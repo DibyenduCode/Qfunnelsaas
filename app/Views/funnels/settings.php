@@ -390,6 +390,42 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- CMS & Platform Step-by-Step Instructions -->
+                <div class="pt-3 border-t border-[#E4E7EC] space-y-2">
+                    <button type="button" onclick="document.getElementById('cmsEmbedGuides').classList.toggle('hidden'); this.querySelector('.arrow-cms').classList.toggle('rotate-180');" class="w-full flex items-center justify-between text-left text-xs font-bold text-[#5B5BD6] hover:text-[#4B4BC0]">
+                        <span class="flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            How to add this to WordPress, Shopify, or Webflow
+                        </span>
+                        <svg class="w-3.5 h-3.5 arrow-cms transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+
+                    <div id="cmsEmbedGuides" class="space-y-3 pt-2 text-[11px] text-[#525866] hidden">
+                        <!-- WordPress Guide -->
+                        <div class="p-2.5 rounded-lg bg-[#F8FAFC] border border-[#E4E7EC] space-y-1">
+                            <strong class="text-[#171A21] block font-bold">WordPress (Gutenberg or Elementor):</strong>
+                            <p>1. Edit any page or post.</p>
+                            <p>2. Add a <strong>Custom HTML block</strong> (or HTML widget in Elementor).</p>
+                            <p>3. Paste the code snippet above and click <strong>Update / Publish</strong>.</p>
+                        </div>
+
+                        <!-- Shopify Guide -->
+                        <div class="p-2.5 rounded-lg bg-[#F8FAFC] border border-[#E4E7EC] space-y-1">
+                            <strong class="text-[#171A21] block font-bold">Shopify Store:</strong>
+                            <p>1. Go to <strong>Online Store → Pages → Add page</strong>.</p>
+                            <p>2. Click the <strong>Show HTML (&lt;&gt;)</strong> button in the editor toolbar.</p>
+                            <p>3. Paste the snippet and save. You can also paste it inside a <em>Custom Liquid</em> section in the Theme Editor!</p>
+                        </div>
+
+                        <!-- Webflow Guide -->
+                        <div class="p-2.5 rounded-lg bg-[#F8FAFC] border border-[#E4E7EC] space-y-1">
+                            <strong class="text-[#171A21] block font-bold">Webflow / Squarespace:</strong>
+                            <p>1. Drag an <strong>Embed component (Custom Code)</strong> onto your page canvas.</p>
+                            <p>2. Paste the snippet inside the code modal and save.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Danger Zone / Quick Actions Card -->

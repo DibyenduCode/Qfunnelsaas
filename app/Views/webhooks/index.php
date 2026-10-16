@@ -12,20 +12,84 @@
         </button>
     </div>
 
-    <!-- Integrations Guide Banner -->
-    <div class="bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div class="flex items-start gap-3">
-            <div class="w-8 h-8 rounded-lg bg-[#5B5BD6] text-white flex items-center justify-center shrink-0 font-bold text-xs shadow-xs">
-                ⚡
+    <!-- Integrations Guide Banner & Step-by-Step Walkthrough -->
+    <div class="bg-white border border-[#E4E7EC] rounded-xl shadow-sm overflow-hidden">
+        <div class="bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border-b border-indigo-100 p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="flex items-start gap-3">
+                <div class="w-9 h-9 rounded-xl bg-[#5B5BD6] text-white flex items-center justify-center shrink-0 font-bold text-sm shadow-sm">
+                    ⚡
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-[#171A21]">Webhook Integration Guide (Zapier, Make, Google Sheets)</h3>
+                    <p class="text-xs text-[#525866] mt-0.5">Stream incoming leads automatically to 5,000+ apps the second they submit a form or finish a quiz.</p>
+                </div>
             </div>
-            <div>
-                <h4 class="text-xs font-bold text-[#171A21]">Connect to 5,000+ Apps via Zapier, Make, or Webhooks</h4>
-                <p class="text-[11px] text-[#525866] mt-0.5">Every time a lead fills out your form or completes an outcome, QFunnel sends a JSON payload with their answers, contact info, and scores.</p>
-            </div>
+            <button type="button" onclick="document.getElementById('webhookGuideDetails').classList.toggle('hidden'); this.querySelector('.arrow').classList.toggle('rotate-180');" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-white text-[#5B5BD6] text-xs font-semibold hover:bg-indigo-50/50 transition-colors shadow-2xs">
+                <span>View Setup Instructions</span>
+                <svg class="w-3.5 h-3.5 arrow transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
         </div>
-        <div class="flex items-center gap-2 text-xs font-semibold shrink-0">
-            <span class="px-2.5 py-1 rounded-md bg-white border border-indigo-100 text-[#5B5BD6] shadow-2xs font-mono text-[10px]">Event: lead.captured</span>
-            <span class="px-2.5 py-1 rounded-md bg-white border border-indigo-100 text-emerald-600 shadow-2xs font-mono text-[10px]">Event: quiz.completed</span>
+
+        <!-- Detailed Guide Accordion Body -->
+        <div id="webhookGuideDetails" class="p-5 space-y-5 bg-[#F8FAFC]/50 text-xs text-[#171A21] border-t border-[#E4E7EC] hidden">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                <!-- Step 1: Zapier / Make -->
+                <div class="bg-white p-4 rounded-xl border border-[#E4E7EC] space-y-2">
+                    <div class="w-6 h-6 rounded-full bg-[#5B5BD6] text-white font-bold text-xs flex items-center justify-center">1</div>
+                    <h4 class="font-bold text-[#171A21]">Connect to Zapier or Make</h4>
+                    <ol class="list-decimal list-inside space-y-1 text-[#687080] text-[11px] leading-relaxed">
+                        <li>Create a Zap and select <strong>Webhooks by Zapier</strong>.</li>
+                        <li>Choose trigger: <strong>Catch Hook</strong>.</li>
+                        <li>Copy the generated <strong>Webhook URL</strong>.</li>
+                    </ol>
+                </div>
+
+                <!-- Step 2: Google Sheets -->
+                <div class="bg-white p-4 rounded-xl border border-[#E4E7EC] space-y-2">
+                    <div class="w-6 h-6 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center">2</div>
+                    <h4 class="font-bold text-[#171A21]">Direct to Google Sheets (Free)</h4>
+                    <ol class="list-decimal list-inside space-y-1 text-[#687080] text-[11px] leading-relaxed">
+                        <li>In your Google Sheet, open <strong>Extensions → Apps Script</strong>.</li>
+                        <li>Add a <code>doPost(e)</code> handler to append a row.</li>
+                        <li>Click <strong>Deploy → Web app</strong> (Access: Anyone).</li>
+                        <li>Copy the deployed Web App URL.</li>
+                    </ol>
+                </div>
+
+                <!-- Step 3: Add in QFunnel -->
+                <div class="bg-white p-4 rounded-xl border border-[#E4E7EC] space-y-2">
+                    <div class="w-6 h-6 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center">3</div>
+                    <h4 class="font-bold text-[#171A21]">Paste & Test in QFunnel</h4>
+                    <ol class="list-decimal list-inside space-y-1 text-[#687080] text-[11px] leading-relaxed">
+                        <li>Click <strong>+ Add Webhook Endpoint</strong> below.</li>
+                        <li>Paste your webhook URL and pick your event.</li>
+                        <li>Click <strong>Test Ping</strong> to verify live delivery!</li>
+                    </ol>
+                </div>
+
+            </div>
+
+            <!-- Example JSON Payload Preview -->
+            <div class="p-3.5 rounded-lg bg-slate-900 text-slate-100 space-y-1.5 font-mono text-[11px]">
+                <div class="flex items-center justify-between text-slate-400 text-[10px] pb-1 border-b border-slate-800">
+                    <span>Sample JSON Payload sent to your Webhook URL:</span>
+                    <span class="text-emerald-400">HTTP POST • Content-Type: application/json</span>
+                </div>
+                <pre class="overflow-x-auto whitespace-pre leading-relaxed">{
+  "event": "lead.captured",
+  "timestamp": "2026-10-17T01:25:00+00:00",
+  "data": {
+    "session_id": 42,
+    "funnel_name": "Doctor Referral Assessment",
+    "lead_data": {
+      "full_name": "Dr. Sarah Connor",
+      "email": "sarah@example.com",
+      "phone": "+1-555-0199"
+    }
+  }
+}</pre>
+            </div>
         </div>
     </div>
 
