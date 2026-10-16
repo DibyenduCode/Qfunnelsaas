@@ -2,6 +2,7 @@
 
 use App\Core\Router;
 use App\Core\Response;
+use App\Controllers\HomeController;
 use App\Controllers\AuthController;
 use App\Controllers\DashboardController;
 use App\Controllers\FunnelController;
@@ -20,16 +21,8 @@ use App\Middleware\CsrfMiddleware;
 
 /** @var Router $router */
 
-// Home Route
-$router->get('/', function() {
-    if (current_user()) {
-        if (is_platform_admin()) {
-            return Response::redirect(url('/admin/platform'));
-        }
-        return Response::redirect(url('/admin/dashboard'));
-    }
-    return Response::redirect(url('/login'));
-});
+// Home Landing Page
+$router->get('/', [HomeController::class, 'index']);
 
 // Authentication Routes
 $router->get('/login', [AuthController::class, 'showLogin']);
