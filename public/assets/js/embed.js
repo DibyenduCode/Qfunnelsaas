@@ -46,19 +46,26 @@
         const modalId = 'qfunnel-modal-' + Math.random().toString(36).substring(2, 9);
         const modal = document.createElement('div');
         modal.id = modalId;
-        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);backdrop-filter:blur(3px);z-index:999999;display:none;align-items:center;justify-center:center;padding:16px;box-sizing:border-box;';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);z-index:999999;display:none;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
 
         const card = document.createElement('div');
-        card.style.cssText = 'position:relative;width:100%;max-width:680px;height:90vh;max-height:800px;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);';
+        card.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%, -50%);width:100%;max-width:min(680px, calc(100vw - 32px));height:90vh;max-height:850px;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.35);z-index:1000000;display:flex;flex-direction:column;box-sizing:border-box;margin:0;';
 
         const closeBtn = document.createElement('button');
         closeBtn.innerHTML = '✕';
-        closeBtn.style.cssText = 'position:absolute;top:14px;right:16px;background:#f1f5f9;border:none;border-radius:50%;width:32px;height:32px;font-size:14px;font-weight:bold;cursor:pointer;z-index:10;color:#0f172a;';
+        closeBtn.style.cssText = 'position:absolute;top:14px;right:16px;background:#f1f5f9;border:none;border-radius:50%;width:32px;height:32px;font-size:14px;font-weight:bold;cursor:pointer;z-index:10;color:#0f172a;line-height:32px;text-align:center;box-shadow:0 2px 5px rgba(0,0,0,0.1);';
         closeBtn.onclick = function() { modal.style.display = 'none'; };
+
+        // Close on clicking backdrop
+        modal.onclick = function(e) {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        };
 
         const iframe = document.createElement('iframe');
         iframe.src = quizUrl;
-        iframe.style.cssText = 'width:100%;height:100%;border:none;';
+        iframe.style.cssText = 'width:100%;height:100%;border:none;flex:1;';
 
         card.appendChild(closeBtn);
         card.appendChild(iframe);
