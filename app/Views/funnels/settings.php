@@ -342,6 +342,56 @@
                 <?php endif; ?>
             </div>
 
+            <!-- Website Embed & API Integration Card -->
+            <div class="bg-white border border-[#E4E7EC] rounded-xl p-5 shadow-sm space-y-4">
+                <div class="border-b border-[#E4E7EC] pb-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-[#171A21]">Embed on Any Website</h3>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Universal JS</span>
+                    </div>
+                    <p class="text-[11px] text-[#687080] mt-0.5">Embed this funnel seamlessly into WordPress, Shopify, Webflow, or custom HTML.</p>
+                </div>
+
+                <!-- Tabs: Inline, Popup, Floating Widget -->
+                <div class="space-y-3">
+                    <div class="flex items-center border-b border-[#E4E7EC] text-xs font-semibold gap-4">
+                        <button type="button" onclick="switchEmbedTab('inline')" id="tabBtnInline" class="pb-2 border-b-2 border-[#5B5BD6] text-[#5B5BD6]">Inline Embed</button>
+                        <button type="button" onclick="switchEmbedTab('popup')" id="tabBtnPopup" class="pb-2 border-b-2 border-transparent text-[#687080] hover:text-[#171A21]">Popup Modal</button>
+                        <button type="button" onclick="switchEmbedTab('float')" id="tabBtnFloat" class="pb-2 border-b-2 border-transparent text-[#687080] hover:text-[#171A21]">Floating Button</button>
+                    </div>
+
+                    <!-- Code Snippets -->
+                    <div id="embedContentInline" class="space-y-2">
+                        <p class="text-[11px] text-[#687080]">Embeds the quiz directly inside your page content:</p>
+                        <div class="relative">
+                            <pre class="p-3 rounded-lg bg-slate-900 text-slate-100 text-[11px] font-mono overflow-x-auto whitespace-pre leading-relaxed">&lt;div data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="inline" data-qfunnel-height="720px"&gt;&lt;/div&gt;
+&lt;script src="<?= url('/assets/js/embed.js') ?>" async&gt;&lt;/script&gt;</pre>
+                            <button type="button" onclick="copySnippet('snippetInline', this)" id="snippetInline" data-code='<div data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="inline" data-qfunnel-height="720px"></div>&#10;<script src="<?= url('/assets/js/embed.js') ?>" async></script>' class="absolute top-2 right-2 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold border border-slate-700">Copy Code</button>
+                        </div>
+                    </div>
+
+                    <div id="embedContentPopup" class="space-y-2 hidden">
+                        <p class="text-[11px] text-[#687080]">Opens quiz in a lightbox modal when visitors click your custom button:</p>
+                        <div class="relative">
+                            <pre class="p-3 rounded-lg bg-slate-900 text-slate-100 text-[11px] font-mono overflow-x-auto whitespace-pre leading-relaxed">&lt;button data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="popup"&gt;
+  Take Our 60-Sec Quiz
+&lt;/button&gt;
+&lt;script src="<?= url('/assets/js/embed.js') ?>" async&gt;&lt;/script&gt;</pre>
+                            <button type="button" onclick="copySnippet('snippetPopup', this)" id="snippetPopup" data-code='<button data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="popup">&#10;  Take Our 60-Sec Quiz&#10;</button>&#10;<script src="<?= url('/assets/js/embed.js') ?>" async></script>' class="absolute top-2 right-2 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold border border-slate-700">Copy Code</button>
+                        </div>
+                    </div>
+
+                    <div id="embedContentFloat" class="space-y-2 hidden">
+                        <p class="text-[11px] text-[#687080]">Displays a floating bubble widget in the bottom corner of your website:</p>
+                        <div class="relative">
+                            <pre class="p-3 rounded-lg bg-slate-900 text-slate-100 text-[11px] font-mono overflow-x-auto whitespace-pre leading-relaxed">&lt;div data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="floating"&gt;&lt;/div&gt;
+&lt;script src="<?= url('/assets/js/embed.js') ?>" async&gt;&lt;/script&gt;</pre>
+                            <button type="button" onclick="copySnippet('snippetFloat', this)" id="snippetFloat" data-code='<div data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="floating"></div>&#10;<script src="<?= url('/assets/js/embed.js') ?>" async></script>' class="absolute top-2 right-2 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold border border-slate-700">Copy Code</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Danger Zone / Quick Actions Card -->
             <div class="bg-white border border-[#E4E7EC] rounded-xl p-5 shadow-sm space-y-3">
                 <h3 class="text-xs font-semibold text-[#687080] uppercase tracking-wider">Quick Actions</h3>
@@ -378,6 +428,40 @@
             const toast = document.getElementById('copyToast');
             toast.classList.remove('hidden');
             setTimeout(() => toast.classList.add('hidden'), 2500);
+        });
+    }
+
+    function switchEmbedTab(tab) {
+        document.getElementById('embedContentInline').classList.add('hidden');
+        document.getElementById('embedContentPopup').classList.add('hidden');
+        document.getElementById('embedContentFloat').classList.add('hidden');
+
+        document.getElementById('tabBtnInline').className = 'pb-2 border-b-2 border-transparent text-[#687080] hover:text-[#171A21]';
+        document.getElementById('tabBtnPopup').className = 'pb-2 border-b-2 border-transparent text-[#687080] hover:text-[#171A21]';
+        document.getElementById('tabBtnFloat').className = 'pb-2 border-b-2 border-transparent text-[#687080] hover:text-[#171A21]';
+
+        if (tab === 'inline') {
+            document.getElementById('embedContentInline').classList.remove('hidden');
+            document.getElementById('tabBtnInline').className = 'pb-2 border-b-2 border-[#5B5BD6] text-[#5B5BD6]';
+        } else if (tab === 'popup') {
+            document.getElementById('embedContentPopup').classList.remove('hidden');
+            document.getElementById('tabBtnPopup').className = 'pb-2 border-b-2 border-[#5B5BD6] text-[#5B5BD6]';
+        } else if (tab === 'float') {
+            document.getElementById('embedContentFloat').classList.remove('hidden');
+            document.getElementById('tabBtnFloat').className = 'pb-2 border-b-2 border-[#5B5BD6] text-[#5B5BD6]';
+        }
+    }
+
+    function copySnippet(btnId, btnElement) {
+        const code = btnElement.getAttribute('data-code');
+        navigator.clipboard.writeText(code).then(() => {
+            const originalText = btnElement.textContent;
+            btnElement.textContent = 'Copied!';
+            btnElement.classList.replace('text-slate-300', 'text-emerald-400');
+            setTimeout(() => {
+                btnElement.textContent = originalText;
+                btnElement.classList.replace('text-emerald-400', 'text-slate-300');
+            }, 2000);
         });
     }
 </script>
