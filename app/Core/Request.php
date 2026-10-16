@@ -149,6 +149,19 @@ class Request
                str_contains($this->header('accept', ''), 'application/json');
     }
 
+    public function file(string $key): ?array
+    {
+        if (isset($_FILES[$key]) && $_FILES[$key]['error'] !== UPLOAD_ERR_NO_FILE) {
+            return $_FILES[$key];
+        }
+        return null;
+    }
+
+    public function files(): array
+    {
+        return $_FILES ?? [];
+    }
+
     public function ip(): string
     {
         return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';

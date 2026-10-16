@@ -17,6 +17,9 @@
         $privacyUrl = !empty($settings['privacy_policy_url']) ? $settings['privacy_policy_url'] : '';
         $termsUrl = !empty($settings['terms_url']) ? $settings['terms_url'] : '';
         $showProgressBar = !isset($settings['show_progress_bar']) || !empty($settings['show_progress_bar']);
+        $logoPosition = $settings['logo_position'] ?? 'left';
+        $logoHeight = max(24, min(90, (int)($settings['logo_height'] ?? 36)));
+        $cardRadius = $settings['card_radius'] ?? 'rounded-2xl';
     ?>
     <style>
         :root {
@@ -83,43 +86,114 @@
 </head>
 <body class="min-h-screen flex flex-col justify-between p-4 sm:p-6 <?= $isDark ? 'bg-[#0D0F14] text-[#F1F3F9]' : 'bg-[#F8FAFC] text-[#0F172A]' ?>">
 
-    <!-- Top Sticky / Elevated Header: 100% White-Labeled -->
+    <!-- Top Sticky / Elevated Header: 100% White-Labeled with Dynamic Alignment -->
     <header class="max-w-2xl mx-auto w-full py-4 px-2 sm:px-0">
-        <div class="flex items-center justify-between gap-4">
-            <!-- Brand Logo & Name -->
-            <div class="flex items-center gap-3">
-                <?php if (!empty($logoUrl)): ?>
-                    <img src="<?= e($logoUrl) ?>" alt="<?= e($companyName) ?>" class="h-8 max-w-[150px] object-contain rounded" onerror="this.style.display='none'; document.getElementById('brandFallbackAvatar').style.display='flex';">
-                    <span id="brandFallbackAvatar" class="w-8 h-8 rounded-lg brand-bg text-white font-extrabold text-sm flex items-center justify-center shadow-sm" style="display:none;">
-                        <?= e(strtoupper(substr($companyName, 0, 2))) ?>
-                    </span>
-                <?php else: ?>
-                    <span class="w-8 h-8 rounded-lg brand-bg text-white font-extrabold text-sm flex items-center justify-center shadow-sm tracking-wide">
-                        <?= e(strtoupper(substr($companyName, 0, 2))) ?>
-                    </span>
-                <?php endif; ?>
+        <?php if ($logoPosition === 'center'): ?>
+            <!-- Center Aligned Header Layout -->
+            <div class="flex flex-col items-center justify-center text-center gap-2">
+                <div class="flex items-center gap-3">
+                    <?php if (!empty($logoUrl)): ?>
+                        <img src="<?= e($logoUrl) ?>" alt="<?= e($companyName) ?>" style="height: <?= $logoHeight ?>px;" class="max-w-[220px] object-contain rounded" onerror="this.style.display='none'; document.getElementById('brandFallbackAvatarCenter').style.display='flex';">
+                        <span id="brandFallbackAvatarCenter" style="width: <?= $logoHeight ?>px; height: <?= $logoHeight ?>px; display:none;" class="rounded-lg brand-bg text-white font-extrabold text-sm flex items-center justify-center shadow-sm">
+                            <?= e(strtoupper(substr($companyName, 0, 2))) ?>
+                        </span>
+                    <?php else: ?>
+                        <span style="width: <?= $logoHeight ?>px; height: <?= $logoHeight ?>px;" class="rounded-lg brand-bg text-white font-extrabold text-sm flex items-center justify-center shadow-sm tracking-wide">
+                            <?= e(strtoupper(substr($companyName, 0, 2))) ?>
+                        </span>
+                    <?php endif; ?>
+                    <div class="text-left">
+                        <span class="text-[11px] font-bold uppercase tracking-wider <?= $isDark ? 'text-slate-400' : 'text-slate-500' ?> block">
+                            <?= e($companyName) ?>
+                        </span>
+                        <h1 class="text-sm font-extrabold <?= $isDark ? 'text-white' : 'text-[#0F172A]' ?>">
+                            <?= e($funnel['name']) ?>
+                        </h1>
+                    </div>
+                </div>
 
-                <div class="leading-tight">
-                    <span class="text-xs font-bold uppercase tracking-wider <?= $isDark ? 'text-slate-400' : 'text-slate-500' ?> block">
-                        <?= e($companyName) ?>
+                <div class="flex items-center justify-center gap-2 pt-1">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold <?= $isDark ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-white text-slate-600 border border-slate-200' ?> shadow-2xs">
+                        <svg class="w-3 h-3 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                        Verified Secure
                     </span>
-                    <h1 class="text-sm font-extrabold <?= $isDark ? 'text-white' : 'text-[#0F172A]' ?>">
-                        <?= e($funnel['name']) ?>
-                    </h1>
+                    <span id="stepProgressBadge" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold brand-bg text-white shadow-xs hidden">
+                        Step <span id="currentStepNum">1</span>
+                    </span>
                 </div>
             </div>
+        <?php elseif ($logoPosition === 'right'): ?>
+            <!-- Right Aligned Logo Header Layout -->
+            <div class="flex items-center justify-between gap-4">
+                <!-- Progress & Badges on Left -->
+                <div class="flex items-center gap-2">
+                    <span id="stepProgressBadge" class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold brand-bg text-white shadow-xs hidden">
+                        Step <span id="currentStepNum">1</span>
+                    </span>
+                    <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold <?= $isDark ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-white text-slate-600 border border-slate-200' ?> shadow-2xs">
+                        <svg class="w-3.5 h-3.5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                        Verified Secure
+                    </span>
+                </div>
 
-            <!-- Estimated Time / Security Badge -->
-            <div class="flex items-center gap-2">
-                <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold <?= $isDark ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-white text-slate-600 border border-slate-200' ?> shadow-2xs">
-                    <svg class="w-3.5 h-3.5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                    Verified Secure
-                </span>
-                <span id="stepProgressBadge" class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold brand-bg text-white shadow-xs hidden">
-                    Step <span id="currentStepNum">1</span>
-                </span>
+                <!-- Brand Logo & Name on Right -->
+                <div class="flex items-center gap-3 text-right">
+                    <div class="leading-tight">
+                        <span class="text-xs font-bold uppercase tracking-wider <?= $isDark ? 'text-slate-400' : 'text-slate-500' ?> block">
+                            <?= e($companyName) ?>
+                        </span>
+                        <h1 class="text-sm font-extrabold <?= $isDark ? 'text-white' : 'text-[#0F172A]' ?>">
+                            <?= e($funnel['name']) ?>
+                        </h1>
+                    </div>
+                    <?php if (!empty($logoUrl)): ?>
+                        <img src="<?= e($logoUrl) ?>" alt="<?= e($companyName) ?>" style="height: <?= $logoHeight ?>px;" class="max-w-[180px] object-contain rounded" onerror="this.style.display='none'; document.getElementById('brandFallbackAvatarRight').style.display='flex';">
+                        <span id="brandFallbackAvatarRight" style="width: <?= $logoHeight ?>px; height: <?= $logoHeight ?>px; display:none;" class="rounded-lg brand-bg text-white font-extrabold text-sm flex items-center justify-center shadow-sm">
+                            <?= e(strtoupper(substr($companyName, 0, 2))) ?>
+                        </span>
+                    <?php else: ?>
+                        <span style="width: <?= $logoHeight ?>px; height: <?= $logoHeight ?>px;" class="rounded-lg brand-bg text-white font-extrabold text-sm flex items-center justify-center shadow-sm tracking-wide">
+                            <?= e(strtoupper(substr($companyName, 0, 2))) ?>
+                        </span>
+                    <?php endif; ?>
+                </div>
             </div>
-        </div>
+        <?php else: ?>
+            <!-- Default Left Aligned Header Layout -->
+            <div class="flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <?php if (!empty($logoUrl)): ?>
+                        <img src="<?= e($logoUrl) ?>" alt="<?= e($companyName) ?>" style="height: <?= $logoHeight ?>px;" class="max-w-[180px] object-contain rounded" onerror="this.style.display='none'; document.getElementById('brandFallbackAvatarLeft').style.display='flex';">
+                        <span id="brandFallbackAvatarLeft" style="width: <?= $logoHeight ?>px; height: <?= $logoHeight ?>px; display:none;" class="rounded-lg brand-bg text-white font-extrabold text-sm flex items-center justify-center shadow-sm">
+                            <?= e(strtoupper(substr($companyName, 0, 2))) ?>
+                        </span>
+                    <?php else: ?>
+                        <span style="width: <?= $logoHeight ?>px; height: <?= $logoHeight ?>px;" class="rounded-lg brand-bg text-white font-extrabold text-sm flex items-center justify-center shadow-sm tracking-wide">
+                            <?= e(strtoupper(substr($companyName, 0, 2))) ?>
+                        </span>
+                    <?php endif; ?>
+
+                    <div class="leading-tight">
+                        <span class="text-xs font-bold uppercase tracking-wider <?= $isDark ? 'text-slate-400' : 'text-slate-500' ?> block">
+                            <?= e($companyName) ?>
+                        </span>
+                        <h1 class="text-sm font-extrabold <?= $isDark ? 'text-white' : 'text-[#0F172A]' ?>">
+                            <?= e($funnel['name']) ?>
+                        </h1>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold <?= $isDark ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-white text-slate-600 border border-slate-200' ?> shadow-2xs">
+                        <svg class="w-3.5 h-3.5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                        Verified Secure
+                    </span>
+                    <span id="stepProgressBadge" class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold brand-bg text-white shadow-xs hidden">
+                        Step <span id="currentStepNum">1</span>
+                    </span>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <?php if ($showProgressBar): ?>
             <!-- Dynamic Funnel Progress Bar -->
@@ -131,7 +205,7 @@
 
     <!-- Main Dynamic Container -->
     <main class="max-w-xl mx-auto w-full my-auto py-4 sm:py-6">
-        <div id="quizAppCard" class="quiz-card <?= $isDark ? 'bg-[#151921] border-[#252B36]' : 'bg-white border-[#E2E8F0]' ?> border rounded-2xl p-6 sm:p-9">
+        <div id="quizAppCard" class="quiz-card <?= $isDark ? 'bg-[#151921] border-[#252B36]' : 'bg-white border-[#E2E8F0]' ?> border <?= e($cardRadius) ?> p-6 sm:p-9">
             
             <!-- Loading state initially -->
             <div id="loadingState" class="text-center py-16">

@@ -29,7 +29,7 @@
 
         <!-- Left Column: Settings Form (8 cols) -->
         <div class="lg:col-span-8 space-y-6">
-            <form action="<?= url("/admin/funnels/{$funnel['id']}/settings") ?>" method="POST" class="space-y-6">
+            <form action="<?= url("/admin/funnels/{$funnel['id']}/settings") ?>" method="POST" enctype="multipart/form-data" class="space-y-6">
                 <?= csrf_field() ?>
 
                 <!-- General Configuration Card -->
@@ -119,14 +119,73 @@
                             <label class="block text-xs font-semibold text-[#171A21] uppercase mb-1">Company / Brand Name</label>
                             <input type="text" name="company_name" value="<?= e($settings['company_name'] ?? '') ?>" placeholder="e.g. Apex Health Clinic"
                                    class="w-full px-3 py-2 rounded-lg border border-[#E4E7EC] text-xs text-[#171A21] focus:ring-2 focus:ring-[#5B5BD6]">
-                            <p class="text-[11px] text-[#687080] mt-1">Displayed in the header and trust badges.</p>
+                            <p class="text-[11px] text-[#687080] mt-1">Displayed in the header, metadata and trust badges.</p>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold text-[#171A21] uppercase mb-1">Company Logo URL</label>
-                            <input type="url" name="logo_url" value="<?= e($settings['logo_url'] ?? '') ?>" placeholder="https://example.com/logo.png"
+                            <label class="block text-xs font-semibold text-[#171A21] uppercase mb-1">Upload Brand Logo</label>
+                            <div class="space-y-2">
+                                <input type="file" name="logo_file" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif"
+                                       class="w-full px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] text-xs text-[#171A21] bg-white file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[#5B5BD6]/10 file:text-[#5B5BD6] hover:file:bg-[#5B5BD6]/20">
+                                <p class="text-[11px] text-[#687080]">Upload file (PNG, SVG, JPG, WebP - Max 3MB) or use URL below.</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-[#171A21] uppercase mb-1">Logo Direct Image URL</label>
+                            <input type="url" name="logo_url" id="logoUrlInput" value="<?= e($settings['logo_url'] ?? '') ?>" placeholder="https://example.com/logo.png"
                                    class="w-full px-3 py-2 rounded-lg border border-[#E4E7EC] text-xs text-[#171A21] focus:ring-2 focus:ring-[#5B5BD6]">
-                            <p class="text-[11px] text-[#687080] mt-1">Replaces the default icon in the top navigation bar.</p>
+                            <?php if (!empty($settings['logo_url'])): ?>
+                                <div class="mt-2 flex items-center gap-3 p-2 rounded-lg bg-[#F7F8FA] border border-[#E4E7EC]">
+                                    <img src="<?= e($settings['logo_url']) ?>" alt="Current Logo" class="h-7 max-w-[120px] object-contain">
+                                    <label class="flex items-center gap-1.5 text-xs text-rose-600 font-medium cursor-pointer ml-auto">
+                                        <input type="checkbox" name="remove_logo" value="1" class="rounded text-rose-600">
+                                        Remove Logo
+                                    </label>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-[#171A21] uppercase mb-1">Logo Alignment / Position</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <?php $logoPos = $settings['logo_position'] ?? 'left'; ?>
+                                <label class="flex items-center justify-center gap-1.5 p-2 rounded-lg border cursor-pointer text-xs font-semibold <?= $logoPos === 'left' ? 'border-[#5B5BD6] bg-[#5B5BD6]/5 text-[#5B5BD6]' : 'border-[#E4E7EC] text-[#171A21] hover:bg-[#F7F8FA]' ?>">
+                                    <input type="radio" name="logo_position" value="left" <?= $logoPos === 'left' ? 'checked' : '' ?> class="sr-only">
+                                    <span>⬅ Left</span>
+                                </label>
+                                <label class="flex items-center justify-center gap-1.5 p-2 rounded-lg border cursor-pointer text-xs font-semibold <?= $logoPos === 'center' ? 'border-[#5B5BD6] bg-[#5B5BD6]/5 text-[#5B5BD6]' : 'border-[#E4E7EC] text-[#171A21] hover:bg-[#F7F8FA]' ?>">
+                                    <input type="radio" name="logo_position" value="center" <?= $logoPos === 'center' ? 'checked' : '' ?> class="sr-only">
+                                    <span>↔ Center</span>
+                                </label>
+                                <label class="flex items-center justify-center gap-1.5 p-2 rounded-lg border cursor-pointer text-xs font-semibold <?= $logoPos === 'right' ? 'border-[#5B5BD6] bg-[#5B5BD6]/5 text-[#5B5BD6]' : 'border-[#E4E7EC] text-[#171A21] hover:bg-[#F7F8FA]' ?>">
+                                    <input type="radio" name="logo_position" value="right" <?= $logoPos === 'right' ? 'checked' : '' ?> class="sr-only">
+                                    <span>Right ➡</span>
+                                </label>
+                            </div>
+                            <p class="text-[11px] text-[#687080] mt-1">Position of the logo and branding inside the quiz header.</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-[#171A21] uppercase mb-1">Logo Height (Pixels)</label>
+                            <div class="flex items-center gap-3">
+                                <input type="range" name="logo_height" min="24" max="80" step="2" value="<?= (int)($settings['logo_height'] ?? 36) ?>"
+                                       oninput="document.getElementById('logoHeightVal').textContent = this.value + 'px'"
+                                       class="w-full accent-[#5B5BD6] cursor-pointer">
+                                <span id="logoHeightVal" class="text-xs font-mono font-bold text-[#171A21] w-12"><?= (int)($settings['logo_height'] ?? 36) ?>px</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-[#171A21] uppercase mb-1">Card Corner Radius</label>
+                            <select name="card_radius" class="w-full px-3 py-2 rounded-lg border border-[#E4E7EC] text-xs text-[#171A21] bg-white focus:ring-2 focus:ring-[#5B5BD6]">
+                                <?php $cardRad = $settings['card_radius'] ?? 'rounded-2xl'; ?>
+                                <option value="rounded-none" <?= $cardRad === 'rounded-none' ? 'selected' : '' ?>>Square (Sharp Corners)</option>
+                                <option value="rounded-lg" <?= $cardRad === 'rounded-lg' ? 'selected' : '' ?>>Subtle Rounded (8px)</option>
+                                <option value="rounded-xl" <?= $cardRad === 'rounded-xl' ? 'selected' : '' ?>>Medium Rounded (12px)</option>
+                                <option value="rounded-2xl" <?= $cardRad === 'rounded-2xl' ? 'selected' : '' ?>>Modern Curvature (16px - Recommended)</option>
+                                <option value="rounded-3xl" <?= $cardRad === 'rounded-3xl' ? 'selected' : '' ?>>Pill Soft (24px)</option>
+                            </select>
                         </div>
 
                         <div>

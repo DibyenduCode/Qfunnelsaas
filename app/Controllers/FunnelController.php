@@ -89,17 +89,59 @@ class FunnelController
         $user = current_user();
 
         try {
+            $existingFunnel = FunnelService::getFunnel($tenantId, (int)$id);
+            $existingSettings = json_decode($existingFunnel['settings_json'] ?? '{}', true) ?: [];
+
+            // Handle Logo File Upload if provided
+            $logoUrl = trim($request->input('logo_url', ''));
+            $uploadedFile = $request->file('logo_file');
+            if ($uploadedFile && $uploadedFile['error'] === UPLOAD_ERR_OK) {
+                $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml', 'image/gif'];
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mimeType = finfo_file($finfo, $uploadedFile['tmp_name']);
+                finfo_close($finfo);
+
+                if (!in_array($mimeType, $allowedTypes, true)) {
+                    throw new \RuntimeException('Invalid logo format. Allowed types: PNG, JPG, WebP, SVG, GIF.');
+                }
+
+                if ($uploadedFile['size'] > 3 * 1024 * 1024) {
+                    throw new \RuntimeException('Logo file size must be less than 3MB.');
+                }
+
+                $ext = pathinfo($uploadedFile['name'], PATHINFO_EXTENSION) ?: 'png';
+                $cleanExt = strtolower(preg_replace('/[^a-z0-9]/i', '', $ext));
+                $fileName = 'logo_' . (int)$id . '_' . bin2hex(random_bytes(6)) . '.' . $cleanExt;
+                $targetDir = dirname(__DIR__, 2) . '/public/uploads/logos';
+                if (!is_dir($targetDir)) {
+                    @mkdir($targetDir, 0755, true);
+                }
+
+                $targetPath = $targetDir . '/' . $fileName;
+                if (move_uploaded_file($uploadedFile['tmp_name'], $targetPath)) {
+                    $logoUrl = url('/uploads/logos/' . $fileName);
+                }
+            }
+
+            // If user did not upload a new file and left logo_url empty, check if they wanted to keep existing or clear
+            if (empty($logoUrl) && empty($uploadedFile) && !empty($existingSettings['logo_url']) && empty($request->input('remove_logo'))) {
+                $logoUrl = $existingSettings['logo_url'];
+            }
+
             $data = [
                 'name' => $request->input('name'),
                 'description' => $request->input('description'),
                 'settings' => [
                     'theme' => $request->input('theme', 'light'),
                     'accent_color' => $request->input('accent_color', '#5B5BD6'),
-                    'logo_url' => trim($request->input('logo_url', '')),
+                    'logo_url' => $logoUrl,
+                    'logo_position' => in_array($request->input('logo_position'), ['left', 'center', 'right'], true) ? $request->input('logo_position') : 'left',
+                    'logo_height' => max(24, min(90, (int)$request->input('logo_height', 36))),
                     'company_name' => trim($request->input('company_name', '')),
                     'white_label' => !empty($request->input('white_label')),
                     'footer_text' => trim($request->input('footer_text', '')),
                     'trust_badge_text' => trim($request->input('trust_badge_text', '')),
+                    'card_radius' => in_array($request->input('card_radius'), ['rounded-none', 'rounded-lg', 'rounded-xl', 'rounded-2xl', 'rounded-3xl'], true) ? $request->input('card_radius') : 'rounded-2xl',
                     'enable_back_button' => !empty($request->input('enable_back_button')),
                     'show_progress_bar' => !empty($request->input('show_progress_bar')),
                     'auto_redirect' => !empty($request->input('auto_redirect')),
@@ -110,7 +152,7 @@ class FunnelController
             ];
 
             FunnelService::updateFunnel($tenantId, (int)$id, $data, (int)$user['id']);
-            Session::setFlash('success', 'Funnel settings updated successfully.');
+            Session::setFlash('success', 'Funnel branding and settings updated successfully.');
         } catch (\Throwable $e) {
             Session::setFlash('error', $e->getMessage());
         }
