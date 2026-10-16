@@ -52,6 +52,17 @@ class View
         return ($base !== '' ? $base : '') . $path;
     }
 
+    public static function fullUrl(string $path = ''): string
+    {
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+            ? 'https://'
+            : 'http://';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $relative = self::url($path);
+        return $protocol . $host . $relative;
+    }
+
     public static function asset(string $path): string
     {
         $base = self::$currentRequest ? self::$currentRequest->basePath() : '';

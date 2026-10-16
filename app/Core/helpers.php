@@ -19,6 +19,13 @@ if (!function_exists('url')) {
     }
 }
 
+if (!function_exists('full_url')) {
+    function full_url(string $path = ''): string
+    {
+        return View::fullUrl($path);
+    }
+}
+
 if (!function_exists('asset')) {
     function asset(string $path): string
     {

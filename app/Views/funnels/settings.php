@@ -313,6 +313,11 @@
                     <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Universal Widget</span>
                 </div>
 
+                <?php
+                $embedHost = rtrim(full_url(''), '/');
+                $embedScript = full_url('/assets/js/embed.js');
+                ?>
+
                 <!-- Tabs: Inline, Popup, Floating Widget -->
                 <div class="space-y-4">
                     <div class="flex items-center border-b border-[#E4E7EC] text-xs font-semibold gap-4">
@@ -325,29 +330,29 @@
                     <div id="embedContentInline" class="space-y-2">
                         <p class="text-[11px] text-[#687080]">Embeds the quiz directly inside your page body:</p>
                         <div class="relative">
-                            <pre class="p-3.5 rounded-lg bg-slate-900 text-slate-100 text-[11px] font-mono overflow-x-auto whitespace-pre leading-relaxed">&lt;div data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="inline" data-qfunnel-height="720px"&gt;&lt;/div&gt;
-&lt;script src="<?= url('/assets/js/embed.js') ?>" async&gt;&lt;/script&gt;</pre>
-                            <button type="button" onclick="copySnippet('snippetInline', this)" id="snippetInline" data-code='<div data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="inline" data-qfunnel-height="720px"></div>&#10;<script src="<?= url('/assets/js/embed.js') ?>" async></script>' class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold border border-slate-700">Copy Code</button>
+                            <pre class="p-3.5 rounded-lg bg-slate-900 text-slate-100 text-[11px] font-mono overflow-x-auto whitespace-pre leading-relaxed">&lt;div data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= e($embedHost) ?>" data-qfunnel-mode="inline" data-qfunnel-height="720px"&gt;&lt;/div&gt;
+&lt;script src="<?= e($embedScript) ?>" async&gt;&lt;/script&gt;</pre>
+                            <button type="button" onclick="copySnippet('snippetInline', this)" id="snippetInline" data-code='<div data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= e($embedHost) ?>" data-qfunnel-mode="inline" data-qfunnel-height="720px"></div>&#10;<script src="<?= e($embedScript) ?>" async></script>' class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold border border-slate-700">Copy Code</button>
                         </div>
                     </div>
 
                     <div id="embedContentPopup" class="space-y-2 hidden">
                         <p class="text-[11px] text-[#687080]">Opens quiz in a lightbox modal when visitors click your custom button:</p>
                         <div class="relative">
-                            <pre class="p-3.5 rounded-lg bg-slate-900 text-slate-100 text-[11px] font-mono overflow-x-auto whitespace-pre leading-relaxed">&lt;button data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="popup"&gt;
+                            <pre class="p-3.5 rounded-lg bg-slate-900 text-slate-100 text-[11px] font-mono overflow-x-auto whitespace-pre leading-relaxed">&lt;button data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= e($embedHost) ?>" data-qfunnel-mode="popup"&gt;
   Take Our 60-Sec Quiz
 &lt;/button&gt;
-&lt;script src="<?= url('/assets/js/embed.js') ?>" async&gt;&lt;/script&gt;</pre>
-                            <button type="button" onclick="copySnippet('snippetPopup', this)" id="snippetPopup" data-code='<button data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="popup">&#10;  Take Our 60-Sec Quiz&#10;</button>&#10;<script src="<?= url('/assets/js/embed.js') ?>" async></script>' class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold border border-slate-700">Copy Code</button>
+&lt;script src="<?= e($embedScript) ?>" async&gt;&lt;/script&gt;</pre>
+                            <button type="button" onclick="copySnippet('snippetPopup', this)" id="snippetPopup" data-code='<button data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= e($embedHost) ?>" data-qfunnel-mode="popup">&#10;  Take Our 60-Sec Quiz&#10;</button>&#10;<script src="<?= e($embedScript) ?>" async></script>' class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold border border-slate-700">Copy Code</button>
                         </div>
                     </div>
 
                     <div id="embedContentFloat" class="space-y-2 hidden">
                         <p class="text-[11px] text-[#687080]">Displays a floating bubble widget in the bottom corner of your website:</p>
                         <div class="relative">
-                            <pre class="p-3.5 rounded-lg bg-slate-900 text-slate-100 text-[11px] font-mono overflow-x-auto whitespace-pre leading-relaxed">&lt;div data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="floating"&gt;&lt;/div&gt;
-&lt;script src="<?= url('/assets/js/embed.js') ?>" async&gt;&lt;/script&gt;</pre>
-                            <button type="button" onclick="copySnippet('snippetFloat', this)" id="snippetFloat" data-code='<div data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="floating"></div>&#10;<script src="<?= url('/assets/js/embed.js') ?>" async></script>' class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold border border-slate-700">Copy Code</button>
+                            <pre class="p-3.5 rounded-lg bg-slate-900 text-slate-100 text-[11px] font-mono overflow-x-auto whitespace-pre leading-relaxed">&lt;div data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= e($embedHost) ?>" data-qfunnel-mode="floating"&gt;&lt;/div&gt;
+&lt;script src="<?= e($embedScript) ?>" async&gt;&lt;/script&gt;</pre>
+                            <button type="button" onclick="copySnippet('snippetFloat', this)" id="snippetFloat" data-code='<div data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= e($embedHost) ?>" data-qfunnel-mode="floating"></div>&#10;<script src="<?= e($embedScript) ?>" async></script>' class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold border border-slate-700">Copy Code</button>
                         </div>
                     </div>
                 </div>
