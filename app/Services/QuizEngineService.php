@@ -222,6 +222,19 @@ class QuizEngineService
             );
         });
 
+        // 5. Trigger Webhook Event (lead.captured)
+        try {
+            WebhookService::trigger((int)$session['tenant_id'], 'lead.captured', [
+                'session_id' => (int)$session['id'],
+                'funnel_id' => (int)$session['funnel_id'],
+                'funnel_name' => $session['funnel_name'],
+                'lead_data' => $cleanData,
+                'submitted_at' => date('Y-m-d H:i:s'),
+            ], (int)$session['funnel_id']);
+        } catch (\Throwable $e) {
+            Logger::error("Webhook dispatch failed: " . $e->getMessage());
+        }
+
         return self::getCurrentStep($rawToken);
     }
 
@@ -569,6 +582,22 @@ class QuizEngineService
             );
         });
 
+        // Trigger Webhook Event (quiz.completed)
+        try {
+            WebhookService::trigger((int)$session['tenant_id'], 'quiz.completed', [
+                'session_id' => (int)$session['id'],
+                'funnel_id' => (int)$session['funnel_id'],
+                'funnel_name' => $session['funnel_name'],
+                'destination_name' => $destName,
+                'destination_url' => $destUrl,
+                'lead_fields' => $formVals,
+                'answers' => $answers,
+                'completed_at' => date('Y-m-d H:i:s'),
+            ], (int)$session['funnel_id']);
+        } catch (\Throwable $e) {
+            Logger::error("Webhook dispatch failed: " . $e->getMessage());
+        }
+
         return [
             'success' => true,
             'status' => 'completed',
@@ -740,6 +769,22 @@ class QuizEngineService
                 [$session['tenant_id'], $session['funnel_id'], $session['funnel_version_id'], $session['id'], $formNode['id']]
             );
         });
+
+        // Trigger Webhook Event (quiz.completed)
+        try {
+            WebhookService::trigger((int)$session['tenant_id'], 'quiz.completed', [
+                'session_id' => (int)$session['id'],
+                'funnel_id' => (int)$session['funnel_id'],
+                'funnel_name' => $session['funnel_name'],
+                'completion_type' => 'message',
+                'success_heading' => $heading,
+                'lead_fields' => $formVals,
+                'answers' => $answers,
+                'completed_at' => date('Y-m-d H:i:s'),
+            ], (int)$session['funnel_id']);
+        } catch (\Throwable $e) {
+            Logger::error("Webhook dispatch failed: " . $e->getMessage());
+        }
 
         return [
             'success' => true,

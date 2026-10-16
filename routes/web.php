@@ -10,6 +10,7 @@ use App\Controllers\SubmissionController;
 use App\Controllers\AnalyticsController;
 use App\Controllers\SettingsController;
 use App\Controllers\TeamController;
+use App\Controllers\WebhookController;
 use App\Controllers\PlatformAdminController;
 use App\Controllers\QuizController;
 use App\Middleware\AuthMiddleware;
@@ -120,6 +121,13 @@ $router->group([AuthMiddleware::class], function (Router $router) {
         $router->post('/admin/team', [TeamController::class, 'store'], [CsrfMiddleware::class]);
         $router->post('/admin/team/{id}/update', [TeamController::class, 'update'], [CsrfMiddleware::class]);
         $router->post('/admin/team/{id}/remove', [TeamController::class, 'remove'], [CsrfMiddleware::class]);
+
+        // Webhooks & Integrations
+        $router->get('/admin/webhooks', [WebhookController::class, 'index']);
+        $router->post('/admin/webhooks', [WebhookController::class, 'store'], [CsrfMiddleware::class]);
+        $router->post('/admin/webhooks/{id}/update', [WebhookController::class, 'update'], [CsrfMiddleware::class]);
+        $router->post('/admin/webhooks/{id}/delete', [WebhookController::class, 'delete'], [CsrfMiddleware::class]);
+        $router->post('/admin/webhooks/{id}/test', [WebhookController::class, 'test'], [CsrfMiddleware::class]);
 
         // Settings
         $router->get('/admin/settings/workspace', [SettingsController::class, 'workspace']);
