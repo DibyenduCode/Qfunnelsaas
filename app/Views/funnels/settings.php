@@ -1,5 +1,6 @@
 <div class="space-y-6">
 
+    <!-- Top Breadcrumb & Actions Bar -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <div class="flex items-center gap-2 mb-1">
@@ -7,8 +8,8 @@
                 <span class="text-xs text-[#687080]">/</span>
                 <span class="text-xs font-semibold text-[#171A21]"><?= e($funnel['name']) ?></span>
             </div>
-            <h2 class="text-lg font-bold text-[#171A21]">Funnel Settings</h2>
-            <p class="text-xs text-[#687080]">Configure general parameters, visitor navigation, styling, and public access.</p>
+            <h2 class="text-lg font-bold text-[#171A21]">Funnel Settings & Integrations</h2>
+            <p class="text-xs text-[#687080]">Configure general parameters, visitor navigation, custom branding, and website embedding.</p>
         </div>
         <div class="flex items-center gap-2">
             <?php if ($funnel['status'] === 'published'): ?>
@@ -24,19 +25,52 @@
         </div>
     </div>
 
+    <!-- Category Tabs Navigation (Modern Sleek Pills) -->
+    <div class="bg-white border border-[#E4E7EC] rounded-xl p-1.5 shadow-2xs flex flex-wrap items-center gap-1.5 text-xs font-semibold">
+        <button type="button" onclick="switchSettingsSection('general')" id="secTab-general"
+                class="settings-tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg bg-[#5B5BD6] text-white transition-all shadow-xs">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            General & Info
+        </button>
+
+        <button type="button" onclick="switchSettingsSection('branding')" id="secTab-branding"
+                class="settings-tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-[#687080] hover:text-[#171A21] hover:bg-slate-50 transition-all">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+            Branding & Logo
+        </button>
+
+        <button type="button" onclick="switchSettingsSection('navigation')" id="secTab-navigation"
+                class="settings-tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-[#687080] hover:text-[#171A21] hover:bg-slate-50 transition-all">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+            Visitor Experience
+        </button>
+
+        <button type="button" onclick="switchSettingsSection('embed')" id="secTab-embed"
+                class="settings-tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-[#687080] hover:text-[#171A21] hover:bg-slate-50 transition-all">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+            Embed on Website
+        </button>
+
+        <button type="button" onclick="switchSettingsSection('advanced')" id="secTab-advanced"
+                class="settings-tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-[#687080] hover:text-[#171A21] hover:bg-slate-50 transition-all">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            Actions & Delete
+        </button>
+    </div>
+
     <!-- Layout Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-        <!-- Left Column: Settings Form (8 cols) -->
+        <!-- Left Column: Settings Content (8 cols) -->
         <div class="lg:col-span-8 space-y-6">
             <form action="<?= url("/admin/funnels/{$funnel['id']}/settings") ?>" method="POST" enctype="multipart/form-data" class="space-y-6">
                 <?= csrf_field() ?>
 
-                <!-- General Configuration Card -->
-                <div class="bg-white border border-[#E4E7EC] rounded-xl p-5 shadow-sm space-y-4">
+                <!-- SECTION 1: General Information -->
+                <div id="section-general" class="settings-section bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-sm space-y-5">
                     <div class="border-b border-[#E4E7EC] pb-3">
-                        <h3 class="text-sm font-semibold text-[#171A21]">General Information</h3>
-                        <p class="text-xs text-[#687080]">Basic identifiers and metadata for your funnel.</p>
+                        <h3 class="text-sm font-bold text-[#171A21]">General Configuration</h3>
+                        <p class="text-xs text-[#687080]">Basic identifiers, titles, and public descriptions for this quiz funnel.</p>
                     </div>
 
                     <div>
@@ -57,61 +91,22 @@
                                class="w-full px-3 py-2 rounded-lg border border-[#E4E7EC] text-xs text-[#171A21] focus:ring-2 focus:ring-[#5B5BD6] focus:border-[#5B5BD6]">
                         <p class="text-[11px] text-[#687080] mt-1">Displayed in the footer of your quiz and consent prompts.</p>
                     </div>
-                </div>
 
-                <!-- Visitor Experience & Navigation Card -->
-                <div class="bg-white border border-[#E4E7EC] rounded-xl p-5 shadow-sm space-y-4">
-                    <div class="border-b border-[#E4E7EC] pb-3">
-                        <h3 class="text-sm font-semibold text-[#171A21]">Visitor Experience & Navigation</h3>
-                        <p class="text-xs text-[#687080]">Control how respondents navigate through quiz steps.</p>
-                    </div>
-
-                    <div class="space-y-3">
-                        <label class="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-[#E4E7EC] hover:bg-[#F7F8FA] transition-colors">
-                            <input type="checkbox" name="enable_back_button" value="1" <?= !empty($settings['enable_back_button']) ? 'checked' : '' ?> class="mt-0.5 rounded text-[#5B5BD6] focus:ring-[#5B5BD6]">
-                            <div>
-                                <span class="text-xs font-semibold text-[#171A21] block">Enable Back Navigation</span>
-                                <span class="text-[11px] text-[#687080]">Allows visitors to go back and revisit previous questions or modify answers.</span>
-                            </div>
-                        </label>
-
-                        <label class="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-[#E4E7EC] hover:bg-[#F7F8FA] transition-colors">
-                            <input type="checkbox" name="show_progress_bar" value="1" <?= !empty($settings['show_progress_bar']) ? 'checked' : '' ?> class="mt-0.5 rounded text-[#5B5BD6] focus:ring-[#5B5BD6]">
-                            <div>
-                                <span class="text-xs font-semibold text-[#171A21] block">Show Progress Bar</span>
-                                <span class="text-[11px] text-[#687080]">Displays a clean progress bar at the top of the quiz during visitor completion.</span>
-                            </div>
-                        </label>
-
-                        <label class="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-[#E4E7EC] hover:bg-[#F7F8FA] transition-colors">
-                            <input type="checkbox" name="auto_redirect" value="1" <?= !empty($settings['auto_redirect']) ? 'checked' : '' ?> class="mt-0.5 rounded text-[#5B5BD6] focus:ring-[#5B5BD6]">
-                            <div>
-                                <span class="text-xs font-semibold text-[#171A21] block">Auto-Redirect on Completion</span>
-                                <span class="text-[11px] text-[#687080]">Automatically navigates the respondent to the final destination URL when reaching the outcome node.</span>
-                            </div>
-                        </label>
-                    </div>
-
-                    <div class="pt-2">
-                        <label class="block text-xs font-semibold text-[#171A21] uppercase mb-1">Redirect Delay (Seconds)</label>
-                        <div class="flex items-center gap-2">
-                            <input type="number" name="redirect_delay_seconds" min="0" max="15" value="<?= (int)($settings['redirect_delay_seconds'] ?? 3) ?>"
-                                   class="w-32 px-3 py-2 rounded-lg border border-[#E4E7EC] text-xs text-[#171A21] focus:ring-2 focus:ring-[#5B5BD6]">
-                            <span class="text-xs text-[#687080]">seconds before redirecting to external destination</span>
-                        </div>
+                    <div class="flex items-center justify-end gap-3 pt-3 border-t border-[#E4E7EC]">
+                        <button type="submit" class="px-5 py-2.5 rounded-lg bg-[#5B5BD6] text-white text-xs font-semibold hover:bg-[#4B4BC0] shadow-sm transition-colors">
+                            Save Changes
+                        </button>
                     </div>
                 </div>
 
-                <!-- Theme & White-Label Branding Card -->
-                <div class="bg-white border border-[#E4E7EC] rounded-xl p-5 shadow-sm space-y-4">
-                    <div class="border-b border-[#E4E7EC] pb-3">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h3 class="text-sm font-semibold text-[#171A21]">Branding & White-Labeling</h3>
-                                <p class="text-xs text-[#687080]">Transform the public quiz into a fully branded, high-converting marketing asset.</p>
-                            </div>
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#5B5BD6]/10 text-[#5B5BD6] uppercase tracking-wide">Agency Grade</span>
+                <!-- SECTION 2: Branding & White-Labeling -->
+                <div id="section-branding" class="settings-section bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-sm space-y-5 hidden">
+                    <div class="border-b border-[#E4E7EC] pb-3 flex items-center justify-between">
+                        <div>
+                            <h3 class="text-sm font-bold text-[#171A21]">Branding & White-Labeling</h3>
+                            <p class="text-xs text-[#687080]">Customize the logo, colors, and layout of the visitor experience.</p>
                         </div>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#5B5BD6]/10 text-[#5B5BD6] uppercase tracking-wide">Agency Grade</span>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -122,6 +117,7 @@
                             <p class="text-[11px] text-[#687080] mt-1">Displayed in the header, metadata and trust badges.</p>
                         </div>
 
+                        <!-- Brand Logo Picker -->
                         <div class="md:col-span-2 p-4 rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] space-y-3">
                             <div>
                                 <label class="block text-xs font-bold text-[#171A21] uppercase tracking-wide">Brand Logo <span class="text-[#687080] font-normal lowercase">(optional)</span></label>
@@ -182,7 +178,6 @@
                                     <span>Right ➡</span>
                                 </label>
                             </div>
-                            <p class="text-[11px] text-[#687080] mt-1">Position of the logo and branding inside the quiz header.</p>
                         </div>
 
                         <div>
@@ -192,6 +187,18 @@
                                        oninput="document.getElementById('logoHeightVal').textContent = this.value + 'px'"
                                        class="w-full accent-[#5B5BD6] cursor-pointer">
                                 <span id="logoHeightVal" class="text-xs font-mono font-bold text-[#171A21] w-12"><?= (int)($settings['logo_height'] ?? 36) ?>px</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-[#171A21] uppercase mb-1">Accent Brand Color</label>
+                            <div class="flex items-center gap-2">
+                                <input type="color" name="accent_color" id="accentColorPicker" value="<?= e($settings['accent_color'] ?? '#5B5BD6') ?>"
+                                       oninput="document.getElementById('accentColorHex').value = this.value"
+                                       class="h-9 w-12 rounded border border-[#E4E7EC] p-0.5 cursor-pointer bg-white">
+                                <input type="text" id="accentColorHex" value="<?= e($settings['accent_color'] ?? '#5B5BD6') ?>"
+                                       oninput="document.getElementById('accentColorPicker').value = this.value"
+                                       class="w-28 px-3 py-2 rounded-lg border border-[#E4E7EC] text-xs font-mono text-[#171A21]">
                             </div>
                         </div>
 
@@ -206,44 +213,21 @@
                                 <option value="rounded-3xl" <?= $cardRad === 'rounded-3xl' ? 'selected' : '' ?>>Pill Soft (24px)</option>
                             </select>
                         </div>
-
-                        <div>
-                            <label class="block text-xs font-semibold text-[#171A21] uppercase mb-1">Accent Brand Color</label>
-                            <div class="flex items-center gap-2">
-                                <input type="color" name="accent_color" id="accentColorPicker" value="<?= e($settings['accent_color'] ?? '#5B5BD6') ?>"
-                                       oninput="document.getElementById('accentColorHex').value = this.value"
-                                       class="h-9 w-12 rounded border border-[#E4E7EC] p-0.5 cursor-pointer bg-white">
-                                <input type="text" id="accentColorHex" value="<?= e($settings['accent_color'] ?? '#5B5BD6') ?>"
-                                       oninput="document.getElementById('accentColorPicker').value = this.value"
-                                       class="w-28 px-3 py-2 rounded-lg border border-[#E4E7EC] text-xs font-mono text-[#171A21]">
-                            </div>
-                            <p class="text-[11px] text-[#687080] mt-1">Powers buttons, active highlights, and progress bars.</p>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-semibold text-[#171A21] uppercase mb-1">Color Theme</label>
-                            <select name="theme" class="w-full px-3 py-2 rounded-lg border border-[#E4E7EC] text-xs text-[#171A21] bg-white focus:ring-2 focus:ring-[#5B5BD6]">
-                                <option value="light" <?= ($settings['theme'] ?? 'light') === 'light' ? 'selected' : '' ?>>Light Clean (High Contrast)</option>
-                                <option value="dark" <?= ($settings['theme'] ?? '') === 'dark' ? 'selected' : '' ?>>Dark Modern (Sleek Charcoal)</option>
-                            </select>
-                            <p class="text-[11px] text-[#687080] mt-1">Base page styling for your respondents.</p>
-                        </div>
                     </div>
 
-                    <div class="pt-2 border-t border-[#E4E7EC] space-y-3">
-                        <label class="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-[#E4E7EC] hover:bg-[#F7F8FA] transition-colors">
+                    <div class="pt-3 border-t border-[#E4E7EC] space-y-4">
+                        <label class="flex items-start gap-3 cursor-pointer p-3.5 rounded-xl border border-[#E4E7EC] hover:bg-[#F8FAFC] transition-colors">
                             <input type="checkbox" name="white_label" value="1" <?= !empty($settings['white_label']) ? 'checked' : '' ?> class="mt-0.5 rounded text-[#5B5BD6] focus:ring-[#5B5BD6]">
                             <div>
-                                <span class="text-xs font-semibold text-[#171A21] block">Enable Complete White-Labeling</span>
+                                <span class="text-xs font-bold text-[#171A21] block">Enable Complete White-Labeling</span>
                                 <span class="text-[11px] text-[#687080]">Removes all "Powered by QFunnel" badges and platform branding from the public quiz runner.</span>
                             </div>
                         </label>
 
                         <div>
                             <label class="block text-xs font-semibold text-[#171A21] uppercase mb-1">Custom Social Proof / Trust Badge</label>
-                            <input type="text" name="trust_badge_text" value="<?= e($settings['trust_badge_text'] ?? '🔒 256-Bit SSL Encrypted • 100% Privacy Guaranteed') ?>" placeholder="e.g. 🔒 256-Bit SSL Encrypted • 100% Privacy Guaranteed"
+                            <input type="text" name="trust_badge_text" value="<?= e($settings['trust_badge_text'] ?? '🔒 256-Bit SSL Encrypted • 100% Privacy Guaranteed') ?>"
                                    class="w-full px-3 py-2 rounded-lg border border-[#E4E7EC] text-xs text-[#171A21] focus:ring-2 focus:ring-[#5B5BD6]">
-                            <p class="text-[11px] text-[#687080] mt-1">Displayed directly under the submit buttons to maximize conversion rate.</p>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -260,45 +244,174 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="flex items-center justify-end gap-3 pt-3 border-t border-[#E4E7EC]">
+                        <button type="submit" class="px-5 py-2.5 rounded-lg bg-[#5B5BD6] text-white text-xs font-semibold hover:bg-[#4B4BC0] shadow-sm transition-colors">
+                            Save Branding Changes
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Submit Button -->
-                <div class="flex items-center justify-end gap-3 pt-2">
-                    <button type="submit" class="px-5 py-2.5 rounded-lg bg-[#171A21] text-white text-xs font-semibold hover:bg-black shadow-sm transition-colors">
-                        Save Changes
-                    </button>
+                <!-- SECTION 3: Visitor Experience & Navigation -->
+                <div id="section-navigation" class="settings-section bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-sm space-y-5 hidden">
+                    <div class="border-b border-[#E4E7EC] pb-3">
+                        <h3 class="text-sm font-bold text-[#171A21]">Visitor Experience & Navigation</h3>
+                        <p class="text-xs text-[#687080]">Control how respondents move through questions and final redirects.</p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <label class="flex items-start gap-3 cursor-pointer p-3.5 rounded-xl border border-[#E4E7EC] hover:bg-[#F8FAFC] transition-colors">
+                            <input type="checkbox" name="enable_back_button" value="1" <?= !empty($settings['enable_back_button']) ? 'checked' : '' ?> class="mt-0.5 rounded text-[#5B5BD6] focus:ring-[#5B5BD6]">
+                            <div>
+                                <span class="text-xs font-semibold text-[#171A21] block">Enable Back Navigation</span>
+                                <span class="text-[11px] text-[#687080]">Allows respondents to go back to previous steps and adjust their answers.</span>
+                            </div>
+                        </label>
+
+                        <label class="flex items-start gap-3 cursor-pointer p-3.5 rounded-xl border border-[#E4E7EC] hover:bg-[#F8FAFC] transition-colors">
+                            <input type="checkbox" name="show_progress_bar" value="1" <?= !empty($settings['show_progress_bar']) ? 'checked' : '' ?> class="mt-0.5 rounded text-[#5B5BD6] focus:ring-[#5B5BD6]">
+                            <div>
+                                <span class="text-xs font-semibold text-[#171A21] block">Show Dynamic Progress Bar</span>
+                                <span class="text-[11px] text-[#687080]">Displays completion percentage at the top of the quiz.</span>
+                            </div>
+                        </label>
+
+                        <label class="flex items-start gap-3 cursor-pointer p-3.5 rounded-xl border border-[#E4E7EC] hover:bg-[#F8FAFC] transition-colors">
+                            <input type="checkbox" name="auto_redirect" value="1" <?= !empty($settings['auto_redirect']) ? 'checked' : '' ?> class="mt-0.5 rounded text-[#5B5BD6] focus:ring-[#5B5BD6]">
+                            <div>
+                                <span class="text-xs font-semibold text-[#171A21] block">Auto-Redirect on Outcome Reached</span>
+                                <span class="text-[11px] text-[#687080]">Navigates visitor automatically to the outcome link after completion.</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="pt-2">
+                        <label class="block text-xs font-semibold text-[#171A21] uppercase mb-1">Redirect Delay (Seconds)</label>
+                        <div class="flex items-center gap-2">
+                            <input type="number" name="redirect_delay_seconds" min="0" max="15" value="<?= (int)($settings['redirect_delay_seconds'] ?? 3) ?>"
+                                   class="w-32 px-3 py-2 rounded-lg border border-[#E4E7EC] text-xs text-[#171A21] focus:ring-2 focus:ring-[#5B5BD6]">
+                            <span class="text-xs text-[#687080]">seconds before redirecting</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-3 pt-3 border-t border-[#E4E7EC]">
+                        <button type="submit" class="px-5 py-2.5 rounded-lg bg-[#5B5BD6] text-white text-xs font-semibold hover:bg-[#4B4BC0] shadow-sm transition-colors">
+                            Save Navigation Changes
+                        </button>
+                    </div>
                 </div>
+
             </form>
-        </div>
 
-        <!-- Right Column: Flow Builder Integration & Info (4 cols) -->
-        <div class="lg:col-span-4 space-y-6">
-
-            <!-- Flow Builder Form Nodes Highlight Card -->
-            <div class="bg-gradient-to-br from-[#F5F5FE] to-[#EEF0FD] border border-[#DCDDF9] rounded-xl p-5 shadow-sm space-y-3">
-                <div class="flex items-center justify-between">
-                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-[#5B5BD6]/10 text-[#5B5BD6] border border-[#5B5BD6]/20">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                        Visual Flow Builder
-                    </span>
+            <!-- SECTION 4: Embed on Website -->
+            <div id="section-embed" class="settings-section bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-sm space-y-5 hidden">
+                <div class="border-b border-[#E4E7EC] pb-3 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-bold text-[#171A21]">Embed on Any Website</h3>
+                        <p class="text-xs text-[#687080]">Seamlessly embed this interactive quiz onto WordPress, Shopify, Webflow, or custom HTML.</p>
+                    </div>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Universal Widget</span>
                 </div>
-                <h3 class="text-sm font-bold text-[#171A21]">Lead Capture via Form Nodes</h3>
-                <p class="text-xs text-[#525866] leading-relaxed">
-                    Lead capture is designed directly on the visual canvas. You can drag and position <strong>Form nodes</strong> anywhere along the user journey:
-                </p>
-                <ul class="text-xs text-[#525866] space-y-1.5 pl-3 list-disc">
-                    <li>Place at the beginning (Pre-Quiz capture)</li>
-                    <li>Place before outcomes to gated results</li>
-                    <li>Preset fields: Name, Email, Phone, Company, Consent</li>
-                    <li>Custom inputs, placeholders & required validation</li>
-                </ul>
-                <div class="pt-2">
-                    <a href="<?= url("/admin/funnels/{$funnel['id']}/builder") ?>" class="w-full inline-flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-[#5B5BD6] text-white text-xs font-semibold hover:bg-[#4B4BC0] transition-colors shadow-sm">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>
-                        Open Flow Builder
-                    </a>
+
+                <!-- Tabs: Inline, Popup, Floating Widget -->
+                <div class="space-y-4">
+                    <div class="flex items-center border-b border-[#E4E7EC] text-xs font-semibold gap-4">
+                        <button type="button" onclick="switchEmbedTab('inline')" id="tabBtnInline" class="pb-2 border-b-2 border-[#5B5BD6] text-[#5B5BD6]">Inline Embed</button>
+                        <button type="button" onclick="switchEmbedTab('popup')" id="tabBtnPopup" class="pb-2 border-b-2 border-transparent text-[#687080] hover:text-[#171A21]">Popup Lightbox</button>
+                        <button type="button" onclick="switchEmbedTab('float')" id="tabBtnFloat" class="pb-2 border-b-2 border-transparent text-[#687080] hover:text-[#171A21]">Floating Corner Button</button>
+                    </div>
+
+                    <!-- Code Snippets -->
+                    <div id="embedContentInline" class="space-y-2">
+                        <p class="text-[11px] text-[#687080]">Embeds the quiz directly inside your page body:</p>
+                        <div class="relative">
+                            <pre class="p-3.5 rounded-lg bg-slate-900 text-slate-100 text-[11px] font-mono overflow-x-auto whitespace-pre leading-relaxed">&lt;div data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="inline" data-qfunnel-height="720px"&gt;&lt;/div&gt;
+&lt;script src="<?= url('/assets/js/embed.js') ?>" async&gt;&lt;/script&gt;</pre>
+                            <button type="button" onclick="copySnippet('snippetInline', this)" id="snippetInline" data-code='<div data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="inline" data-qfunnel-height="720px"></div>&#10;<script src="<?= url('/assets/js/embed.js') ?>" async></script>' class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold border border-slate-700">Copy Code</button>
+                        </div>
+                    </div>
+
+                    <div id="embedContentPopup" class="space-y-2 hidden">
+                        <p class="text-[11px] text-[#687080]">Opens quiz in a lightbox modal when visitors click your custom button:</p>
+                        <div class="relative">
+                            <pre class="p-3.5 rounded-lg bg-slate-900 text-slate-100 text-[11px] font-mono overflow-x-auto whitespace-pre leading-relaxed">&lt;button data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="popup"&gt;
+  Take Our 60-Sec Quiz
+&lt;/button&gt;
+&lt;script src="<?= url('/assets/js/embed.js') ?>" async&gt;&lt;/script&gt;</pre>
+                            <button type="button" onclick="copySnippet('snippetPopup', this)" id="snippetPopup" data-code='<button data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="popup">&#10;  Take Our 60-Sec Quiz&#10;</button>&#10;<script src="<?= url('/assets/js/embed.js') ?>" async></script>' class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold border border-slate-700">Copy Code</button>
+                        </div>
+                    </div>
+
+                    <div id="embedContentFloat" class="space-y-2 hidden">
+                        <p class="text-[11px] text-[#687080]">Displays a floating bubble widget in the bottom corner of your website:</p>
+                        <div class="relative">
+                            <pre class="p-3.5 rounded-lg bg-slate-900 text-slate-100 text-[11px] font-mono overflow-x-auto whitespace-pre leading-relaxed">&lt;div data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="floating"&gt;&lt;/div&gt;
+&lt;script src="<?= url('/assets/js/embed.js') ?>" async&gt;&lt;/script&gt;</pre>
+                            <button type="button" onclick="copySnippet('snippetFloat', this)" id="snippetFloat" data-code='<div data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="floating"></div>&#10;<script src="<?= url('/assets/js/embed.js') ?>" async></script>' class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold border border-slate-700">Copy Code</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CMS Guides -->
+                <div class="pt-4 border-t border-[#E4E7EC] space-y-3">
+                    <h4 class="text-xs font-bold text-[#171A21] uppercase tracking-wide">Step-by-Step Platform Guides</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div class="p-3 rounded-xl bg-[#F8FAFC] border border-[#E4E7EC] space-y-1">
+                            <strong class="text-xs font-bold text-[#171A21] block">WordPress</strong>
+                            <p class="text-[11px] text-[#687080]">Add a <strong>Custom HTML block</strong> in Gutenberg or Elementor, paste the snippet, and publish.</p>
+                        </div>
+                        <div class="p-3 rounded-xl bg-[#F8FAFC] border border-[#E4E7EC] space-y-1">
+                            <strong class="text-xs font-bold text-[#171A21] block">Shopify</strong>
+                            <p class="text-[11px] text-[#687080]">Add a <strong>Custom Liquid</strong> section in the Theme Editor, paste the code, and click Save.</p>
+                        </div>
+                        <div class="p-3 rounded-xl bg-[#F8FAFC] border border-[#E4E7EC] space-y-1">
+                            <strong class="text-xs font-bold text-[#171A21] block">Webflow</strong>
+                            <p class="text-[11px] text-[#687080]">Drag an <strong>Embed (HTML)</strong> element onto the page canvas, paste snippet, and publish.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            <!-- SECTION 5: Actions & Danger Zone -->
+            <div id="section-advanced" class="settings-section bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-sm space-y-5 hidden">
+                <div class="border-b border-[#E4E7EC] pb-3">
+                    <h3 class="text-sm font-bold text-[#171A21]">Funnel Actions & Management</h3>
+                    <p class="text-xs text-[#687080]">Duplicate this entire flow or permanently remove it.</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="p-4 rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] flex items-center justify-between">
+                        <div>
+                            <strong class="text-xs font-bold text-[#171A21] block">Duplicate Funnel</strong>
+                            <p class="text-[11px] text-[#687080]">Clones all nodes, questions, branching edges, and settings into a new draft.</p>
+                        </div>
+                        <form method="POST" action="<?= url("/admin/funnels/{$funnel['id']}/duplicate") ?>">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="px-4 py-2 rounded-lg border border-[#E4E7EC] bg-white hover:bg-slate-50 text-xs font-semibold text-[#171A21] shadow-2xs">
+                                Duplicate Funnel
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="p-4 rounded-xl border border-rose-200 bg-rose-50/50 flex items-center justify-between">
+                        <div>
+                            <strong class="text-xs font-bold text-rose-700 block">Delete Funnel</strong>
+                            <p class="text-[11px] text-rose-600">Permanently deletes this funnel and all associated question nodes.</p>
+                        </div>
+                        <form method="POST" action="<?= url("/admin/funnels/{$funnel['id']}/delete") ?>" onsubmit="return confirm('Are you sure you want to delete this funnel? This action cannot be undone.');">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs">
+                                Delete Funnel
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Quick Status & Live Link (4 cols) -->
+        <div class="lg:col-span-4 space-y-6">
 
             <!-- Public Access & Live Link Card -->
             <div class="bg-white border border-[#E4E7EC] rounded-xl p-5 shadow-sm space-y-4">
@@ -342,112 +455,19 @@
                 <?php endif; ?>
             </div>
 
-            <!-- Website Embed & API Integration Card -->
-            <div class="bg-white border border-[#E4E7EC] rounded-xl p-5 shadow-sm space-y-4">
-                <div class="border-b border-[#E4E7EC] pb-3">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-sm font-semibold text-[#171A21]">Embed on Any Website</h3>
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Universal JS</span>
-                    </div>
-                    <p class="text-[11px] text-[#687080] mt-0.5">Embed this funnel seamlessly into WordPress, Shopify, Webflow, or custom HTML.</p>
-                </div>
-
-                <!-- Tabs: Inline, Popup, Floating Widget -->
-                <div class="space-y-3">
-                    <div class="flex items-center border-b border-[#E4E7EC] text-xs font-semibold gap-4">
-                        <button type="button" onclick="switchEmbedTab('inline')" id="tabBtnInline" class="pb-2 border-b-2 border-[#5B5BD6] text-[#5B5BD6]">Inline Embed</button>
-                        <button type="button" onclick="switchEmbedTab('popup')" id="tabBtnPopup" class="pb-2 border-b-2 border-transparent text-[#687080] hover:text-[#171A21]">Popup Modal</button>
-                        <button type="button" onclick="switchEmbedTab('float')" id="tabBtnFloat" class="pb-2 border-b-2 border-transparent text-[#687080] hover:text-[#171A21]">Floating Button</button>
-                    </div>
-
-                    <!-- Code Snippets -->
-                    <div id="embedContentInline" class="space-y-2">
-                        <p class="text-[11px] text-[#687080]">Embeds the quiz directly inside your page content:</p>
-                        <div class="relative">
-                            <pre class="p-3 rounded-lg bg-slate-900 text-slate-100 text-[11px] font-mono overflow-x-auto whitespace-pre leading-relaxed">&lt;div data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="inline" data-qfunnel-height="720px"&gt;&lt;/div&gt;
-&lt;script src="<?= url('/assets/js/embed.js') ?>" async&gt;&lt;/script&gt;</pre>
-                            <button type="button" onclick="copySnippet('snippetInline', this)" id="snippetInline" data-code='<div data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="inline" data-qfunnel-height="720px"></div>&#10;<script src="<?= url('/assets/js/embed.js') ?>" async></script>' class="absolute top-2 right-2 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold border border-slate-700">Copy Code</button>
-                        </div>
-                    </div>
-
-                    <div id="embedContentPopup" class="space-y-2 hidden">
-                        <p class="text-[11px] text-[#687080]">Opens quiz in a lightbox modal when visitors click your custom button:</p>
-                        <div class="relative">
-                            <pre class="p-3 rounded-lg bg-slate-900 text-slate-100 text-[11px] font-mono overflow-x-auto whitespace-pre leading-relaxed">&lt;button data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="popup"&gt;
-  Take Our 60-Sec Quiz
-&lt;/button&gt;
-&lt;script src="<?= url('/assets/js/embed.js') ?>" async&gt;&lt;/script&gt;</pre>
-                            <button type="button" onclick="copySnippet('snippetPopup', this)" id="snippetPopup" data-code='<button data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="popup">&#10;  Take Our 60-Sec Quiz&#10;</button>&#10;<script src="<?= url('/assets/js/embed.js') ?>" async></script>' class="absolute top-2 right-2 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold border border-slate-700">Copy Code</button>
-                        </div>
-                    </div>
-
-                    <div id="embedContentFloat" class="space-y-2 hidden">
-                        <p class="text-[11px] text-[#687080]">Displays a floating bubble widget in the bottom corner of your website:</p>
-                        <div class="relative">
-                            <pre class="p-3 rounded-lg bg-slate-900 text-slate-100 text-[11px] font-mono overflow-x-auto whitespace-pre leading-relaxed">&lt;div data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="floating"&gt;&lt;/div&gt;
-&lt;script src="<?= url('/assets/js/embed.js') ?>" async&gt;&lt;/script&gt;</pre>
-                            <button type="button" onclick="copySnippet('snippetFloat', this)" id="snippetFloat" data-code='<div data-qfunnel-embed="<?= e($funnel['slug']) ?>" data-qfunnel-host="<?= url('') ?>" data-qfunnel-mode="floating"></div>&#10;<script src="<?= url('/assets/js/embed.js') ?>" async></script>' class="absolute top-2 right-2 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold border border-slate-700">Copy Code</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- CMS & Platform Step-by-Step Instructions -->
-                <div class="pt-3 border-t border-[#E4E7EC] space-y-2">
-                    <button type="button" onclick="document.getElementById('cmsEmbedGuides').classList.toggle('hidden'); this.querySelector('.arrow-cms').classList.toggle('rotate-180');" class="w-full flex items-center justify-between text-left text-xs font-bold text-[#5B5BD6] hover:text-[#4B4BC0]">
-                        <span class="flex items-center gap-1.5">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            How to add this to WordPress, Shopify, or Webflow
-                        </span>
-                        <svg class="w-3.5 h-3.5 arrow-cms transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                    </button>
-
-                    <div id="cmsEmbedGuides" class="space-y-3 pt-2 text-[11px] text-[#525866] hidden">
-                        <!-- WordPress Guide -->
-                        <div class="p-2.5 rounded-lg bg-[#F8FAFC] border border-[#E4E7EC] space-y-1">
-                            <strong class="text-[#171A21] block font-bold">WordPress (Gutenberg or Elementor):</strong>
-                            <p>1. Edit any page or post.</p>
-                            <p>2. Add a <strong>Custom HTML block</strong> (or HTML widget in Elementor).</p>
-                            <p>3. Paste the code snippet above and click <strong>Update / Publish</strong>.</p>
-                        </div>
-
-                        <!-- Shopify Guide -->
-                        <div class="p-2.5 rounded-lg bg-[#F8FAFC] border border-[#E4E7EC] space-y-1">
-                            <strong class="text-[#171A21] block font-bold">Shopify Store:</strong>
-                            <p>1. Go to <strong>Online Store → Pages → Add page</strong>.</p>
-                            <p>2. Click the <strong>Show HTML (&lt;&gt;)</strong> button in the editor toolbar.</p>
-                            <p>3. Paste the snippet and save. You can also paste it inside a <em>Custom Liquid</em> section in the Theme Editor!</p>
-                        </div>
-
-                        <!-- Webflow Guide -->
-                        <div class="p-2.5 rounded-lg bg-[#F8FAFC] border border-[#E4E7EC] space-y-1">
-                            <strong class="text-[#171A21] block font-bold">Webflow / Squarespace:</strong>
-                            <p>1. Drag an <strong>Embed component (Custom Code)</strong> onto your page canvas.</p>
-                            <p>2. Paste the snippet inside the code modal and save.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Danger Zone / Quick Actions Card -->
-            <div class="bg-white border border-[#E4E7EC] rounded-xl p-5 shadow-sm space-y-3">
-                <h3 class="text-xs font-semibold text-[#687080] uppercase tracking-wider">Quick Actions</h3>
-                
-                <div class="space-y-2 pt-1">
-                    <form method="POST" action="<?= url("/admin/funnels/{$funnel['id']}/duplicate") ?>">
-                        <?= csrf_field() ?>
-                        <button type="submit" class="w-full py-2 px-3 rounded-lg border border-[#E4E7EC] hover:bg-[#F7F8FA] text-xs font-semibold text-[#171A21] flex items-center justify-center gap-1.5 transition-colors">
-                            <svg class="w-3.5 h-3.5 text-[#687080]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/></svg>
-                            Duplicate Funnel
-                        </button>
-                    </form>
-
-                    <form method="POST" action="<?= url("/admin/funnels/{$funnel['id']}/delete") ?>" onsubmit="return confirm('Are you sure you want to delete this funnel? This action cannot be undone.');">
-                        <?= csrf_field() ?>
-                        <button type="submit" class="w-full py-2 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-xs font-semibold text-rose-700 flex items-center justify-center gap-1.5 transition-colors">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                            Delete Funnel
-                        </button>
-                    </form>
+            <!-- Quick Jump Help Box -->
+            <div class="bg-gradient-to-br from-[#F5F5FE] to-[#EEF0FD] border border-[#DCDDF9] rounded-xl p-5 shadow-sm space-y-3">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-[#5B5BD6]/10 text-[#5B5BD6] border border-[#5B5BD6]/20">
+                    💡 Quick Tip
+                </span>
+                <h4 class="text-xs font-bold text-[#171A21]">Looking for Flow Questions?</h4>
+                <p class="text-xs text-[#525866] leading-relaxed">
+                    Questions, options, scores, and branching logic are configured visually in the <strong>Flow Builder</strong> canvas.
+                </p>
+                <div class="pt-1">
+                    <a href="<?= url("/admin/funnels/{$funnel['id']}/builder") ?>" class="w-full inline-flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-[#5B5BD6] text-white text-xs font-semibold hover:bg-[#4B4BC0] transition-colors shadow-sm">
+                        Open Flow Builder →
+                    </a>
                 </div>
             </div>
 
@@ -465,6 +485,29 @@
             toast.classList.remove('hidden');
             setTimeout(() => toast.classList.add('hidden'), 2500);
         });
+    }
+
+    function switchSettingsSection(sectionId) {
+        // Hide all sections
+        document.querySelectorAll('.settings-section').forEach(sec => sec.classList.add('hidden'));
+
+        // Reset all tabs styling
+        document.querySelectorAll('.settings-tab-btn').forEach(btn => {
+            btn.className = 'settings-tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-[#687080] hover:text-[#171A21] hover:bg-slate-50 transition-all';
+        });
+
+        // Show target section
+        const targetSec = document.getElementById('section-' + sectionId);
+        if (targetSec) targetSec.classList.remove('hidden');
+
+        // Activate button
+        const activeBtn = document.getElementById('secTab-' + sectionId);
+        if (activeBtn) {
+            activeBtn.className = 'settings-tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg bg-[#5B5BD6] text-white transition-all shadow-xs';
+        }
+
+        // Store active section in URL hash for back/refresh persistence
+        history.replaceState(null, null, '#' + sectionId);
     }
 
     function switchEmbedTab(tab) {
@@ -500,4 +543,12 @@
             }, 2000);
         });
     }
+
+    // Auto-restore section tab from URL hash on page load
+    window.addEventListener('DOMContentLoaded', () => {
+        const hash = window.location.hash.replace('#', '');
+        if (hash && ['general', 'branding', 'navigation', 'embed', 'advanced'].includes(hash)) {
+            switchSettingsSection(hash);
+        }
+    });
 </script>
