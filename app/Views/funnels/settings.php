@@ -122,23 +122,42 @@
                             <p class="text-[11px] text-[#687080] mt-1">Displayed in the header, metadata and trust badges.</p>
                         </div>
 
-                        <div>
-                            <label class="block text-xs font-semibold text-[#171A21] uppercase mb-1">Upload Brand Logo</label>
-                            <div class="space-y-2">
-                                <input type="file" name="logo_file" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif"
-                                       class="w-full px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] text-xs text-[#171A21] bg-white file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[#5B5BD6]/10 file:text-[#5B5BD6] hover:file:bg-[#5B5BD6]/20">
-                                <p class="text-[11px] text-[#687080]">Upload file (PNG, SVG, JPG, WebP - Max 3MB) or use URL below.</p>
+                        <div class="md:col-span-2 p-4 rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] space-y-3">
+                            <div>
+                                <label class="block text-xs font-bold text-[#171A21] uppercase tracking-wide">Brand Logo <span class="text-[#687080] font-normal lowercase">(optional)</span></label>
+                                <p class="text-[11px] text-[#687080]">Choose one of two ways to set your logo: upload a file OR paste an existing image link.</p>
                             </div>
-                        </div>
 
-                        <div>
-                            <label class="block text-xs font-semibold text-[#171A21] uppercase mb-1">Logo Direct Image URL</label>
-                            <input type="url" name="logo_url" id="logoUrlInput" value="<?= e($settings['logo_url'] ?? '') ?>" placeholder="https://example.com/logo.png"
-                                   class="w-full px-3 py-2 rounded-lg border border-[#E4E7EC] text-xs text-[#171A21] focus:ring-2 focus:ring-[#5B5BD6]">
+                            <div class="grid grid-cols-1 md:grid-cols-11 gap-3 items-center">
+                                <!-- Option A: Upload -->
+                                <div class="md:col-span-5 bg-white p-3 rounded-lg border border-[#E4E7EC]">
+                                    <label class="block text-[11px] font-semibold text-[#171A21] mb-1.5">Method 1: Upload from Device</label>
+                                    <input type="file" name="logo_file" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif"
+                                           class="w-full text-xs text-[#171A21] file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[#5B5BD6]/10 file:text-[#5B5BD6] hover:file:bg-[#5B5BD6]/20 cursor-pointer">
+                                    <span class="text-[10px] text-[#687080] block mt-1">PNG, JPG, SVG, WebP (Max 3MB)</span>
+                                </div>
+
+                                <!-- OR Divider -->
+                                <div class="md:col-span-1 text-center font-bold text-xs text-[#687080] uppercase">
+                                    — OR —
+                                </div>
+
+                                <!-- Option B: URL -->
+                                <div class="md:col-span-5 bg-white p-3 rounded-lg border border-[#E4E7EC]">
+                                    <label class="block text-[11px] font-semibold text-[#171A21] mb-1.5">Method 2: Paste Hosted Image URL</label>
+                                    <input type="url" name="logo_url" id="logoUrlInput" value="<?= e($settings['logo_url'] ?? '') ?>" placeholder="https://yourwebsite.com/logo.png"
+                                           class="w-full px-3 py-1.5 rounded-lg border border-[#E4E7EC] text-xs text-[#171A21] focus:ring-2 focus:ring-[#5B5BD6]">
+                                    <span class="text-[10px] text-[#687080] block mt-1">Direct link to an image on your website or CDN</span>
+                                </div>
+                            </div>
+
                             <?php if (!empty($settings['logo_url'])): ?>
-                                <div class="mt-2 flex items-center gap-3 p-2 rounded-lg bg-[#F7F8FA] border border-[#E4E7EC]">
-                                    <img src="<?= e($settings['logo_url']) ?>" alt="Current Logo" class="h-7 max-w-[120px] object-contain">
-                                    <label class="flex items-center gap-1.5 text-xs text-rose-600 font-medium cursor-pointer ml-auto">
+                                <div class="flex items-center justify-between p-2.5 rounded-lg bg-white border border-[#E4E7EC]">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-[11px] font-semibold text-[#687080]">Current Active Logo:</span>
+                                        <img src="<?= e($settings['logo_url']) ?>" alt="Current Logo" class="h-7 max-w-[140px] object-contain">
+                                    </div>
+                                    <label class="flex items-center gap-1.5 text-xs text-rose-600 font-semibold cursor-pointer">
                                         <input type="checkbox" name="remove_logo" value="1" class="rounded text-rose-600">
                                         Remove Logo
                                     </label>
