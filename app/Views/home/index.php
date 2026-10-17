@@ -72,7 +72,7 @@
         }
 
         .ambient-card {
-            background: rgba(16, 22, 35, 0.7);
+            background: rgba(16, 22, 35, 0.75);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -85,12 +85,6 @@
             transform: translateY(-4px);
             border-color: rgba(99, 102, 241, 0.4);
             box-shadow: 0 20px 40px -15px rgba(99, 102, 241, 0.25);
-        }
-
-        .ambient-card-light {
-            background: #FFFFFF;
-            border: 1px solid #E2E8F0;
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
         }
 
         .brand-gradient-text {
@@ -108,22 +102,43 @@
             box-shadow: 0 12px 28px -6px rgba(99, 102, 241, 0.7);
         }
 
-        .shimmer-badge {
-            background: linear-gradient(90deg, rgba(99, 102, 241, 0.1) 0%, rgba(99, 102, 241, 0.3) 50%, rgba(99, 102, 241, 0.1) 100%);
-            background-size: 200% 100%;
-            animation: shimmer 3s infinite linear;
-        }
-
-        @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
-        }
-
         /* Glass pill border */
         .glass-pill {
             background: rgba(255, 255, 255, 0.04);
             backdrop-filter: blur(8px);
             border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Visual Canvas Showcase Styles */
+        .canvas-grid {
+            background-color: #080B11;
+            background-image: 
+                radial-gradient(rgba(255, 255, 255, 0.08) 1.2px, transparent 1.2px),
+                linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 24px 24px, 120px 120px, 120px 120px;
+        }
+
+        @keyframes cableFlow {
+            from { stroke-dashoffset: 40; }
+            to { stroke-dashoffset: 0; }
+        }
+
+        .cable-flow {
+            stroke-dasharray: 6 6;
+            animation: cableFlow 1.6s linear infinite;
+        }
+
+        .builder-node {
+            transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.15s ease;
+        }
+        .builder-node:hover {
+            box-shadow: 0 10px 30px -5px rgba(99, 102, 241, 0.3);
+        }
+        .builder-node.active-step {
+            border-color: #6366F1 !important;
+            box-shadow: 0 0 30px 2px rgba(99, 102, 241, 0.45) !important;
+            transform: scale(1.02);
         }
 
         /* Custom scrollbar */
@@ -153,8 +168,8 @@
                 v2.4 Release
             </span>
             <span class="text-slate-200">Universal Embeds for WordPress & Shopify + Auto-Retrying Webhooks & REST API!</span>
-            <a href="#embed-showcase" class="inline-flex items-center gap-1 text-brand-400 hover:text-brand-300 font-bold ml-1 transition-colors">
-                <span>See Embed Modes</span>
+            <a href="#builder-showcase" class="inline-flex items-center gap-1 text-brand-400 hover:text-brand-300 font-bold ml-1 transition-colors">
+                <span>Explore Visual Canvas</span>
                 <span class="text-sm">→</span>
             </a>
         </div>
@@ -185,6 +200,10 @@
             <!-- Navigation Links -->
             <nav class="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-300">
                 <a href="#how-it-works" class="hover:text-white transition-colors">How It Works</a>
+                <a href="#builder-showcase" class="hover:text-brand-300 text-brand-400 transition-colors flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-brand-400 animate-pulse"></span>
+                    <span>Visual Canvas</span>
+                </a>
                 <a href="#features" class="hover:text-white transition-colors">Features</a>
                 <a href="#embed-showcase" class="hover:text-white transition-colors">Universal Embeds</a>
                 <a href="#comparison" class="hover:text-white transition-colors">Why Quiz?</a>
@@ -260,9 +279,9 @@
                             <span id="heroCtaText">Build Your First Funnel Free</span>
                             <span class="group-hover:translate-x-1 transition-transform">→</span>
                         </a>
-                        <a href="<?= url('/embed-demo.html') ?>" class="px-7 py-4 rounded-xl glass-pill hover:bg-white/[0.08] text-white border border-white/[0.15] text-sm font-bold transition-all flex items-center gap-2 group">
-                            <span class="text-brand-400">⚡</span>
-                            <span>Test Live Embed Demo</span>
+                        <a href="#builder-showcase" class="px-7 py-4 rounded-xl glass-pill hover:bg-white/[0.08] text-white border border-white/[0.15] text-sm font-bold transition-all flex items-center gap-2 group">
+                            <span class="text-brand-400">✨</span>
+                            <span>Watch Live Visual Builder</span>
                         </a>
                     </div>
 
@@ -501,63 +520,339 @@
 
             </div>
 
-            <!-- Visual Graph Pipeline Banner -->
-            <div class="ambient-card rounded-3xl border border-white/[0.1] p-6 sm:p-8 space-y-6">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
-                    <div class="flex items-center gap-3">
-                        <span class="w-3 h-3 rounded-full bg-brand-500 animate-pulse"></span>
-                        <h4 class="text-xs font-bold text-white uppercase tracking-wider font-mono">
-                            Live Execution Architecture • End-to-End Pipeline
-                        </h4>
-                    </div>
-                    <span class="text-xs font-bold text-emerald-400 font-mono bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                        Zero Data Loss Guarantee
-                    </span>
+        </div>
+    </section>
+
+    <!-- ================= MOVING VISUAL BUILDER SHOWCASE (LIVE PRODUCT FEATURE) ================= -->
+    <section id="builder-showcase" class="py-20 lg:py-28 bg-dark-900 border-b border-white/[0.08] relative overflow-hidden">
+        
+        <!-- Ambient Glowing Background Lights -->
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[450px] bg-brand-600/10 blur-[140px] rounded-full pointer-events-none"></div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            
+            <!-- Section Header -->
+            <div class="text-center max-w-3xl mx-auto mb-12 space-y-3">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-500/15 text-brand-300 border border-brand-500/30 text-xs font-bold font-mono uppercase tracking-wide">
+                    <span class="w-2 h-2 rounded-full bg-brand-400 animate-ping"></span>
+                    <span>Live Moving Canvas Engine</span>
                 </div>
-
-                <!-- Pipeline Grid -->
-                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 text-center">
-                    <div class="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] space-y-1">
-                        <span class="text-[10px] font-bold text-brand-400 font-mono block">STAGE 1</span>
-                        <h5 class="text-xs font-bold text-white">Pre-Quiz Form</h5>
-                        <p class="text-[11px] text-slate-400">Captures verified Name, Email & Phone upfront</p>
-                    </div>
-
-                    <div class="p-4 rounded-2xl bg-brand-500/10 border border-brand-500/20 space-y-1">
-                        <span class="text-[10px] font-bold text-brand-300 font-mono block">STAGE 2</span>
-                        <h5 class="text-xs font-bold text-white">Branching Logic</h5>
-                        <p class="text-[11px] text-slate-400">Dynamic score calculation & custom paths</p>
-                    </div>
-
-                    <div class="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] space-y-1">
-                        <span class="text-[10px] font-bold text-purple-400 font-mono block">STAGE 3</span>
-                        <h5 class="text-xs font-bold text-white">Tailored Recommendation</h5>
-                        <p class="text-[11px] text-slate-400">Personalized outcome & targeted CTA link</p>
-                    </div>
-
-                    <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 space-y-1">
-                        <span class="text-[10px] font-bold text-emerald-400 font-mono block">STAGE 4</span>
-                        <h5 class="text-xs font-bold text-white">Instant Webhook Sync</h5>
-                        <p class="text-[11px] text-slate-400">Dispatches payload to Sheets, CRM & Zapier</p>
-                    </div>
-                </div>
-
-                <div class="flex flex-wrap items-center justify-between text-xs text-slate-400 pt-2 border-t border-white/[0.06]">
-                    <span class="flex items-center gap-2">
-                        🔒 HMAC-SHA256 Payload Signatures • Atomic Backtracking Engine
-                    </span>
-                    <a href="<?= url('/register') ?>" class="text-brand-400 hover:text-brand-300 font-bold flex items-center gap-1">
-                        <span>Start building free</span>
-                        <span>→</span>
-                    </a>
-                </div>
+                <h2 class="text-3xl sm:text-5xl font-black text-white tracking-tight font-display">
+                    Visual branching builder. Moving in real time.
+                </h2>
+                <p class="text-base text-slate-400">
+                    Experience our dynamic graph architecture in action. Watch simulated leads flow through decision branches, or grab and drag any node yourself!
+                </p>
             </div>
 
+            <!-- Canvas Window Container -->
+            <div class="rounded-3xl border border-white/[0.12] ambient-card overflow-hidden shadow-2xl">
+                
+                <!-- Mac-Style Window Top Bar -->
+                <div class="bg-dark-950/90 border-b border-white/[0.08] px-5 py-3.5 flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block"></span>
+                            <span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
+                            <span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
+                        </div>
+                        <div class="flex items-center gap-2 pl-3 border-l border-white/[0.1] text-xs font-mono">
+                            <span class="font-bold text-white">Visual Graph Builder</span>
+                            <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">Auto-Router Active</span>
+                        </div>
+                    </div>
+
+                    <!-- Builder Action Controls -->
+                    <div class="flex items-center gap-2.5 text-xs">
+                        <div class="hidden sm:flex items-center gap-1.5 glass-pill px-3 py-1 rounded-lg text-slate-300 font-mono text-[11px]">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span>6 Nodes Synced</span>
+                        </div>
+                        <button type="button" onclick="toggleTourMode()" id="btnTourToggle" class="px-3.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white font-bold transition-all flex items-center gap-1.5 shadow-sm">
+                            <span id="tourIcon">⏸</span>
+                            <span id="tourLabel">Pause Tour</span>
+                        </button>
+                        <button type="button" onclick="resetCanvasLayout()" class="px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-slate-300 font-bold transition-all">
+                            Reset View ↺
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Canvas Body with Dot Grid & Virtual Cursor -->
+                <div id="showcaseCanvasContainer" class="relative canvas-grid w-full h-[540px] overflow-x-auto overflow-y-hidden select-none">
+                    
+                    <div id="innerCanvasWorld" class="relative w-[1300px] h-[540px]">
+                        
+                        <!-- Virtual Animated User Cursor -->
+                        <div id="virtualCursor" class="absolute z-30 pointer-events-none transition-all duration-700 ease-out flex items-center gap-2" style="top: 220px; left: 160px;">
+                            <svg class="w-5 h-5 text-brand-400 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M4 2l16 12-7 1.5 4 8-3 1.5-4-8-4 5z"/>
+                            </svg>
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-brand-500 text-white shadow-xl whitespace-nowrap font-mono flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-ping"></span>
+                                Alex (Automating Graph...)
+                            </span>
+                        </div>
+
+                        <!-- SVG Cables Surface -->
+                        <svg id="canvasSvgSurface" class="absolute inset-0 w-full h-full pointer-events-none z-10">
+                            <defs>
+                                <linearGradient id="cableGradPrimary" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#6366F1"/>
+                                    <stop offset="100%" stop-color="#818CF8"/>
+                                </linearGradient>
+                                <linearGradient id="cableGradSuccess" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#6366F1"/>
+                                    <stop offset="100%" stop-color="#10B981"/>
+                                </linearGradient>
+                                <linearGradient id="cableGradPurple" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#6366F1"/>
+                                    <stop offset="100%" stop-color="#C084FC"/>
+                                </linearGradient>
+                                <filter id="glowFilter">
+                                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                                    <feMerge>
+                                        <feMergeNode in="coloredBlur"/>
+                                        <feMergeNode in="SourceGraphic"/>
+                                    </feMerge>
+                                </filter>
+                            </defs>
+
+                            <!-- Base background wires -->
+                            <path id="wireBase1" d="" fill="none" stroke="#23304A" stroke-width="2.5" stroke-linecap="round"/>
+                            <path id="wireBase2" d="" fill="none" stroke="#23304A" stroke-width="2.5" stroke-linecap="round"/>
+                            <path id="wireBase3A" d="" fill="none" stroke="#23304A" stroke-width="2.5" stroke-linecap="round"/>
+                            <path id="wireBase3B" d="" fill="none" stroke="#23304A" stroke-width="2.5" stroke-linecap="round"/>
+                            <path id="wireBase4" d="" fill="none" stroke="#23304A" stroke-width="2.5" stroke-linecap="round"/>
+                            <path id="wireBase5" d="" fill="none" stroke="#23304A" stroke-width="2.5" stroke-linecap="round"/>
+
+                            <!-- Glowing Animated Flow Cables -->
+                            <path id="wireFlow1" d="" fill="none" stroke="url(#cableGradPrimary)" stroke-width="2.5" stroke-linecap="round" class="cable-flow"/>
+                            <path id="wireFlow2" d="" fill="none" stroke="url(#cableGradPrimary)" stroke-width="2.5" stroke-linecap="round" class="cable-flow"/>
+                            <path id="wireFlow3A" d="" fill="none" stroke="url(#cableGradSuccess)" stroke-width="2.5" stroke-linecap="round" class="cable-flow"/>
+                            <path id="wireFlow3B" d="" fill="none" stroke="url(#cableGradPurple)" stroke-width="2.5" stroke-linecap="round" class="cable-flow"/>
+                            <path id="wireFlow4" d="" fill="none" stroke="url(#cableGradSuccess)" stroke-width="2.5" stroke-linecap="round" class="cable-flow"/>
+                            <path id="wireFlow5" d="" fill="none" stroke="url(#cableGradPurple)" stroke-width="2.5" stroke-linecap="round" class="cable-flow"/>
+
+                            <!-- Traveling energy packets along the wires -->
+                            <circle r="4" fill="#818CF8" filter="url(#glowFilter)">
+                                <animateMotion id="motionPacket1" dur="2.4s" repeatCount="indefinite" path=""/>
+                            </circle>
+                            <circle r="4" fill="#34D399" filter="url(#glowFilter)">
+                                <animateMotion id="motionPacket2" dur="2.8s" repeatCount="indefinite" path=""/>
+                            </circle>
+                            <circle r="4" fill="#C084FC" filter="url(#glowFilter)">
+                                <animateMotion id="motionPacket3" dur="3.2s" repeatCount="indefinite" path=""/>
+                            </circle>
+                        </svg>
+
+                        <!-- Nodes Layer (z-20) -->
+                        <div id="canvasNodesLayer" class="absolute inset-0 z-20">
+                            
+                            <!-- NODE 1: Start Trigger -->
+                            <div id="node1" class="builder-node active-step absolute w-60 rounded-2xl bg-dark-900/95 border border-white/[0.12] p-4 shadow-xl hover:border-brand-500 cursor-move" style="top: 190px; left: 40px;" onmousedown="startNodeDrag(event, 'node1')">
+                                <div class="flex items-center justify-between border-b border-white/[0.08] pb-2.5 mb-2.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center text-xs">🌐</span>
+                                        <span class="text-xs font-bold text-white">Start Trigger</span>
+                                    </div>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-white/[0.06] text-slate-400 font-mono">Input</span>
+                                </div>
+                                <div class="space-y-1 text-xs">
+                                    <div class="font-semibold text-slate-200">Universal Embed Hook</div>
+                                    <p class="text-[11px] text-slate-400">WordPress, Shopify & Webflow traffic</p>
+                                </div>
+                                <!-- Output port circle -->
+                                <div class="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-brand-500 border-2 border-dark-950 flex items-center justify-center">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                                </div>
+                            </div>
+
+                            <!-- NODE 2: Question 1 -->
+                            <div id="node2" class="builder-node absolute w-64 rounded-2xl bg-dark-900/95 border border-white/[0.12] p-4 shadow-xl hover:border-brand-500 cursor-move" style="top: 130px; left: 320px;" onmousedown="startNodeDrag(event, 'node2')">
+                                <!-- Input port -->
+                                <div class="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-slate-700 border-2 border-dark-950"></div>
+                                <div class="flex items-center justify-between border-b border-white/[0.08] pb-2.5 mb-2.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs">❓</span>
+                                        <span class="text-xs font-bold text-white">Branching Question</span>
+                                    </div>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-300 font-mono">Q1</span>
+                                </div>
+                                <div class="space-y-2 text-xs">
+                                    <div class="font-semibold text-slate-200 leading-snug">What is your primary growth bottleneck?</div>
+                                    <div class="space-y-1 text-[11px]">
+                                        <div class="p-1.5 rounded bg-white/[0.04] text-slate-300 flex justify-between">
+                                            <span>A) Low website traffic</span>
+                                            <span class="text-slate-500 font-mono">+10 pts</span>
+                                        </div>
+                                        <div id="node2OptionB" class="p-1.5 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30 flex justify-between font-semibold transition-all">
+                                            <span>B) Unqualified leads</span>
+                                            <span class="text-brand-400 font-mono">+35 pts</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Output port -->
+                                <div class="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-brand-500 border-2 border-dark-950 flex items-center justify-center">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                                </div>
+                            </div>
+
+                            <!-- NODE 3: Conditional Branch Evaluation -->
+                            <div id="node3" class="builder-node absolute w-64 rounded-2xl bg-dark-900/95 border border-white/[0.12] p-4 shadow-xl hover:border-brand-500 cursor-move" style="top: 150px; left: 620px;" onmousedown="startNodeDrag(event, 'node3')">
+                                <!-- Input port -->
+                                <div class="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-slate-700 border-2 border-dark-950"></div>
+                                <div class="flex items-center justify-between border-b border-white/[0.08] pb-2.5 mb-2.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs">🔀</span>
+                                        <span class="text-xs font-bold text-white">Dynamic Logic Split</span>
+                                    </div>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-brand-500 text-white font-mono">Branch</span>
+                                </div>
+                                <div class="space-y-2 text-xs">
+                                    <div id="branchRowA" class="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 flex items-center justify-between transition-all">
+                                        <span class="font-bold">Score ≥ 35 (VIP Priority)</span>
+                                        <span class="text-[10px] font-mono">Route A ➔</span>
+                                    </div>
+                                    <div id="branchRowB" class="p-2 rounded-lg bg-white/[0.03] text-slate-400 flex items-center justify-between transition-all">
+                                        <span>Score &lt; 35 (Nurture)</span>
+                                        <span class="text-[10px] font-mono">Route B ➔</span>
+                                    </div>
+                                </div>
+                                <!-- Output port A (top right) -->
+                                <div class="absolute -right-2 top-1/3 -translate-y-1/2 w-4 h-4 rounded-full bg-emerald-500 border-2 border-dark-950 flex items-center justify-center">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                                </div>
+                                <!-- Output port B (bottom right) -->
+                                <div class="absolute -right-2 top-2/3 -translate-y-1/2 w-4 h-4 rounded-full bg-purple-500 border-2 border-dark-950 flex items-center justify-center">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                                </div>
+                            </div>
+
+                            <!-- NODE 4: Form Capture (Route A) -->
+                            <div id="node4" class="builder-node absolute w-60 rounded-2xl bg-dark-900/95 border border-white/[0.12] p-4 shadow-xl hover:border-brand-500 cursor-move" style="top: 50px; left: 920px;" onmousedown="startNodeDrag(event, 'node4')">
+                                <!-- Input port -->
+                                <div class="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-slate-700 border-2 border-dark-950"></div>
+                                <div class="flex items-center justify-between border-b border-white/[0.08] pb-2 mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs">📝</span>
+                                        <span class="text-xs font-bold text-white">VIP Lead Intake</span>
+                                    </div>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 font-mono">Form</span>
+                                </div>
+                                <div class="space-y-1 text-[11px] text-slate-300">
+                                    <div>• Verified Work Email</div>
+                                    <div>• Direct Phone / WhatsApp</div>
+                                    <div>• Budget Range Selector</div>
+                                </div>
+                                <!-- Output port -->
+                                <div class="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-brand-500 border-2 border-dark-950 flex items-center justify-center">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                                </div>
+                            </div>
+
+                            <!-- NODE 5: Outcome Nurture (Route B) -->
+                            <div id="node5" class="builder-node absolute w-60 rounded-2xl bg-dark-900/95 border border-white/[0.12] p-4 shadow-xl hover:border-brand-500 cursor-move" style="top: 320px; left: 920px;" onmousedown="startNodeDrag(event, 'node5')">
+                                <!-- Input port -->
+                                <div class="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-slate-700 border-2 border-dark-950"></div>
+                                <div class="flex items-center justify-between border-b border-white/[0.08] pb-2 mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs">🎯</span>
+                                        <span class="text-xs font-bold text-white">Self-Serve Nurture</span>
+                                    </div>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400 font-mono">Outcome</span>
+                                </div>
+                                <div class="space-y-1 text-[11px] text-slate-300">
+                                    <div>• Personalized Audit Report</div>
+                                    <div>• Free Video Guide Link</div>
+                                    <div>• Recommended Starter Plan</div>
+                                </div>
+                                <!-- Output port -->
+                                <div class="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-brand-500 border-2 border-dark-950 flex items-center justify-center">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                                </div>
+                            </div>
+
+                            <!-- NODE 6: Real-Time Webhook & Google Sheets -->
+                            <div id="node6" class="builder-node absolute w-64 rounded-2xl bg-dark-900/95 border border-emerald-500/40 p-4 shadow-xl hover:border-emerald-400 cursor-move" style="top: 175px; left: 1200px;" onmousedown="startNodeDrag(event, 'node6')">
+                                <!-- Input ports -->
+                                <div class="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-slate-700 border-2 border-dark-950"></div>
+                                <div class="flex items-center justify-between border-b border-white/[0.08] pb-2 mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs">⚡</span>
+                                        <span class="text-xs font-bold text-white">Automated Webhooks</span>
+                                    </div>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 font-mono" id="node6StatusPill">200 OK</span>
+                                </div>
+                                <div class="space-y-1 text-xs">
+                                    <div class="font-semibold text-slate-200">Google Sheets & CRM Sync</div>
+                                    <p class="text-[11px] text-emerald-400 font-mono">HMAC-SHA256 • 28ms Latency</p>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Canvas Right Drawer Inspector (Live Node Properties) -->
+                    <div id="builderInspectorDrawer" class="absolute top-4 right-4 z-30 w-72 bg-dark-950/95 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-4 shadow-2xl space-y-3 hidden sm:block">
+                        <div class="flex items-center justify-between border-b border-white/[0.08] pb-2">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">Step Inspector</span>
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        </div>
+                        <div class="space-y-2 text-xs">
+                            <div>
+                                <span class="text-slate-500 text-[10px] uppercase font-mono block">Node Type</span>
+                                <strong class="text-white text-xs" id="inspectorNodeTitle">Branching Logic Split</strong>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 text-[10px] uppercase font-mono block">Condition Trigger</span>
+                                <span class="font-mono text-brand-300 text-[11px]" id="inspectorCondition">if (score >= 35) ➔ VIP Route</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 text-[10px] uppercase font-mono block">Automation Target</span>
+                                <span class="font-mono text-emerald-400 text-[11px]">Google Sheets + HubSpot CRM</span>
+                            </div>
+                        </div>
+                        <div class="pt-2 border-t border-white/[0.08] flex items-center justify-between text-[11px]">
+                            <span class="text-slate-400">Graph Sync:</span>
+                            <span class="text-emerald-400 font-bold">Auto-Saved ✓</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Canvas Bottom Execution Stream Bar -->
+                <div class="bg-dark-950 border-t border-white/[0.08] px-5 py-3 flex flex-wrap items-center justify-between gap-4 text-xs font-mono">
+                    <div class="flex items-center gap-3">
+                        <span class="flex h-2 w-2 relative">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <span class="text-slate-400">Live Execution Event:</span>
+                        <span id="canvasEventTicker" class="text-slate-200 font-semibold">[15:37:12] Visitor #1289 evaluated ➔ Selected Option B (+35 pts) ➔ Routed to VIP Funnel ➔ Webhook 200 OK (28ms)</span>
+                    </div>
+
+                    <div class="flex items-center gap-4 text-slate-400 text-[11px]">
+                        <span>Graph Latency: <strong class="text-emerald-400">28ms</strong></span>
+                        <span>Delivery Rate: <strong class="text-white">100%</strong></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Bottom CTA Link -->
+            <div class="mt-8 text-center">
+                <a href="<?= url('/register') ?>" class="inline-flex items-center gap-2 text-sm font-bold text-brand-400 hover:text-brand-300 transition-colors">
+                    <span>Try the full drag-and-drop visual builder with your free account</span>
+                    <span>→</span>
+                </a>
+            </div>
         </div>
     </section>
 
     <!-- ================= 3-IN-1 EMBED SHOWCASE SECTION ================= -->
-    <section id="embed-showcase" class="py-20 lg:py-28 bg-dark-900 border-b border-white/[0.08] relative">
+    <section id="embed-showcase" class="py-20 lg:py-28 bg-dark-950 border-b border-white/[0.08] relative">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             
             <!-- Section Header -->
@@ -659,7 +954,7 @@
     </section>
 
     <!-- ================= FEATURES GRID SECTION ================= -->
-    <section id="features" class="py-20 lg:py-28 bg-dark-950 border-b border-white/[0.08]">
+    <section id="features" class="py-20 lg:py-28 bg-dark-900 border-b border-white/[0.08]">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             
             <!-- Section Header -->
@@ -797,7 +1092,7 @@
     </section>
 
     <!-- ================= COMPARISON SECTION (TRADITIONAL FORMS VS QFUNNEL) ================= -->
-    <section id="comparison" class="py-20 lg:py-28 bg-dark-900 border-b border-white/[0.08]">
+    <section id="comparison" class="py-20 lg:py-28 bg-dark-950 border-b border-white/[0.08]">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             
             <div class="text-center max-w-3xl mx-auto mb-16 space-y-3">
@@ -886,7 +1181,7 @@
     </section>
 
     <!-- ================= PRICING SECTION ================= -->
-    <section id="pricing" class="py-20 lg:py-28 bg-dark-950 border-b border-white/[0.08] relative">
+    <section id="pricing" class="py-20 lg:py-28 bg-dark-900 border-b border-white/[0.08] relative">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             
             <!-- Section Header -->
@@ -1135,7 +1430,7 @@
     </section>
 
     <!-- ================= FAQ SECTION (ACCORDION) ================= -->
-    <section id="faq" class="py-20 lg:py-28 bg-dark-900 border-b border-white/[0.08]">
+    <section id="faq" class="py-20 lg:py-28 bg-dark-950 border-b border-white/[0.08]">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             
             <!-- Section Header -->
@@ -1235,7 +1530,7 @@
     </section>
 
     <!-- ================= PRE-FOOTER CTA SECTION ================= -->
-    <section class="py-24 bg-dark-950 text-center border-b border-white/[0.08] relative overflow-hidden">
+    <section class="py-24 bg-dark-900 text-center border-b border-white/[0.08] relative overflow-hidden">
         <div class="absolute inset-0 bg-gradient-to-b from-brand-950/30 to-dark-950 pointer-events-none"></div>
         <div class="max-w-3xl mx-auto px-4 sm:px-6 relative z-10 space-y-4">
             <span class="px-3 py-1 rounded-full bg-brand-500/20 text-brand-300 text-xs font-bold font-mono border border-brand-500/30">
@@ -1292,7 +1587,7 @@
                 <div class="space-y-2.5">
                     <h5 class="text-xs font-bold text-white uppercase tracking-wider mb-3 font-mono">PRODUCT</h5>
                     <div><a href="#how-it-works" class="hover:text-white transition-colors">How It Works</a></div>
-                    <div><a href="#features" class="hover:text-white transition-colors">Visual Canvas Builder</a></div>
+                    <div><a href="#builder-showcase" class="hover:text-white transition-colors">Visual Canvas Builder</a></div>
                     <div><a href="#embed-showcase" class="hover:text-white transition-colors">Universal Embeds (3-in-1)</a></div>
                     <div><a href="<?= url('/embed-demo.html') ?>" class="hover:text-white transition-colors">Live Interactive Demo</a></div>
                     <div><a href="#pricing" class="hover:text-white transition-colors">Pricing & Plans</a></div>
@@ -1360,7 +1655,7 @@
         </div>
     </footer>
 
-    <!-- ================= JAVASCRIPT INTERACTIONS ================= -->
+    <!-- ================= JAVASCRIPT INTERACTIONS & SIMULATION ================= -->
     <script>
         // Hero Quiz Node Simulator Answer Click
         function selectHeroAnswer(btn, score, route) {
@@ -1396,7 +1691,260 @@
             }
         }
 
-        // Embed Showcase Tab Switcher
+        // ================= MOVING VISUAL BUILDER CANVAS LOGIC =================
+        function getPortCoordinates(element, isOutput, portIndex = 0, totalPorts = 1) {
+            const rect = element.getBoundingClientRect();
+            const parent = document.getElementById('innerCanvasWorld').getBoundingClientRect();
+            
+            const x = isOutput ? (rect.right - parent.left) : (rect.left - parent.left);
+            let y = (rect.top - parent.top) + rect.height / 2;
+            
+            if (totalPorts > 1) {
+                const fraction = (portIndex + 1) / (totalPorts + 1);
+                y = (rect.top - parent.top) + (rect.height * fraction);
+            }
+            return { x, y };
+        }
+
+        function buildCubicBezier(p1, p2) {
+            const dx = Math.abs(p2.x - p1.x);
+            const cx1 = p1.x + Math.max(dx * 0.45, 40);
+            const cy1 = p1.y;
+            const cx2 = p2.x - Math.max(dx * 0.45, 40);
+            const cy2 = p2.y;
+            return `M ${p1.x} ${p1.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${p2.x} ${p2.y}`;
+        }
+
+        function updateCanvasWires() {
+            const n1 = document.getElementById('node1');
+            const n2 = document.getElementById('node2');
+            const n3 = document.getElementById('node3');
+            const n4 = document.getElementById('node4');
+            const n5 = document.getElementById('node5');
+            const n6 = document.getElementById('node6');
+
+            if (!n1 || !n2 || !n3 || !n4 || !n5 || !n6) return;
+
+            // Coordinates
+            const p1 = getPortCoordinates(n1, true);
+            const p2In = getPortCoordinates(n2, false);
+            const p2Out = getPortCoordinates(n2, true);
+            const p3In = getPortCoordinates(n3, false);
+            const p3OutA = getPortCoordinates(n3, true, 0, 2);
+            const p3OutB = getPortCoordinates(n3, true, 1, 2);
+            const p4In = getPortCoordinates(n4, false);
+            const p4Out = getPortCoordinates(n4, true);
+            const p5In = getPortCoordinates(n5, false);
+            const p5Out = getPortCoordinates(n5, true);
+            const p6InA = getPortCoordinates(n6, false, 0, 2);
+            const p6InB = getPortCoordinates(n6, false, 1, 2);
+
+            // Paths
+            const d1 = buildCubicBezier(p1, p2In);
+            const d2 = buildCubicBezier(p2Out, p3In);
+            const d3A = buildCubicBezier(p3OutA, p4In);
+            const d3B = buildCubicBezier(p3OutB, p5In);
+            const d4 = buildCubicBezier(p4Out, p6InA);
+            const d5 = buildCubicBezier(p5Out, p6InB);
+
+            // Set wire paths
+            document.getElementById('wireBase1').setAttribute('d', d1);
+            document.getElementById('wireFlow1').setAttribute('d', d1);
+            
+            document.getElementById('wireBase2').setAttribute('d', d2);
+            document.getElementById('wireFlow2').setAttribute('d', d2);
+
+            document.getElementById('wireBase3A').setAttribute('d', d3A);
+            document.getElementById('wireFlow3A').setAttribute('d', d3A);
+
+            document.getElementById('wireBase3B').setAttribute('d', d3B);
+            document.getElementById('wireFlow3B').setAttribute('d', d3B);
+
+            document.getElementById('wireBase4').setAttribute('d', d4);
+            document.getElementById('wireFlow4').setAttribute('d', d4);
+
+            document.getElementById('wireBase5').setAttribute('d', d5);
+            document.getElementById('wireFlow5').setAttribute('d', d5);
+
+            // Animate Motion Packets
+            document.getElementById('motionPacket1').setAttribute('path', d1);
+            document.getElementById('motionPacket2').setAttribute('path', d3A);
+            document.getElementById('motionPacket3').setAttribute('path', d4);
+        }
+
+        // Auto Tour Simulation Loop
+        let tourActive = true;
+        let tourStep = 0;
+        let tourInterval = null;
+
+        const tourStepsData = [
+            {
+                cursor: { x: 160, y: 220 },
+                activeNode: 'node1',
+                title: 'Start Trigger: Universal Embed Hook',
+                cond: 'Receives traffic from WordPress & Shopify',
+                ticker: '[15:37:00] New visitor arrival triggered from WordPress / Shopify landing page'
+            },
+            {
+                cursor: { x: 440, y: 210 },
+                activeNode: 'node2',
+                title: 'Branching Question 1',
+                cond: 'Selected Option B: Unqualified leads (+35 pts)',
+                ticker: '[15:37:03] Visitor selected Option B: "Unqualified leads" (+35 pts computed)'
+            },
+            {
+                cursor: { x: 740, y: 220 },
+                activeNode: 'node3',
+                title: 'Dynamic Logic Split Condition',
+                cond: 'if (total_score >= 35) ➔ VIP Route (Evaluated TRUE)',
+                ticker: '[15:37:06] Decision Gate: Score 85 >= 35 ➔ Unlocks VIP Priority Intake Branch'
+            },
+            {
+                cursor: { x: 1040, y: 120 },
+                activeNode: 'node4',
+                title: 'VIP Lead Intake Form',
+                cond: 'Collects Work Email, Phone & Company Size',
+                ticker: '[15:37:09] Lead captured: alex@growthagency.io (Phone verified +1-415-***)'
+            },
+            {
+                cursor: { x: 1320, y: 240 },
+                activeNode: 'node6',
+                title: 'Automated Webhooks & Google Sheets',
+                cond: 'Dispatches HMAC-SHA256 Payload to CRM',
+                ticker: '[15:37:12] Webhook 200 OK ➔ Synced to Google Sheets & CRM in 28ms'
+            }
+        ];
+
+        function runTourTick() {
+            if (!tourActive) return;
+            const current = tourStepsData[tourStep];
+            
+            // Move Virtual Cursor
+            const cursor = document.getElementById('virtualCursor');
+            if (cursor) {
+                cursor.style.left = current.cursor.x + 'px';
+                cursor.style.top = current.cursor.y + 'px';
+            }
+
+            // Highlight Active Node
+            document.querySelectorAll('.builder-node').forEach(n => n.classList.remove('active-step'));
+            const activeEl = document.getElementById(current.activeNode);
+            if (activeEl) {
+                activeEl.classList.add('active-step');
+            }
+
+            // Update Inspector Drawer
+            document.getElementById('inspectorNodeTitle').textContent = current.title;
+            document.getElementById('inspectorCondition').textContent = current.cond;
+            document.getElementById('canvasEventTicker').textContent = current.ticker;
+
+            // Flash Webhook Pill on final step
+            if (current.activeNode === 'node6') {
+                const pill = document.getElementById('node6StatusPill');
+                pill.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-400 text-dark-950 font-mono transition-colors';
+                setTimeout(() => {
+                    pill.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 font-mono transition-colors';
+                }, 1200);
+            }
+
+            tourStep = (tourStep + 1) % tourStepsData.length;
+        }
+
+        function toggleTourMode() {
+            tourActive = !tourActive;
+            const btn = document.getElementById('btnTourToggle');
+            const icon = document.getElementById('tourIcon');
+            const label = document.getElementById('tourLabel');
+
+            if (tourActive) {
+                icon.textContent = '⏸';
+                label.textContent = 'Pause Tour';
+                btn.className = 'px-3.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white font-bold transition-all flex items-center gap-1.5 shadow-sm';
+            } else {
+                icon.textContent = '▶';
+                label.textContent = 'Resume Tour';
+                btn.className = 'px-3.5 py-1.5 rounded-lg bg-white/[0.1] hover:bg-white/[0.2] text-white font-bold transition-all flex items-center gap-1.5 shadow-sm';
+            }
+        }
+
+        function resetCanvasLayout() {
+            document.getElementById('node1').style.top = '190px';
+            document.getElementById('node1').style.left = '40px';
+
+            document.getElementById('node2').style.top = '130px';
+            document.getElementById('node2').style.left = '320px';
+
+            document.getElementById('node3').style.top = '150px';
+            document.getElementById('node3').style.left = '620px';
+
+            document.getElementById('node4').style.top = '50px';
+            document.getElementById('node4').style.left = '920px';
+
+            document.getElementById('node5').style.top = '320px';
+            document.getElementById('node5').style.left = '920px';
+
+            document.getElementById('node6').style.top = '175px';
+            document.getElementById('node6').style.left = '1200px';
+
+            updateCanvasWires();
+        }
+
+        // Draggable Nodes Implementation
+        let draggedNode = null;
+        let dragOffset = { x: 0, y: 0 };
+
+        function startNodeDrag(e, nodeId) {
+            draggedNode = document.getElementById(nodeId);
+            if (!draggedNode) return;
+
+            // Pause tour temporarily when user drags
+            tourActive = false;
+            document.getElementById('tourIcon').textContent = '▶';
+            document.getElementById('tourLabel').textContent = 'Resume Tour';
+
+            const rect = draggedNode.getBoundingClientRect();
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
+
+            // Select node in inspector
+            document.querySelectorAll('.builder-node').forEach(n => n.classList.remove('active-step'));
+            draggedNode.classList.add('active-step');
+
+            window.addEventListener('mousemove', onNodeDragMove);
+            window.addEventListener('mouseup', onNodeDragEnd);
+        }
+
+        function onNodeDragMove(e) {
+            if (!draggedNode) return;
+            const parent = document.getElementById('innerCanvasWorld').getBoundingClientRect();
+            let newX = e.clientX - parent.left - dragOffset.x;
+            let newY = e.clientY - parent.top - dragOffset.y;
+
+            // Boundaries
+            newX = Math.max(10, Math.min(newX, 1050));
+            newY = Math.max(10, Math.min(newY, 400));
+
+            draggedNode.style.left = newX + 'px';
+            draggedNode.style.top = newY + 'px';
+
+            updateCanvasWires();
+        }
+
+        function onNodeDragEnd() {
+            draggedNode = null;
+            window.removeEventListener('mousemove', onNodeDragMove);
+            window.removeEventListener('mouseup', onNodeDragEnd);
+        }
+
+        // Initial setup on window load
+        window.addEventListener('load', () => {
+            updateCanvasWires();
+            window.addEventListener('resize', updateCanvasWires);
+            tourInterval = setInterval(runTourTick, 2800);
+            runTourTick();
+        });
+
+        // ================= 3-IN-1 EMBED SHOWCASE TABS =================
         const embedTabContents = {
             inline: {
                 title: 'Embed directly inside your blog posts or landing page',
