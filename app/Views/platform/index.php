@@ -104,7 +104,7 @@
                 <?php foreach ($planStats as $p): ?>
                     <div class="p-3.5 rounded-lg border border-[#E2E8F0] bg-slate-50/50 hover:bg-slate-50 transition-colors">
                         <span class="block text-xs font-bold text-slate-800"><?= e($p['name']) ?></span>
-                        <span class="text-[11px] text-slate-500 font-mono">$<?= number_format((float)$p['price'], 2) ?>/mo</span>
+                        <span class="text-[11px] text-slate-500 font-mono">₹<?= number_format((float)$p['price'], 2) ?>/mo</span>
                         <div class="mt-3 flex items-baseline justify-between">
                             <span class="text-xl font-extrabold text-indigo-600"><?= (int)$p['subscriber_count'] ?></span>
                             <span class="text-[10px] uppercase font-semibold text-slate-400">Tenants</span>

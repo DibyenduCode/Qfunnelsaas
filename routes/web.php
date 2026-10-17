@@ -14,6 +14,8 @@ use App\Controllers\TeamController;
 use App\Controllers\WebhookController;
 use App\Controllers\PlatformAdminController;
 use App\Controllers\QuizController;
+use App\Controllers\ApiController;
+use App\Controllers\LegalController;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\TenantMiddleware;
 use App\Middleware\PlatformAdminMiddleware;
@@ -42,6 +44,18 @@ $router->get('/api/quiz/step', [QuizController::class, 'apiStep']);
 $router->post('/api/quiz/form', [QuizController::class, 'apiSubmitForm']);
 $router->post('/api/quiz/answer', [QuizController::class, 'apiSubmitAnswer']);
 $router->post('/api/quiz/back', [QuizController::class, 'apiBack']);
+
+// Public Dynamic Legal & Compliance Pages
+$router->get('/terms', [LegalController::class, 'terms']);
+$router->get('/privacy', [LegalController::class, 'privacy']);
+$router->get('/refund-policy', [LegalController::class, 'refundPolicy']);
+$router->get('/cookie-policy', [LegalController::class, 'cookiePolicy']);
+$router->get('/legal/{slug}', [LegalController::class, 'show']);
+
+// External Workspace REST API (v1) - Bearer / API-Key Token Authenticated
+$router->get('/api/v1/me', [ApiController::class, 'me']);
+$router->get('/api/v1/funnels', [ApiController::class, 'funnels']);
+$router->get('/api/v1/submissions', [ApiController::class, 'submissions']);
 
 // Protected Admin Routes Group
 $router->group([AuthMiddleware::class], function (Router $router) {
@@ -76,6 +90,12 @@ $router->group([AuthMiddleware::class], function (Router $router) {
         
         // Audit Logs
         $router->get('/admin/platform/logs', [PlatformAdminController::class, 'logs']);
+
+        // Legal Pages & Compliance CMS
+        $router->get('/admin/platform/legal-pages', [PlatformAdminController::class, 'legalPages']);
+        $router->post('/admin/platform/legal-pages/create', [PlatformAdminController::class, 'createLegalPage'], [CsrfMiddleware::class]);
+        $router->post('/admin/platform/legal-pages/{id}/update', [PlatformAdminController::class, 'updateLegalPage'], [CsrfMiddleware::class]);
+        $router->post('/admin/platform/legal-pages/{id}/delete', [PlatformAdminController::class, 'deleteLegalPage'], [CsrfMiddleware::class]);
     });
 
     // Tenant-Scoped Workspace Routes
@@ -121,6 +141,7 @@ $router->group([AuthMiddleware::class], function (Router $router) {
         $router->post('/admin/webhooks/{id}/update', [WebhookController::class, 'update'], [CsrfMiddleware::class]);
         $router->post('/admin/webhooks/{id}/delete', [WebhookController::class, 'delete'], [CsrfMiddleware::class]);
         $router->post('/admin/webhooks/{id}/test', [WebhookController::class, 'test'], [CsrfMiddleware::class]);
+        $router->post('/admin/webhooks/deliveries/{id}/retry', [WebhookController::class, 'retryDelivery'], [CsrfMiddleware::class]);
 
         // Settings
         $router->get('/admin/settings/workspace', [SettingsController::class, 'workspace']);

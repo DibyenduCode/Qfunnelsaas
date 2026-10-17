@@ -6,11 +6,27 @@
             <h2 class="text-lg font-bold text-[#171A21]">Webhooks & Outbound Integrations</h2>
             <p class="text-xs text-[#687080]">Stream captured leads and quiz completions instantly to Zapier, Make, HubSpot, or your custom CRM.</p>
         </div>
-        <button onclick="document.getElementById('addWebhookModal').classList.remove('hidden')" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#5B5BD6] text-white text-xs font-semibold hover:bg-[#4B4BC0] shadow-sm transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            + Add Webhook Endpoint
-        </button>
+        <?php if (!empty($hasWebhooks)): ?>
+            <button onclick="document.getElementById('addWebhookModal').classList.remove('hidden')" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#5B5BD6] text-white text-xs font-semibold hover:bg-[#4B4BC0] shadow-sm transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                + Add Webhook Endpoint
+            </button>
+        <?php else: ?>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
+                🔒 Plan Upgrade Required for Webhooks
+            </span>
+        <?php endif; ?>
     </div>
+
+    <?php if (empty($hasWebhooks)): ?>
+        <div class="p-4 rounded-xl border border-amber-200 bg-amber-50/80 text-xs text-amber-900 flex items-start gap-3">
+            <span class="text-base">⚡</span>
+            <div>
+                <strong class="font-bold block">Webhooks & API Integrations are locked on your current plan</strong>
+                <p class="text-[11px] text-amber-800 mt-0.5">Your subscription tier does not include real-time webhook endpoints. Upgrade to Standard or Pro to unlock instant automated leads delivery to Zapier, Make, Slack, or your CRM.</p>
+            </div>
+        </div>
+    <?php endif; ?>
 
     <!-- Integrations Guide Banner & Step-by-Step Walkthrough -->
     <div class="bg-white border border-[#E4E7EC] rounded-xl shadow-sm overflow-hidden">
@@ -234,8 +250,16 @@
                                 <td class="py-2.5 px-3 text-[#687080] truncate max-w-[200px]" title="<?= e($log['response_body'] ?? '') ?>">
                                     <?= e($log['response_body'] ?? 'No body') ?>
                                 </td>
-                                <td class="py-2.5 px-3 text-right text-[#687080] text-[11px]">
+                                <td class="py-2.5 px-3 text-[#687080] text-[11px]">
                                     <?= date('M j, H:i:s', strtotime($log['created_at'])) ?>
+                                </td>
+                                <td class="py-2.5 px-3 text-right">
+                                    <form action="<?= url("/admin/webhooks/deliveries/{$log['id']}/retry") ?>" method="POST" class="inline">
+                                        <?= csrf_field() ?>
+                                        <button type="submit" class="inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 text-[10px] font-semibold border border-slate-200 transition-colors" title="Retry delivery now">
+                                            ↻ Retry
+                                        </button>
+                                    </form>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

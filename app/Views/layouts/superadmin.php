@@ -115,7 +115,16 @@
                     <span>Payment Gateways</span>
                 </a>
 
-                <!-- 5. Audit Logs -->
+                <!-- 5. Legal Pages CMS -->
+                <a href="<?= url('/admin/platform/legal-pages') ?>" 
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all <?= str_contains($_SERVER['REQUEST_URI'] ?? '', '/admin/platform/legal-pages') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' ?>">
+                    <svg class="w-5 h-5 <?= str_contains($_SERVER['REQUEST_URI'] ?? '', '/admin/platform/legal-pages') ? 'text-white' : 'text-slate-400' ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>Legal Pages CMS</span>
+                </a>
+
+                <!-- 6. Audit Logs -->
                 <a href="<?= url('/admin/platform/logs') ?>" 
                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all <?= str_contains($_SERVER['REQUEST_URI'] ?? '', '/admin/platform/logs') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' ?>">
                     <svg class="w-5 h-5 <?= str_contains($_SERVER['REQUEST_URI'] ?? '', '/admin/platform/logs') ? 'text-white' : 'text-slate-400' ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,7 +133,7 @@
                     <span>System Audit Trail</span>
                 </a>
 
-                <!-- 6. Profile Option -->
+                <!-- 7. Profile Option -->
                 <a href="<?= url('/admin/platform/profile') ?>" 
                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all <?= str_contains($_SERVER['REQUEST_URI'] ?? '', '/admin/platform/profile') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' ?>">
                     <svg class="w-5 h-5 <?= str_contains($_SERVER['REQUEST_URI'] ?? '', '/admin/platform/profile') ? 'text-white' : 'text-slate-400' ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24">

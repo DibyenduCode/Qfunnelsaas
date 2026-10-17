@@ -215,12 +215,23 @@
                         </div>
                     </div>
 
+                    <?php $hasWhiteLabel = !empty($planFeatures['white_label']) || !empty($isPlatformAdmin); ?>
                     <div class="pt-3 border-t border-[#E4E7EC] space-y-4">
-                        <label class="flex items-start gap-3 cursor-pointer p-3.5 rounded-xl border border-[#E4E7EC] hover:bg-[#F8FAFC] transition-colors">
-                            <input type="checkbox" name="white_label" value="1" <?= !empty($settings['white_label']) ? 'checked' : '' ?> class="mt-0.5 rounded text-[#5B5BD6] focus:ring-[#5B5BD6]">
-                            <div>
-                                <span class="text-xs font-bold text-[#171A21] block">Enable Complete White-Labeling</span>
-                                <span class="text-[11px] text-[#687080]">Removes all "Powered by QFunnel" badges and platform branding from the public quiz runner.</span>
+                        <label class="flex items-start gap-3 p-3.5 rounded-xl border border-[#E4E7EC] <?= $hasWhiteLabel ? 'hover:bg-[#F8FAFC] cursor-pointer' : 'bg-slate-50 opacity-90' ?> transition-colors">
+                            <input type="checkbox" name="white_label" value="1" <?= (!empty($settings['white_label']) && $hasWhiteLabel) ? 'checked' : '' ?> <?= $hasWhiteLabel ? '' : 'disabled' ?> class="mt-0.5 rounded text-[#5B5BD6] focus:ring-[#5B5BD6]">
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-bold text-[#171A21] block">Enable Complete White-Labeling</span>
+                                    <?php if ($hasWhiteLabel): ?>
+                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase">Unlocked</span>
+                                    <?php else: ?>
+                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200 uppercase">★ Pro Plan</span>
+                                    <?php endif; ?>
+                                </div>
+                                <span class="text-[11px] text-[#687080] block mt-0.5">Removes all "Powered by QFunnel" badges and platform branding from the public quiz runner.</span>
+                                <?php if (!$hasWhiteLabel): ?>
+                                    <span class="text-[10px] text-purple-700 font-semibold block mt-1">Upgrade your subscription plan to Pro to unlock 100% white-labeling.</span>
+                                <?php endif; ?>
                             </div>
                         </label>
 

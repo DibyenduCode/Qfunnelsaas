@@ -56,16 +56,16 @@ class PlatformSettingService
             ],
             'bank_transfer' => [
                 'enabled' => false,
-                'bank_name' => 'Silicon Valley Commercial Bank',
-                'account_holder' => 'QuizFunnel Technologies Inc',
+                'bank_name' => 'HDFC Bank / State Bank of India',
+                'account_holder' => 'QuizFunnel Technologies Pvt Ltd',
                 'account_number' => '',
                 'routing_code' => '',
-                'instructions' => "Please transfer subscription dues to the above account and include your Workspace ID in the payment reference.\nOnce transferred, notify billing@qfunnel.local.",
+                'instructions' => "Please transfer subscription dues via UPI / NEFT / IMPS / RTGS to the above bank account and mention your Workspace ID in the transaction reference.\nOnce transferred, notify billing@qfunnel.local.",
             ],
             'manual_custom' => [
                 'enabled' => false,
                 'title' => 'Offline / Invoice Payment',
-                'instructions' => "For offline purchase orders or invoice payments, contact your account manager or email billing@qfunnel.local.",
+                'instructions' => "For offline purchase orders or custom INR tax invoices, contact your account manager or email billing@qfunnel.local.",
             ],
         ];
 
@@ -76,5 +76,22 @@ class PlatformSettingService
 
         // Merge defaults to assure all keys exist
         return array_replace_recursive($defaults, $saved);
+    }
+
+    public static function getDefaultCurrency(): string
+    {
+        return (string) self::get('default_currency', 'INR');
+    }
+
+    public static function getCurrencySymbol(): string
+    {
+        $curr = self::getDefaultCurrency();
+        return match ($curr) {
+            'INR' => '₹',
+            'USD' => '$',
+            'EUR' => '€',
+            'GBP' => '£',
+            default => '₹',
+        };
     }
 }

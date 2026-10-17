@@ -271,7 +271,7 @@ $totalUsersCount = $users['total'] ?? count($userItems);
                     <select name="plan_id" id="modalPlanSelect" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         <?php foreach ($plans as $p): ?>
                             <option value="<?= (int)$p['id'] ?>">
-                                <?= e($p['name']) ?> ($<?= number_format((float)$p['price'], 2) ?> / <?= e($p['billing_interval']) ?>)
+                                <?= e($p['name']) ?> (₹<?= number_format((float)$p['price'], 2) ?> / <?= e($p['billing_interval']) ?>)
                             </option>
                         <?php endforeach; ?>
                     </select>

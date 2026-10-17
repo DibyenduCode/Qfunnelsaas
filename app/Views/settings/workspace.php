@@ -30,6 +30,49 @@
         </form>
     </div>
 
+    <!-- Developer REST API Access Card -->
+    <div class="bg-white border border-[#E4E7EC] rounded-xl p-5 shadow-sm space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-bold text-[#171A21]">Developer REST API Access</h3>
+                <p class="text-xs text-[#687080]">Programmatic workspace integration for fetching funnels and captured leads.</p>
+            </div>
+            <?php if (!empty($hasApiAccess)): ?>
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    ● API Active
+                </span>
+            <?php else: ?>
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-700 border border-purple-200">
+                    ★ Pro Plan Feature
+                </span>
+            <?php endif; ?>
+        </div>
+
+        <?php if (!empty($hasApiAccess)): ?>
+            <div class="p-3.5 rounded-lg border border-slate-200 bg-slate-50 space-y-2">
+                <label class="block text-xs font-semibold text-slate-700">Workspace API Secret Key</label>
+                <div class="flex items-center gap-2">
+                    <input type="text" id="workspaceApiKeyInput" readonly value="<?= e($tenant['api_key'] ?? 'No key generated') ?>" class="w-full px-3 py-1.5 text-xs font-mono rounded-lg border border-slate-200 bg-white text-slate-800">
+                    <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('workspaceApiKeyInput').value); this.textContent = 'Copied!'; setTimeout(() => this.textContent = 'Copy', 2000);" class="shrink-0 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-2xs transition-colors">
+                        Copy
+                    </button>
+                </div>
+                <div class="pt-2 text-[11px] text-slate-500 space-y-1">
+                    <p>Include this key in your HTTP requests as <code class="bg-white px-1 py-0.5 rounded border border-slate-200 font-mono text-indigo-600">Authorization: Bearer <?= e($tenant['api_key'] ?? '') ?></code></p>
+                    <p>Endpoints: <code class="bg-white px-1 py-0.5 rounded border border-slate-200 font-mono text-slate-700">GET /api/v1/funnels</code>, <code class="bg-white px-1 py-0.5 rounded border border-slate-200 font-mono text-slate-700">GET /api/v1/submissions</code>, <code class="bg-white px-1 py-0.5 rounded border border-slate-200 font-mono text-slate-700">GET /api/v1/me</code></p>
+                </div>
+            </div>
+        <?php else: ?>
+            <div class="p-3.5 rounded-lg border border-purple-200 bg-purple-50/60 text-xs text-purple-900 flex items-start gap-3">
+                <span class="text-base">🔒</span>
+                <div>
+                    <strong class="block font-bold">REST API Access is locked on your current plan</strong>
+                    <p class="text-[11px] text-purple-800 mt-0.5">Upgrade your subscription plan to Pro to unlock developer API tokens, bearer authentication, and programmatic lead access.</p>
+                </div>
+            </div>
+        <?php endif; ?>
+    </div>
+
     <!-- Plan & Usage Limits Overview -->
     <div class="bg-white border border-[#E4E7EC] rounded-xl p-5 shadow-sm space-y-4">
         <div class="flex items-center justify-between">

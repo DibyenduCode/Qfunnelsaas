@@ -90,3 +90,25 @@ if (!function_exists('is_platform_admin')) {
         return !empty($user['is_platform_admin']);
     }
 }
+
+if (!function_exists('currency_symbol')) {
+    function currency_symbol(): string
+    {
+        return '₹';
+    }
+}
+
+if (!function_exists('currency_code')) {
+    function currency_code(): string
+    {
+        return 'INR';
+    }
+}
+
+if (!function_exists('format_currency')) {
+    function format_currency(float|int|string $amount, bool $showSymbol = true): string
+    {
+        $formatted = number_format((float)$amount, 2);
+        return $showSymbol ? '₹' . $formatted : $formatted;
+    }
+}

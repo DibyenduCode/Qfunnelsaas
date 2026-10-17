@@ -10,6 +10,7 @@ use App\Services\FunnelPublishService;
 use App\Services\FormSchemaService;
 use App\Services\TenantContextService;
 use App\Services\AuthorizationService;
+use App\Services\UsageLimitService;
 
 class FunnelController
 {
@@ -74,12 +75,15 @@ class FunnelController
 
         $formFields = FormSchemaService::getFormFields($tenantId, (int)$id);
         $settings = json_decode($funnel['settings_json'] ?? '{}', true) ?: [];
+        $planFeatures = UsageLimitService::getTenantFeatures($tenantId);
 
         return view('funnels.settings', [
             'title' => "Settings: {$funnel['name']} — Quiz Funnel SaaS",
             'funnel' => $funnel,
             'formFields' => $formFields,
             'settings' => $settings,
+            'planFeatures' => $planFeatures,
+            'isPlatformAdmin' => AuthorizationService::isPlatformAdmin(),
         ]);
     }
 
@@ -128,6 +132,15 @@ class FunnelController
                 $logoUrl = $existingSettings['logo_url'];
             }
 
+            // Check white_label feature permission
+            $canWhiteLabel = UsageLimitService::hasFeature($tenantId, 'white_label') || AuthorizationService::isPlatformAdmin();
+            $requestedWhiteLabel = !empty($request->input('white_label'));
+            $whiteLabel = $requestedWhiteLabel && $canWhiteLabel;
+
+            if ($requestedWhiteLabel && !$canWhiteLabel) {
+                Session::setFlash('warning', 'White-labeling requires a Pro subscription plan and was skipped.');
+            }
+
             $data = [
                 'name' => $request->input('name'),
                 'description' => $request->input('description'),
@@ -138,7 +151,7 @@ class FunnelController
                     'logo_position' => in_array($request->input('logo_position'), ['left', 'center', 'right'], true) ? $request->input('logo_position') : 'left',
                     'logo_height' => max(24, min(90, (int)$request->input('logo_height', 36))),
                     'company_name' => trim($request->input('company_name', '')),
-                    'white_label' => !empty($request->input('white_label')),
+                    'white_label' => $whiteLabel,
                     'footer_text' => trim($request->input('footer_text', '')),
                     'trust_badge_text' => trim($request->input('trust_badge_text', '')),
                     'card_radius' => in_array($request->input('card_radius'), ['rounded-none', 'rounded-lg', 'rounded-xl', 'rounded-2xl', 'rounded-3xl'], true) ? $request->input('card_radius') : 'rounded-2xl',

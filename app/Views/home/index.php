@@ -751,7 +751,7 @@
                 </div>
                 
                 <div class="mb-2">
-                    <span class="text-3xl font-extrabold text-white">$49</span>
+                    <span class="text-3xl font-extrabold text-white">₹2,999</span>
                     <span class="text-xs text-slate-400"> / lifetime access</span>
                 </div>
                 
@@ -965,9 +965,10 @@
                     <div><a href="#features" class="hover:text-white transition-colors">Google Sheets Webhook Sync</a></div>
                     <div><a href="#features" class="hover:text-white transition-colors">WordPress Embed Guide</a></div>
                     <div><a href="#features" class="hover:text-white transition-colors">Shopify Liquid Section</a></div>
-                    <div><a href="#features" class="hover:text-white transition-colors">HMAC-SHA256 Verification</a></div>
-                    <div><a href="#faq" class="hover:text-white transition-colors">Privacy Policy & GDPR</a></div>
-                    <div><a href="#faq" class="hover:text-white transition-colors">Terms of Service</a></div>
+                    <div><a href="<?= url('/privacy') ?>" class="hover:text-white transition-colors">Privacy Policy & GDPR</a></div>
+                    <div><a href="<?= url('/terms') ?>" class="hover:text-white transition-colors">Terms of Service</a></div>
+                    <div><a href="<?= url('/refund-policy') ?>" class="hover:text-white transition-colors">Refund & Cancellation</a></div>
+                    <div><a href="<?= url('/cookie-policy') ?>" class="hover:text-white transition-colors">Cookie Policy</a></div>
                 </div>
 
                 <!-- Col 4: Official Contact -->

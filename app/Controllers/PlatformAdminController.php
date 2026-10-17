@@ -8,6 +8,8 @@ use App\Core\Session;
 use App\Core\Database;
 use App\Services\AuditLogService;
 use App\Services\PlatformSettingService;
+use App\Services\UsageLimitService;
+use App\Services\LegalPageService;
 
 class PlatformAdminController
 {
@@ -278,6 +280,7 @@ class PlatformAdminController
         return view('platform.plans', [
             'title' => 'Subscription Plans — Super Admin Control',
             'plans' => $plans,
+            'featureCatalog' => UsageLimitService::getFeatureCatalog(),
         ], 'superadmin');
     }
 
@@ -318,13 +321,12 @@ class PlatformAdminController
             'max_team_members' => $maxTeamMembers,
         ];
 
-        $features = [
-            'custom_branding' => !empty($request->input('feature_custom_branding')),
-            'csv_export' => !empty($request->input('feature_csv_export')),
-            'analytics' => !empty($request->input('feature_analytics')),
-            'webhooks' => !empty($request->input('feature_webhooks')),
-            'priority_support' => !empty($request->input('feature_priority_support')),
-        ];
+        // Read all system features dynamically from catalog
+        $catalog = UsageLimitService::getFeatureCatalog();
+        $features = [];
+        foreach ($catalog as $key => $meta) {
+            $features[$key] = !empty($request->input("feature_{$key}"));
+        }
 
         Database::execute(
             "INSERT INTO plans (name, slug, price, billing_interval, description, limits_json, features_json, is_active) 
@@ -380,13 +382,12 @@ class PlatformAdminController
             'max_team_members' => $maxTeamMembers,
         ];
 
-        $features = [
-            'custom_branding' => !empty($request->input('feature_custom_branding')),
-            'csv_export' => !empty($request->input('feature_csv_export')),
-            'analytics' => !empty($request->input('feature_analytics')),
-            'webhooks' => !empty($request->input('feature_webhooks')),
-            'priority_support' => !empty($request->input('feature_priority_support')),
-        ];
+        // Read all system features dynamically from catalog
+        $catalog = UsageLimitService::getFeatureCatalog();
+        $features = [];
+        foreach ($catalog as $key => $meta) {
+            $features[$key] = !empty($request->input("feature_{$key}"));
+        }
 
         Database::execute(
             "UPDATE plans SET name = ?, price = ?, billing_interval = ?, description = ?, limits_json = ?, features_json = ?, is_active = ? WHERE id = ?",
@@ -607,5 +608,123 @@ class PlatformAdminController
             'title' => 'Platform Audit Logs — Super Admin Control',
             'logs' => $logs,
         ], 'superadmin');
+    }
+
+    /**
+     * 9. Legal Pages & Compliance CMS
+     */
+    public function legalPages(Request $request): Response
+    {
+        $pages = LegalPageService::getAllPages();
+
+        $selectedId = (int)$request->query('id', 0);
+        $activePage = null;
+
+        if ($selectedId > 0) {
+            foreach ($pages as $p) {
+                if ((int)$p['id'] === $selectedId) {
+                    $activePage = $p;
+                    break;
+                }
+            }
+        }
+
+        if (!$activePage && !empty($pages)) {
+            $activePage = $pages[0];
+        }
+
+        return view('platform.legal_pages', [
+            'title' => 'Legal Pages & Policies CMS — Super Admin Control',
+            'pages' => $pages,
+            'activePage' => $activePage,
+        ], 'superadmin');
+    }
+
+    /**
+     * 9b. Update Legal Page
+     */
+    public function updateLegalPage(Request $request, string $id): Response
+    {
+        $pageId = (int)$id;
+
+        try {
+            LegalPageService::updatePage($pageId, [
+                'title' => (string)$request->input('title'),
+                'slug' => (string)$request->input('slug'),
+                'meta_description' => (string)$request->input('meta_description'),
+                'content' => (string)$request->input('content'),
+                'is_published' => (int)$request->input('is_published', 1),
+            ]);
+
+            $currentUser = current_user();
+            AuditLogService::log(null, (int)($currentUser['id'] ?? 0), 'update_legal_page', 'legal_page', $pageId, [
+                'title' => $request->input('title'),
+                'slug' => $request->input('slug'),
+            ]);
+
+            Session::setFlash('success', "Legal policy page successfully updated and live.");
+        } catch (\Exception $e) {
+            Session::setFlash('error', "Error updating legal page: " . $e->getMessage());
+        }
+
+        return Response::redirect(url('/admin/platform/legal-pages?id=' . $pageId));
+    }
+
+    /**
+     * 9c. Create New Legal Page
+     */
+    public function createLegalPage(Request $request): Response
+    {
+        try {
+            $newPageId = LegalPageService::createPage([
+                'title' => (string)$request->input('title'),
+                'slug' => (string)$request->input('slug'),
+                'meta_description' => (string)$request->input('meta_description'),
+                'content' => (string)$request->input('content'),
+                'is_published' => (int)$request->input('is_published', 1),
+            ]);
+
+            $currentUser = current_user();
+            AuditLogService::log(null, (int)($currentUser['id'] ?? 0), 'create_legal_page', 'legal_page', $newPageId, [
+                'title' => $request->input('title'),
+                'slug' => $request->input('slug'),
+            ]);
+
+            Session::setFlash('success', "New legal policy page created successfully.");
+            return Response::redirect(url('/admin/platform/legal-pages?id=' . $newPageId));
+        } catch (\Exception $e) {
+            Session::setFlash('error', "Failed to create legal page: " . $e->getMessage());
+            return Response::redirect(url('/admin/platform/legal-pages'));
+        }
+    }
+
+    /**
+     * 9d. Delete Legal Page
+     */
+    public function deleteLegalPage(Request $request, string $id): Response
+    {
+        $pageId = (int)$id;
+        $page = LegalPageService::getPageById($pageId);
+
+        if (!$page) {
+            Session::setFlash('error', "Legal page not found.");
+            return Response::redirect(url('/admin/platform/legal-pages'));
+        }
+
+        if (in_array($page['slug'], ['privacy', 'terms', 'refund-policy', 'cookie-policy'])) {
+            Session::setFlash('error', "Cannot delete core system legal policy '{$page['title']}'. You may edit or unpublish it instead.");
+            return Response::redirect(url('/admin/platform/legal-pages?id=' . $pageId));
+        }
+
+        LegalPageService::deletePage($pageId);
+
+        $currentUser = current_user();
+        AuditLogService::log(null, (int)($currentUser['id'] ?? 0), 'delete_legal_page', 'legal_page', $pageId, [
+            'title' => $page['title'],
+            'slug' => $page['slug'],
+        ]);
+
+        Session::setFlash('success', "Legal page '{$page['title']}' permanently deleted.");
+        return Response::redirect(url('/admin/platform/legal-pages'));
     }
 }

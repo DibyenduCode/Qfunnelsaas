@@ -10,12 +10,15 @@ use App\Services\TenantContextService;
 use App\Services\WebhookService;
 use App\Services\FunnelService;
 use App\Services\AuditLogService;
+use App\Services\UsageLimitService;
+use App\Services\AuthorizationService;
 
 class WebhookController
 {
     public function index(Request $request): Response
     {
         $tenantId = TenantContextService::getActiveTenantId();
+        $hasWebhooks = UsageLimitService::hasFeature($tenantId, 'webhooks') || AuthorizationService::isPlatformAdmin();
 
         $endpoints = Database::query(
             "SELECT we.*, f.name as funnel_name,
@@ -49,6 +52,7 @@ class WebhookController
             'endpoints' => $endpoints,
             'funnels' => $funnels,
             'recentDeliveries' => $recentDeliveries,
+            'hasWebhooks' => $hasWebhooks,
         ]);
     }
 
@@ -56,6 +60,11 @@ class WebhookController
     {
         $tenantId = TenantContextService::getActiveTenantId();
         $user = current_user();
+
+        if (!UsageLimitService::hasFeature($tenantId, 'webhooks') && !AuthorizationService::isPlatformAdmin()) {
+            Session::setFlash('error', 'Outbound Webhooks are not included in your current subscription plan. Please upgrade your plan to connect webhooks.');
+            return Response::redirect(url('/admin/webhooks'));
+        }
 
         $name = trim($request->input('name', ''));
         $targetUrl = trim($request->input('target_url', ''));
@@ -158,6 +167,45 @@ class WebhookController
             }
         } catch (\Throwable $e) {
             Session::setFlash('error', $e->getMessage());
+        }
+
+        return Response::redirect(url('/admin/webhooks'));
+    }
+
+    public function retryDelivery(Request $request, string $id): Response
+    {
+        $tenantId = TenantContextService::getActiveTenantId();
+        $deliveryId = (int)$id;
+
+        $delivery = Database::fetchOne(
+            "SELECT wd.*, we.target_url, we.secret, we.name as endpoint_name 
+             FROM webhook_deliveries wd 
+             JOIN webhook_endpoints we ON wd.webhook_id = we.id 
+             WHERE wd.tenant_id = ? AND wd.id = ?",
+            [$tenantId, $deliveryId]
+        );
+
+        if (!$delivery) {
+            Session::setFlash('error', 'Delivery log record not found.');
+            return Response::redirect(url('/admin/webhooks'));
+        }
+
+        $endpoint = [
+            'tenant_id' => $tenantId,
+            'id' => (int)$delivery['webhook_id'],
+            'target_url' => $delivery['target_url'],
+            'secret' => $delivery['secret'] ?? '',
+        ];
+
+        $payload = json_decode($delivery['payload_json'] ?? '{}', true) ?: [];
+        $data = $payload['data'] ?? $payload;
+
+        $res = WebhookService::deliverPayload($endpoint, $delivery['event_type'], $data);
+
+        if ($res['status'] === 'success') {
+            Session::setFlash('success', "Webhook re-sent successfully to '{$delivery['endpoint_name']}' (HTTP {$res['response_code']} in {$res['duration_ms']}ms).");
+        } else {
+            Session::setFlash('error', "Webhook retry failed (HTTP {$res['response_code']}). Check endpoint URL.");
         }
 
         return Response::redirect(url('/admin/webhooks'));

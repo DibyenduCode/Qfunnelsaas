@@ -28,12 +28,14 @@ class SettingsController
         );
 
         $usage = UsageLimitService::getUsageOverview($tenantId);
+        $hasApiAccess = UsageLimitService::hasFeature($tenantId, 'api_access') || AuthorizationService::isPlatformAdmin();
 
         return view('settings.workspace', [
             'title' => 'Workspace Settings — Quiz Funnel SaaS',
             'tenant' => $tenant,
             'members' => $members,
             'usage' => $usage,
+            'hasApiAccess' => $hasApiAccess,
         ]);
     }
 

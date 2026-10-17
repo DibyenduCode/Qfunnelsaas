@@ -9,6 +9,7 @@ use App\Services\SubmissionService;
 use App\Services\FunnelService;
 use App\Services\TenantContextService;
 use App\Services\AuthorizationService;
+use App\Services\UsageLimitService;
 
 class SubmissionController
 {
@@ -31,6 +32,7 @@ class SubmissionController
             'submissions' => $submissions,
             'funnels' => $funnels,
             'filters' => $filters,
+            'canExport' => UsageLimitService::hasFeature($tenantId, 'csv_export') || AuthorizationService::isPlatformAdmin(),
         ]);
     }
 
@@ -58,6 +60,11 @@ class SubmissionController
         }
 
         $tenantId = TenantContextService::getActiveTenantId();
+
+        if (!UsageLimitService::hasFeature($tenantId, 'csv_export') && !AuthorizationService::isPlatformAdmin()) {
+            Session::setFlash('error', 'CSV Export is a premium feature. Please upgrade your subscription plan to unlock lead data exports.');
+            return Response::redirect(url('/admin/submissions'));
+        }
         $funnelId = $request->query('funnel_id') ? (int)$request->query('funnel_id') : null;
 
         $csv = SubmissionService::exportCsv($tenantId, $funnelId);
