@@ -10,10 +10,15 @@ class HomeController
 {
     public function index(Request $request): Response
     {
-        $plans = Database::query("SELECT * FROM plans WHERE is_active = 1 ORDER BY price ASC, id ASC");
+        $plans = [];
+        try {
+            $plans = Database::query("SELECT * FROM plans WHERE is_active = 1 ORDER BY price ASC, id ASC");
+        } catch (\Throwable $e) {
+            $plans = [];
+        }
 
         return view('home.index', [
-            'title' => 'QFunnel — The Smarter Way to Build Interactive Quiz Funnels',
+            'title' => 'QFunnel — Interactive Quiz Funnel & Lead Qualification SaaS',
             'plans' => $plans,
             'currentUser' => current_user(),
         ], null);
