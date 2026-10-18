@@ -84,7 +84,7 @@
                                 <td class="py-3.5 px-4">
                                     <?php if ($f['status'] === 'published'): ?>
                                         <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                            Published (v<?= (int)$f['current_published_version_id'] ?>)
+                                            Published
                                         </span>
                                     <?php elseif ($f['status'] === 'draft'): ?>
                                         <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">

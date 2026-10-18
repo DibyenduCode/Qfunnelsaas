@@ -200,6 +200,11 @@ $edges = [
 $saved = FunnelGraphService::saveGraph($tenantAId, $funnelAId, ['nodes' => $nodes, 'edges' => $edges], $userAId);
 $runner->assert(count($saved['nodes']) === 4 && count($saved['edges']) === 3, 'Graph nodes and edges saved atomically');
 
+\App\Services\FormSchemaService::saveFormFields($tenantAId, $funnelAId, [
+    ['field_key' => 'full_name', 'label' => 'Full Name', 'field_type' => 'text', 'is_required' => 1],
+    ['field_key' => 'email', 'label' => 'Email Address', 'field_type' => 'email', 'is_required' => 1],
+], $userAId);
+
 // Test 3.2: Validate complete graph
 $val = FunnelGraphService::validateGraph($tenantAId, $funnelAId);
 $runner->assert($val['is_valid'] === true, 'Complete branching flow passes validation');

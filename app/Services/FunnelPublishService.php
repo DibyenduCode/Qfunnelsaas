@@ -64,18 +64,6 @@ class FunnelPublishService
             }
             unset($ff);
 
-            if (empty($formFields)) {
-                foreach ($nodes as $n) {
-                    if ($n['node_type'] === 'form' && !empty($n['config_json'])) {
-                        $fConf = json_decode($n['config_json'], true);
-                        if (!empty($fConf['fields']) && is_array($fConf['fields'])) {
-                            $formFields = $fConf['fields'];
-                            break;
-                        }
-                    }
-                }
-            }
-
             $formSchemaSnapshot = [
                 'fields' => $formFields,
             ];

@@ -146,7 +146,8 @@ class Request
     public function isAjax(): bool
     {
         return $this->header('x-requested-with') === 'XMLHttpRequest' ||
-               str_contains($this->header('accept', ''), 'application/json');
+               str_contains($this->header('accept', ''), 'application/json') ||
+               str_contains($this->header('content-type', ''), 'application/json');
     }
 
     public function file(string $key): ?array

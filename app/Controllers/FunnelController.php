@@ -210,17 +210,17 @@ class FunnelController
         try {
             $res = FunnelPublishService::publish($tenantId, (int)$id, (int)$user['id']);
             if ($request->isAjax()) {
-                return Response::success($res, "Funnel published successfully (Version {$res['version_number']}).");
+                return Response::success($res, "Funnel published successfully.");
             }
-            Session::setFlash('success', "Funnel published successfully as Version {$res['version_number']}.");
+            Session::setFlash('success', "Funnel published successfully.");
+            return Response::redirect(url("/admin/funnels/{$id}/builder"));
         } catch (\Throwable $e) {
             if ($request->isAjax()) {
                 return Response::error($e->getMessage(), 'PUBLISH_ERROR', null, 400);
             }
             Session::setFlash('error', $e->getMessage());
+            return Response::redirect(url("/admin/funnels/{$id}/builder"));
         }
-
-        return Response::redirect(url("/admin/funnels/{$id}/builder"));
     }
 
     public function unpublish(Request $request, string $id): Response
@@ -230,12 +230,18 @@ class FunnelController
 
         try {
             FunnelService::unpublishFunnel($tenantId, (int)$id, (int)$user['id']);
+            if ($request->isAjax()) {
+                return Response::success(null, 'Funnel unpublished and reverted to draft status.');
+            }
             Session::setFlash('success', 'Funnel unpublished and reverted to draft status.');
+            return Response::redirect(url("/admin/funnels/{$id}/builder"));
         } catch (\Throwable $e) {
+            if ($request->isAjax()) {
+                return Response::error($e->getMessage(), 'UNPUBLISH_ERROR', null, 400);
+            }
             Session::setFlash('error', $e->getMessage());
+            return Response::redirect(url("/admin/funnels/{$id}/builder"));
         }
-
-        return Response::redirect(url("/admin/funnels/{$id}/builder"));
     }
 
     public function delete(Request $request, string $id): Response

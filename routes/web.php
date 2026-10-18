@@ -52,6 +52,10 @@ $router->get('/refund-policy', [LegalController::class, 'refundPolicy']);
 $router->get('/cookie-policy', [LegalController::class, 'cookiePolicy']);
 $router->get('/legal/{slug}', [LegalController::class, 'show']);
 
+// Public Documentation Page (API, Webhooks & Embedding)
+$router->get('/docs', [HomeController::class, 'docs']);
+$router->get('/documentation', [HomeController::class, 'docs']);
+
 // External Workspace REST API (v1) - Bearer / API-Key Token Authenticated
 $router->get('/api/v1/me', [ApiController::class, 'me']);
 $router->get('/api/v1/funnels', [ApiController::class, 'funnels']);
@@ -96,6 +100,9 @@ $router->group([AuthMiddleware::class], function (Router $router) {
         $router->post('/admin/platform/legal-pages/create', [PlatformAdminController::class, 'createLegalPage'], [CsrfMiddleware::class]);
         $router->post('/admin/platform/legal-pages/{id}/update', [PlatformAdminController::class, 'updateLegalPage'], [CsrfMiddleware::class]);
         $router->post('/admin/platform/legal-pages/{id}/delete', [PlatformAdminController::class, 'deleteLegalPage'], [CsrfMiddleware::class]);
+
+        // API, Webhook & Embedding Documentation Hub
+        $router->get('/admin/platform/docs', [PlatformAdminController::class, 'docs']);
     });
 
     // Tenant-Scoped Workspace Routes

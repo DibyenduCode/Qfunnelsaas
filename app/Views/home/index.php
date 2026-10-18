@@ -177,64 +177,105 @@
 
     <!-- ================= NAVBAR ================= -->
     <header class="sticky top-0 z-40 bg-dark-950/80 backdrop-blur-xl border-b border-white/[0.08] transition-all">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
             
             <!-- Brand Logo -->
-            <a href="<?= url('/') ?>" class="flex items-center gap-3.5 group">
-                <div class="w-10 h-10 rounded-xl brand-gradient-btn flex items-center justify-center font-black text-white shadow-lg group-hover:scale-105 transition-all duration-300">
+            <a href="<?= url('/') ?>" class="flex items-center gap-3 group shrink-0 select-none">
+                <div class="w-10 h-10 rounded-xl brand-gradient-btn flex items-center justify-center font-black text-white shadow-lg shadow-brand-500/20 group-hover:scale-105 transition-all duration-300 ring-1 ring-white/10">
                     <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
                         <polyline points="2 17 12 22 22 17"></polyline>
                         <polyline points="2 12 12 17 22 12"></polyline>
                     </svg>
                 </div>
-                <div class="leading-tight">
+                <div class="leading-tight shrink-0">
                     <div class="flex items-center gap-2">
-                        <span class="text-xl font-extrabold text-white tracking-tight font-display">QFunnel</span>
-                        <span class="px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 text-[10px] font-bold border border-brand-500/20">PRO</span>
+                        <span class="text-xl font-extrabold text-white tracking-tight font-display whitespace-nowrap">QFunnel</span>
+                        <span class="px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 text-[10px] font-bold border border-brand-500/25 tracking-wide whitespace-nowrap">PRO</span>
                     </div>
-                    <span class="text-[10px] text-slate-400 font-medium tracking-wider uppercase block">Interactive Quiz SaaS</span>
+                    <span class="text-[10px] text-slate-400 font-medium tracking-wider uppercase block whitespace-nowrap">Interactive Quiz SaaS</span>
                 </div>
             </a>
 
-            <!-- Navigation Links -->
-            <nav class="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-300">
-                <a href="#how-it-works" class="hover:text-white transition-colors">How It Works</a>
-                <a href="#builder-showcase" class="hover:text-brand-300 text-brand-400 transition-colors flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-brand-400 animate-pulse"></span>
-                    <span>Visual Canvas</span>
-                </a>
-                <a href="#features" class="hover:text-white transition-colors">Features</a>
-                <a href="#embed-showcase" class="hover:text-white transition-colors">Universal Embeds</a>
-                <a href="#comparison" class="hover:text-white transition-colors">Why Quiz?</a>
-                <a href="#pricing" class="hover:text-white transition-colors">Pricing</a>
-                <a href="#faq" class="hover:text-white transition-colors">FAQ</a>
+            <!-- Navigation Links (Modern Glass Capsule Pill - 4 Core Items) -->
+            <nav class="hidden md:flex items-center gap-1 lg:gap-2 px-4 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.08] backdrop-blur-md shadow-inner text-slate-300">
+                <a href="#how-it-works" class="px-3.5 py-1.5 rounded-full text-xs lg:text-sm font-medium hover:text-white hover:bg-white/[0.06] transition-all whitespace-nowrap">How It Works</a>
+                <a href="#features" class="px-3.5 py-1.5 rounded-full text-xs lg:text-sm font-medium hover:text-white hover:bg-white/[0.06] transition-all whitespace-nowrap">Features</a>
+                <a href="#pricing" class="px-3.5 py-1.5 rounded-full text-xs lg:text-sm font-medium hover:text-white hover:bg-white/[0.06] transition-all whitespace-nowrap">Pricing</a>
+                <a href="#faq" class="px-3.5 py-1.5 rounded-full text-xs lg:text-sm font-medium hover:text-white hover:bg-white/[0.06] transition-all whitespace-nowrap">FAQ</a>
             </nav>
 
             <!-- Actions & Language Switcher -->
-            <div class="flex items-center gap-3.5">
+            <div class="flex items-center gap-2.5 sm:gap-3 shrink-0">
                 
                 <!-- Language Toggle (ENG / বাংলা) -->
-                <div class="flex items-center glass-pill p-1 rounded-full text-xs font-bold">
-                    <button type="button" onclick="switchLanguage('en')" id="btnLangEn" class="px-2.5 py-1 rounded-full bg-brand-600 text-white transition-all shadow-xs">EN</button>
-                    <button type="button" onclick="switchLanguage('bn')" id="btnLangBn" class="px-2.5 py-1 rounded-full text-slate-400 hover:text-white transition-all">বাং</button>
+                <div class="hidden sm:flex items-center bg-white/[0.04] p-1 rounded-full border border-white/10 text-xs font-bold shrink-0 shadow-xs">
+                    <button type="button" onclick="switchLanguage('en')" id="btnLangEn" class="px-2.5 py-1 rounded-full bg-brand-600 text-white transition-all shadow-xs text-xs">EN</button>
+                    <button type="button" onclick="switchLanguage('bn')" id="btnLangBn" class="px-2.5 py-1 rounded-full text-slate-400 hover:text-white transition-all text-xs">বাং</button>
                 </div>
 
                 <?php if (!empty($currentUser)): ?>
                     <a href="<?= is_platform_admin() ? url('/admin/platform') : url('/admin/dashboard') ?>" 
-                       class="px-5 py-2.5 rounded-xl brand-gradient-btn text-white text-xs font-bold transition-all flex items-center gap-2 group">
+                       class="px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl brand-gradient-btn text-white text-xs font-bold transition-all flex items-center gap-2 group whitespace-nowrap shadow-md shadow-brand-500/20">
                         <span>Dashboard</span>
                         <span class="group-hover:translate-x-0.5 transition-transform">→</span>
                     </a>
                 <?php else: ?>
-                    <a href="<?= url('/login') ?>" class="hidden sm:inline-flex text-xs font-bold text-slate-300 hover:text-white transition-colors px-3 py-2">
+                    <a href="<?= url('/login') ?>" class="hidden sm:inline-flex text-xs font-bold text-slate-300 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-white/5 whitespace-nowrap">
                         Sign In
                     </a>
-                    <a href="<?= url('/register') ?>" class="px-5 py-2.5 rounded-xl brand-gradient-btn text-white text-xs font-bold transition-all flex items-center gap-2 group">
+                    <a href="<?= url('/register') ?>" class="shrink-0 px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-xl brand-gradient-btn text-white text-xs font-bold transition-all flex items-center gap-1.5 group whitespace-nowrap shadow-md shadow-brand-500/20 hover:shadow-brand-500/35">
                         <span>Get Started Free</span>
-                        <span class="group-hover:translate-x-0.5 transition-transform">→</span>
+                        <span class="group-hover:translate-x-0.5 transition-transform text-xs">→</span>
                     </a>
                 <?php endif; ?>
+
+                <!-- Mobile Hamburger Button -->
+                <button type="button" onclick="toggleMobileMenu()" id="mobileMenuBtn" class="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-slate-300 hover:text-white transition-all focus:outline-none" aria-label="Toggle navigation menu">
+                    <svg id="iconBurger" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                    <svg id="iconClose" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile & Tablet Drawer Menu -->
+        <div id="mobileMenuDrawer" class="hidden md:hidden border-t border-white/[0.08] bg-dark-950/95 backdrop-blur-2xl transition-all">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 space-y-3">
+                <nav class="flex flex-col space-y-1 font-medium text-sm text-slate-300">
+                    <a href="#how-it-works" onclick="toggleMobileMenu()" class="px-3.5 py-2.5 rounded-xl hover:bg-white/[0.06] hover:text-white transition-all flex items-center justify-between">
+                        <span>How It Works</span>
+                        <span class="text-xs text-slate-500">→</span>
+                    </a>
+                    <a href="#features" onclick="toggleMobileMenu()" class="px-3.5 py-2.5 rounded-xl hover:bg-white/[0.06] hover:text-white transition-all flex items-center justify-between">
+                        <span>Features</span>
+                        <span class="text-xs text-slate-500">→</span>
+                    </a>
+                    <a href="#pricing" onclick="toggleMobileMenu()" class="px-3.5 py-2.5 rounded-xl hover:bg-white/[0.06] hover:text-white transition-all flex items-center justify-between">
+                        <span>Pricing</span>
+                        <span class="text-xs text-slate-500">→</span>
+                    </a>
+                    <a href="#faq" onclick="toggleMobileMenu()" class="px-3.5 py-2.5 rounded-xl hover:bg-white/[0.06] hover:text-white transition-all flex items-center justify-between">
+                        <span>FAQ</span>
+                        <span class="text-xs text-slate-500">→</span>
+                    </a>
+                </nav>
+                
+                <div class="pt-3 border-t border-white/[0.08] flex items-center justify-between gap-3">
+                    <div class="flex items-center bg-white/[0.04] p-1 rounded-full border border-white/10 text-xs font-bold">
+                        <button type="button" onclick="switchLanguage('en')" id="btnMobileLangEn" class="px-3 py-1 rounded-full bg-brand-600 text-white transition-all shadow-xs text-xs">EN</button>
+                        <button type="button" onclick="switchLanguage('bn')" id="btnMobileLangBn" class="px-3 py-1 rounded-full text-slate-400 hover:text-white transition-all text-xs">বাং</button>
+                    </div>
+                    
+                    <?php if (empty($currentUser)): ?>
+                        <a href="<?= url('/login') ?>" class="text-xs font-bold text-slate-300 hover:text-white px-4 py-2 rounded-xl bg-white/[0.04] border border-white/10">
+                            Sign In
+                        </a>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     </header>
@@ -1590,6 +1631,7 @@
                     <div><a href="#builder-showcase" class="hover:text-white transition-colors">Visual Canvas Builder</a></div>
                     <div><a href="#embed-showcase" class="hover:text-white transition-colors">Universal Embeds (3-in-1)</a></div>
                     <div><a href="<?= url('/embed-demo.html') ?>" class="hover:text-white transition-colors">Live Interactive Demo</a></div>
+                    <div><a href="<?= url('/docs') ?>" class="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Documentation</a></div>
                     <div><a href="#pricing" class="hover:text-white transition-colors">Pricing & Plans</a></div>
                     <div><a href="#faq" class="hover:text-white transition-colors">FAQ & Knowledgebase</a></div>
                     <div><a href="<?= url('/register') ?>" class="text-brand-400 font-semibold hover:underline">Create Free Workspace →</a></div>
@@ -1602,6 +1644,7 @@
                     <div><a href="<?= url('/terms') ?>" class="hover:text-white transition-colors">Terms of Service</a></div>
                     <div><a href="<?= url('/refund-policy') ?>" class="hover:text-white transition-colors">Refund & Cancellation</a></div>
                     <div><a href="<?= url('/cookie-policy') ?>" class="hover:text-white transition-colors">Cookie Policy</a></div>
+                    <div><a href="<?= url('/docs') ?>" class="hover:text-white transition-colors">API & Webhook Docs</a></div>
                     <div><a href="#features" class="hover:text-white transition-colors">Google Sheets Webhook Sync</a></div>
                     <div><a href="#features" class="hover:text-white transition-colors">WordPress & Shopify Guides</a></div>
                 </div>
@@ -2103,19 +2146,48 @@
 
         function switchLanguage(lang) {
             const t = translations[lang] || translations.en;
-            document.getElementById('heroBadgeText').textContent = t.heroBadge;
-            document.getElementById('heroHead1').textContent = t.head1;
-            document.getElementById('heroHead2').textContent = t.head2;
-            document.getElementById('heroHead3').textContent = t.head3;
-            document.getElementById('heroSubText').textContent = t.sub;
-            document.getElementById('heroCtaText').textContent = t.cta;
+            const heroBadge = document.getElementById('heroBadgeText');
+            const heroHead1 = document.getElementById('heroHead1');
+            const heroHead2 = document.getElementById('heroHead2');
+            const heroHead3 = document.getElementById('heroHead3');
+            const heroSub = document.getElementById('heroSubText');
+            const heroCta = document.getElementById('heroCtaText');
 
-            if (lang === 'bn') {
-                document.getElementById('btnLangBn').className = 'px-2.5 py-1 rounded-full bg-brand-600 text-white transition-all shadow-xs';
-                document.getElementById('btnLangEn').className = 'px-2.5 py-1 rounded-full text-slate-400 hover:text-white transition-all';
+            if (heroBadge) heroBadge.textContent = t.heroBadge;
+            if (heroHead1) heroHead1.textContent = t.head1;
+            if (heroHead2) heroHead2.textContent = t.head2;
+            if (heroHead3) heroHead3.textContent = t.head3;
+            if (heroSub) heroSub.textContent = t.sub;
+            if (heroCta) heroCta.textContent = t.cta;
+
+            const activeBtn = 'px-2.5 py-1 rounded-full bg-brand-600 text-white transition-all shadow-xs text-xs';
+            const inactiveBtn = 'px-2.5 py-1 rounded-full text-slate-400 hover:text-white transition-all text-xs';
+
+            ['btnLangEn', 'btnMobileLangEn'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.className = (lang === 'en') ? activeBtn : inactiveBtn;
+            });
+            ['btnLangBn', 'btnMobileLangBn'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.className = (lang === 'bn') ? activeBtn : inactiveBtn;
+            });
+        }
+
+        function toggleMobileMenu() {
+            const drawer = document.getElementById('mobileMenuDrawer');
+            const burger = document.getElementById('iconBurger');
+            const close = document.getElementById('iconClose');
+            if (!drawer) return;
+
+            const isClosed = drawer.classList.contains('hidden');
+            if (isClosed) {
+                drawer.classList.remove('hidden');
+                burger?.classList.add('hidden');
+                close?.classList.remove('hidden');
             } else {
-                document.getElementById('btnLangEn').className = 'px-2.5 py-1 rounded-full bg-brand-600 text-white transition-all shadow-xs';
-                document.getElementById('btnLangBn').className = 'px-2.5 py-1 rounded-full text-slate-400 hover:text-white transition-all';
+                drawer.classList.add('hidden');
+                burger?.classList.remove('hidden');
+                close?.classList.add('hidden');
             }
         }
     </script>

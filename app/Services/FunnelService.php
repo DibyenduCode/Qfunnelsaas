@@ -118,34 +118,7 @@ class FunnelService
             );
             $funnelId = (int) Database::lastInsertId();
 
-            // Create default starting Question node
-            Database::execute(
-                "INSERT INTO funnel_nodes (tenant_id, funnel_id, node_key, node_type, title, is_start, position_x, position_y) VALUES (?, ?, 'q_1', 'question', 'First Question', 1, 100, 200)",
-                [$tenantId, $funnelId]
-            );
-            $initialNodeId = (int) Database::lastInsertId();
-
-            Database::execute(
-                "INSERT INTO questions (tenant_id, funnel_id, node_id, question_text, question_type, is_required, display_order) VALUES (?, ?, ?, 'What is your primary goal?', 'single_choice', 1, 1)",
-                [$tenantId, $funnelId, $initialNodeId]
-            );
-            $initialQId = (int) Database::lastInsertId();
-
-            Database::execute(
-                "INSERT INTO question_options (tenant_id, question_id, option_key, label, display_order) VALUES 
-                (?, ?, 'opt_1', 'Option A', 1),
-                (?, ?, 'opt_2', 'Option B', 2)",
-                [$tenantId, $initialQId, $tenantId, $initialQId]
-            );
-
-            // Create default Pre-Quiz fields
-            Database::execute(
-                "INSERT INTO form_fields (tenant_id, funnel_id, field_key, label, field_type, placeholder, is_required, display_order, is_active) VALUES 
-                (?, ?, 'full_name', 'Full Name', 'text', 'Enter your name', 1, 1, 1),
-                (?, ?, 'email', 'Email Address', 'email', 'Enter your email', 1, 2, 1)",
-                [$tenantId, $funnelId, $tenantId, $funnelId]
-            );
-
+            // Start with a completely blank canvas so the user can drag & drop any nodes they choose
             AuditLogService::log($tenantId, $userId, 'create_funnel', 'funnel', $funnelId, ['name' => $name, 'slug' => $slug]);
 
             return self::getFunnel($tenantId, $funnelId);

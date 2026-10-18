@@ -94,7 +94,7 @@ class SubmissionService
             "SELECT qa.*, q.question_type 
              FROM quiz_answers qa
              LEFT JOIN questions q ON qa.question_id = q.id
-             WHERE qa.session_id = ? AND qa.superseded_at IS NULL
+             WHERE qa.session_id = ? AND qa.superseded_at IS NULL AND (qa.answer_type != 'form' OR qa.answer_type IS NULL)
              ORDER BY qa.id ASC",
             [$sessionId]
         );

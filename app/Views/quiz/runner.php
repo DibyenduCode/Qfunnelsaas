@@ -272,7 +272,7 @@
 
             <!-- Result / Destination Container -->
             <div id="resultSection" class="hidden space-y-6 text-center py-2">
-                <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 font-extrabold text-2xl flex items-center justify-center mx-auto border border-emerald-200 shadow-sm animate-bounce">
+                <div id="resultIcon" class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 font-extrabold text-2xl flex items-center justify-center mx-auto border border-emerald-200 shadow-sm animate-bounce">
                     ✓
                 </div>
                 <div>
@@ -523,7 +523,7 @@
 
             document.getElementById('questionSection').classList.remove('hidden');
             document.getElementById('stepProgressBadge').classList.remove('hidden');
-            currentStepNumber = step.step_number || 2;
+            currentStepNumber = step.step_number || 1;
             document.getElementById('currentStepNum').textContent = currentStepNumber;
             updateProgressBar(currentStepNumber, 4);
 
@@ -653,13 +653,15 @@
             document.getElementById('questionSection').classList.add('hidden');
             document.getElementById('formSection').classList.add('hidden');
             document.getElementById('stepProgressBadge').classList.add('hidden');
-            document.getElementById('resultSection').classList.remove('hidden');
 
             const resultDestCard = document.getElementById('resultDestCard');
             const cta = document.getElementById('destinationCtaBtn');
             const notice = document.getElementById('redirectNotice');
+            const resultIcon = document.getElementById('resultIcon');
 
+            // 1. Thank You Screen (Message / No Redirection)
             if (result.completion_type === 'message') {
+                document.getElementById('resultSection').classList.remove('hidden');
                 document.getElementById('resultHeading').textContent = result.success_heading || 'Thank You!';
                 document.getElementById('resultSubheading').textContent = result.success_message || 'Your submission has been received.';
                 if (resultDestCard) resultDestCard.classList.add('hidden');
@@ -668,6 +670,33 @@
                 return;
             }
 
+            // 2. Destination Node: If redirecting to any link, directly redirect immediately without showing intermediate card or button!
+            const targetUrl = (result.destination_url || '').trim();
+            if (targetUrl && targetUrl !== '#' && !targetUrl.startsWith('javascript:')) {
+                let resolvedUrl = targetUrl;
+                if (!/^https?:\/\//i.test(resolvedUrl) && !resolvedUrl.startsWith('/') && !resolvedUrl.startsWith('.')) {
+                    resolvedUrl = 'https://' + resolvedUrl;
+                }
+
+                document.getElementById('resultSection').classList.remove('hidden');
+                if (resultDestCard) resultDestCard.classList.add('hidden');
+                if (cta) cta.classList.add('hidden');
+                if (notice) notice.classList.add('hidden');
+
+                if (resultIcon) {
+                    resultIcon.className = 'w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto border border-indigo-200 shadow-sm';
+                    resultIcon.innerHTML = `<svg class="w-6 h-6 animate-spin text-indigo-600" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>`;
+                }
+                document.getElementById('resultHeading').textContent = 'Redirecting...';
+                document.getElementById('resultSubheading').textContent = `Taking you to ${result.destination_name || 'your results'}...`;
+
+                // Directly redirect
+                window.location.href = resolvedUrl;
+                return;
+            }
+
+            // 3. Fallback: Only shown if destination URL was unconfigured or blank
+            document.getElementById('resultSection').classList.remove('hidden');
             document.getElementById('resultHeading').textContent = 'Quiz Completed!';
             document.getElementById('resultSubheading').textContent = 'Thank you. Based on your answers, here is your recommendation:';
             if (resultDestCard) resultDestCard.classList.remove('hidden');
@@ -679,7 +708,14 @@
             const summaryContainer = document.getElementById('resultAnswersSummary');
             summaryContainer.innerHTML = '';
 
-            const answers = (result.summary && result.summary.answers) || [];
+            // Cleanly filter out lead capture data or raw JSON from question answers
+            const answers = ((result.summary && result.summary.answers) || []).filter(a => {
+                if (a.answer_type === 'form') return false;
+                const val = (a.answer || a.answer_value_text || '').trim();
+                if (val.startsWith('{') && val.endsWith('}')) return false;
+                return true;
+            });
+
             answers.forEach(a => {
                 summaryContainer.innerHTML += `
                     <div class="flex items-center justify-between text-[11px] py-1 border-b <?= $isDark ? 'border-slate-800' : 'border-slate-200/60' ?> last:border-0">
@@ -688,21 +724,6 @@
                     </div>
                 `;
             });
-
-            if (result.auto_redirect && result.destination_url) {
-                notice.classList.remove('hidden');
-                let count = result.redirect_delay_seconds || 3;
-                document.getElementById('countdownSeconds').textContent = count;
-
-                const timer = setInterval(() => {
-                    count--;
-                    document.getElementById('countdownSeconds').textContent = count;
-                    if (count <= 0) {
-                        clearInterval(timer);
-                        window.location.href = result.destination_url;
-                    }
-                }, 1000);
-            }
         }
 
         function showError(msg) {

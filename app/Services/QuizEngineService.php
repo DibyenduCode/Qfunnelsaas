@@ -57,11 +57,7 @@ class QuizEngineService
         $rawToken = bin2hex(random_bytes(32));
         $tokenHash = hash('sha256', $rawToken);
 
-        $hasForm = !empty($formSnapshot['fields']);
-        $initialStatus = $hasForm ? 'form_pending' : 'in_progress';
-        $initialNodeId = $startNodeId;
-
-        // Backward compatibility: If the start node is a legacy 'start' node, follow the wire to target
+        // Resolve start node object from graph snapshot
         $startNodeObj = null;
         foreach ($graphSnapshot['nodes'] ?? [] as $n) {
             if ((int)$n['id'] === $startNodeId) {
@@ -69,7 +65,15 @@ class QuizEngineService
                 break;
             }
         }
-        if ($startNodeObj && $startNodeObj['node_type'] === 'start' && !$hasForm) {
+
+        // Only legacy funnels with an explicit 'start' node type use pre-quiz forms
+        $isLegacyStartNode = ($startNodeObj && $startNodeObj['node_type'] === 'start');
+        $hasForm = $isLegacyStartNode && !empty($formSnapshot['fields']);
+        $initialStatus = $hasForm ? 'form_pending' : 'in_progress';
+        $initialNodeId = $startNodeId;
+
+        // Backward compatibility: If the start node is a legacy 'start' node with no form, follow the wire to target
+        if ($isLegacyStartNode && !$hasForm) {
             $edges = $graphSnapshot['edges'] ?? [];
             foreach ($edges as $e) {
                 if ((int)$e['source_node_id'] === (int)$startNodeId) {
@@ -498,10 +502,11 @@ class QuizEngineService
             return self::getCurrentStep($rawToken);
         }
 
-        // Find the most recent active answer
+        $currentNodeId = (int)$session['current_node_id'];
+        // Find the most recent active answer that is NOT the current node
         $previousAnswer = Database::fetchOne(
-            "SELECT * FROM quiz_answers WHERE session_id = ? AND superseded_at IS NULL ORDER BY id DESC LIMIT 1",
-            [$session['id']]
+            "SELECT * FROM quiz_answers WHERE session_id = ? AND superseded_at IS NULL AND node_id != ? ORDER BY id DESC LIMIT 1",
+            [$session['id'], $currentNodeId]
         );
 
         if ($previousAnswer) {
@@ -548,7 +553,7 @@ class QuizEngineService
         $answers = Database::query(
             "SELECT question_text_snapshot, answer_value_text, answered_at 
              FROM quiz_answers 
-             WHERE session_id = ? AND superseded_at IS NULL 
+             WHERE session_id = ? AND superseded_at IS NULL AND (answer_type != 'form' OR answer_type IS NULL)
              ORDER BY id ASC",
             [$session['id']]
         );
@@ -735,7 +740,7 @@ class QuizEngineService
         $answers = Database::query(
             "SELECT question_text_snapshot, answer_value_text, answered_at 
              FROM quiz_answers 
-             WHERE session_id = ? AND superseded_at IS NULL 
+             WHERE session_id = ? AND superseded_at IS NULL AND (answer_type != 'form' OR answer_type IS NULL)
              ORDER BY id ASC",
             [$session['id']]
         );

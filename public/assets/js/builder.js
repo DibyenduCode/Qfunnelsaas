@@ -370,7 +370,19 @@
     // Rendering Canvas Elements
     function renderCanvas() {
         nodesContainer.innerHTML = '';
-        graphData.nodes.forEach(renderNodeElement);
+        if (!graphData.nodes || graphData.nodes.length === 0) {
+            nodesContainer.innerHTML = `
+                <div class="absolute left-64 top-40 text-center pointer-events-none select-none max-w-sm p-6 rounded-2xl border-2 border-dashed border-slate-300 bg-white/70 backdrop-blur-xs shadow-sm">
+                    <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-[#5B5BD6] flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                    </div>
+                    <h3 class="text-sm font-bold text-[#171A21]">Blank Canvas</h3>
+                    <p class="text-xs text-[#687080] mt-1 leading-relaxed">Click or drag any node from the <strong>Node Palette</strong> on the left to start building your workflow.</p>
+                </div>
+            `;
+        } else {
+            graphData.nodes.forEach(renderNodeElement);
+        }
         renderWires();
         updateMinimap();
     }
@@ -1047,6 +1059,19 @@
     // Inspector Panel Rendering
     function renderInspector(preserveScroll = false) {
         const scrollPos = (preserveScroll && inspectorContent) ? inspectorContent.scrollTop : 0;
+        const activeEl = document.activeElement;
+        let focusedInfo = null;
+        if (inspectorContent && activeEl && inspectorContent.contains(activeEl)) {
+            focusedInfo = {
+                id: activeEl.id || null,
+                oninput: activeEl.getAttribute('oninput'),
+                onchange: activeEl.getAttribute('onchange'),
+                name: activeEl.name || null,
+                selectionStart: activeEl.selectionStart,
+                selectionEnd: activeEl.selectionEnd
+            };
+        }
+
         const node = findNode(selectedNodeId);
         if (!node) return deselectAll();
 
@@ -1224,7 +1249,7 @@
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-1.5">
                                 <span class="w-4 h-4 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold flex items-center justify-center">${idx + 1}</span>
-                                <span class="font-bold text-[10px] text-[#171A21] truncate max-w-[140px]">${escapeHtml(f.label || 'Untitled Field')}</span>
+                                <span id="field-header-label-${f.id}" class="font-bold text-[10px] text-[#171A21] truncate max-w-[140px]">${escapeHtml(f.label || 'Untitled Field')}</span>
                                 ${f.is_required ? '<span class="text-[9px] font-bold text-rose-600 bg-rose-50 px-1 rounded">Required</span>' : ''}
                             </div>
                             <div class="flex items-center gap-1">
@@ -1237,13 +1262,13 @@
                         <div class="grid grid-cols-2 gap-2">
                             <div>
                                 <label class="block text-[9px] font-semibold text-[#687080] mb-0.5">Label</label>
-                                <input type="text" value="${escapeHtml(f.label || '')}" placeholder="Field Label"
+                                <input type="text" id="field-label-input-${f.id}" value="${escapeHtml(f.label || '')}" placeholder="Field Label"
                                        oninput="updateFormField('${node.id}', '${f.id}', 'label', this.value)"
                                        class="w-full px-2 py-1 rounded border border-[#E4E7EC] bg-white text-xs">
                             </div>
                             <div>
                                 <label class="block text-[9px] font-semibold text-[#687080] mb-0.5">Field Type</label>
-                                <select onchange="updateFormField('${node.id}', '${f.id}', 'field_type', this.value)"
+                                <select id="field-type-select-${f.id}" onchange="updateFormField('${node.id}', '${f.id}', 'field_type', this.value)"
                                         class="w-full px-2 py-1 rounded border border-[#E4E7EC] bg-white text-xs">
                                     <option value="text" ${f.field_type === 'text' ? 'selected' : ''}>Text Input</option>
                                     <option value="email" ${f.field_type === 'email' ? 'selected' : ''}>Email Address</option>
@@ -1258,7 +1283,7 @@
                         ${f.field_type !== 'consent' ? `
                             <div>
                                 <label class="block text-[9px] font-semibold text-[#687080] mb-0.5">Placeholder</label>
-                                <input type="text" value="${escapeHtml(f.placeholder || '')}" placeholder="Placeholder text"
+                                <input type="text" id="field-placeholder-input-${f.id}" value="${escapeHtml(f.placeholder || '')}" placeholder="Placeholder text"
                                        oninput="updateFormField('${node.id}', '${f.id}', 'placeholder', this.value)"
                                        class="w-full px-2 py-1 rounded border border-[#E4E7EC] bg-white text-xs">
                             </div>
@@ -1266,12 +1291,12 @@
 
                         <div class="pt-1 flex items-center justify-between text-[10px]">
                             <label class="flex items-center gap-1.5 cursor-pointer text-[#344054]">
-                                <input type="checkbox" ${f.is_required ? 'checked' : ''}
+                                <input type="checkbox" id="field-required-input-${f.id}" ${f.is_required ? 'checked' : ''}
                                        onchange="updateFormField('${node.id}', '${f.id}', 'is_required', this.checked ? 1 : 0)"
                                        class="rounded text-[#5B5BD6]">
                                 <span>Required field</span>
                             </label>
-                            <span class="text-slate-400 font-mono text-[9px]">key: ${escapeHtml(f.field_key || '')}</span>
+                            <span id="field-key-badge-${f.id}" class="text-slate-400 font-mono text-[9px]">key: ${escapeHtml(f.field_key || '')}</span>
                         </div>
                     </div>
                 `;
@@ -1390,6 +1415,33 @@
         if (preserveScroll && inspectorContent) {
             inspectorContent.scrollTop = scrollPos;
         }
+
+        // Restore active focus and text selection range if preserving view
+        if (preserveScroll && focusedInfo) {
+            let targetEl = null;
+            if (focusedInfo.id) {
+                targetEl = inspectorContent.querySelector(`#${CSS.escape(focusedInfo.id)}`);
+            }
+            if (!targetEl && focusedInfo.name) {
+                targetEl = inspectorContent.querySelector(`[name="${CSS.escape(focusedInfo.name)}"]`);
+            }
+            if (!targetEl && focusedInfo.oninput) {
+                targetEl = inspectorContent.querySelector(`[oninput="${CSS.escape(focusedInfo.oninput)}"]`);
+            }
+            if (!targetEl && focusedInfo.onchange) {
+                targetEl = inspectorContent.querySelector(`[onchange="${CSS.escape(focusedInfo.onchange)}"]`);
+            }
+            if (targetEl) {
+                try {
+                    targetEl.focus();
+                    if (focusedInfo.selectionStart !== null && typeof targetEl.setSelectionRange === 'function') {
+                        targetEl.setSelectionRange(focusedInfo.selectionStart, focusedInfo.selectionEnd);
+                    }
+                } catch (e) {
+                    console.warn('Failed to restore focus/selection:', e);
+                }
+            }
+        }
     }
 
     // Graph Mutations
@@ -1497,7 +1549,9 @@
             if (!node.form) node.form = {};
             node.form[prop] = value;
             renderCanvas();
-            renderInspector(true);
+            if (prop === 'submit_action') {
+                renderInspector(true);
+            }
             markDirty();
         }
     };
@@ -1584,9 +1638,29 @@
             const field = node.form.fields.find(f => f.id == fieldId || f.field_key == fieldId);
             if (field) {
                 field[prop] = value;
-                if (prop === 'label' && (!field.field_key || field.field_key.startsWith('field_'))) {
-                    field.field_key = value.toLowerCase().replace(/[^a-z0-9_]/g, '_').substring(0, 30);
+
+                if (prop === 'label') {
+                    // Update header title in card directly in DOM
+                    const headerLabelEl = document.getElementById(`field-header-label-${field.id}`);
+                    if (headerLabelEl) {
+                        headerLabelEl.textContent = value.trim() ? value : 'Untitled Field';
+                    }
+
+                    // Auto-generate key ONLY if existing key is auto-generated or generic AND sanitized value is not empty
+                    const sanitized = value.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/^_+|_+$/g, '').substring(0, 30);
+                    if (sanitized && (!field.field_key || field.field_key.startsWith('field_') || field.field_key === 'custom_field')) {
+                        field.field_key = sanitized;
+                        const keyBadgeEl = document.getElementById(`field-key-badge-${field.id}`);
+                        if (keyBadgeEl) {
+                            keyBadgeEl.textContent = `key: ${field.field_key}`;
+                        }
+                    }
                 }
+
+                if (prop === 'field_type') {
+                    renderInspector(true);
+                }
+
                 renderCanvas();
                 markDirty();
             }
@@ -1920,11 +1994,28 @@
 
         if (autoSaveTimer) clearTimeout(autoSaveTimer);
         autoSaveTimer = setTimeout(() => {
+            // If user is actively typing or focused inside an inspector input/textarea, defer autosave
+            if (inspectorContent && document.activeElement && inspectorContent.contains(document.activeElement)) {
+                const tag = (document.activeElement.tagName || '').toLowerCase();
+                if (tag === 'input' || tag === 'textarea') {
+                    markDirty();
+                    return;
+                }
+            }
             saveGraphNow(true);
         }, 3000);
     }
 
     window.saveGraphNow = async function (isAuto = false) {
+        if (isAuto && inspectorContent && document.activeElement && inspectorContent.contains(document.activeElement)) {
+            const tag = (document.activeElement.tagName || '').toLowerCase();
+            if (tag === 'input' || tag === 'textarea') {
+                if (autoSaveTimer) clearTimeout(autoSaveTimer);
+                autoSaveTimer = setTimeout(() => saveGraphNow(true), 2500);
+                return;
+            }
+        }
+
         setSaveStatus('saving', 'Saving...');
         try {
             // Track the currently selected node by key so we don't lose selection or desync IDs
@@ -1956,7 +2047,9 @@
                 renderCanvas();
 
                 // If inspector is currently viewing a node, re-render with fresh IDs while keeping scroll position
-                if (selectedNodeId) {
+                // However, do NOT re-render during auto-save if user is actively editing inside the inspector
+                const isEditingInspector = inspectorContent && document.activeElement && inspectorContent.contains(document.activeElement);
+                if (selectedNodeId && (!isAuto || !isEditingInspector)) {
                     renderInspector(true);
                 }
             } else {
@@ -2050,14 +2143,24 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
                     'X-CSRF-Token': window.CSRF_TOKEN
                 }
             });
-            const json = await resp.json();
-            if (json.success) {
+
+            let json = null;
+            try {
+                json = await resp.json();
+            } catch (parseErr) {
+                const rawText = await resp.text().catch(() => '');
+                throw new Error(rawText ? `Server returned error (${resp.status}): ${rawText.slice(0, 150)}` : `Server error (${resp.status})`);
+            }
+
+            if (json && json.success) {
                 await showAlertDialog({
                     title: 'Funnel Published!',
-                    message: `Funnel published successfully as Version ${json.data.version_number}! Public URL is active.`,
+                    message: 'Funnel published successfully! Public URL is active.',
                     type: 'success',
                     btnText: 'Awesome!'
                 });
@@ -2065,16 +2168,17 @@
             } else {
                 await showAlertDialog({
                     title: 'Cannot Publish Funnel',
-                    message: json.error || 'Please fix flow errors before publishing.',
+                    message: (json && json.error) ? json.error : 'Please fix flow errors before publishing.',
                     type: 'danger',
                     btnText: 'Inspect Errors'
                 });
                 openValidationDrawer();
             }
         } catch (e) {
+            console.error('Publish error:', e);
             showAlertDialog({
-                title: 'Network Error',
-                message: 'Publish request failed. Please check your network or server connection.',
+                title: 'Cannot Publish',
+                message: e.message || 'Publish request failed. Please check your network or server connection.',
                 type: 'danger',
                 btnText: 'Close'
             });
