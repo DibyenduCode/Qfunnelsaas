@@ -74,6 +74,15 @@
                     </div>
 
                     <div>
+                        <label class="block text-xs font-semibold text-[#171A21] uppercase mb-1">Funnel Engine & Mode</label>
+                        <select name="funnel_mode" class="w-full px-3 py-2 rounded-lg border border-[#E4E7EC] text-xs font-semibold text-[#171A21] bg-white focus:ring-2 focus:ring-[#5B5BD6] focus:border-[#5B5BD6]">
+                            <option value="quiz" <?= ($funnel['funnel_mode'] ?? 'quiz') === 'quiz' ? 'selected' : '' ?>>🎯 Lead & Quiz Funnel (Scoring & Branching)</option>
+                            <option value="calculator" <?= ($funnel['funnel_mode'] ?? 'quiz') === 'calculator' ? 'selected' : '' ?>>🧮 Calculator & Quote Funnel (Math Formulas & Price Estimates)</option>
+                        </select>
+                        <p class="text-[11px] text-[#687080] mt-1">Switching modes adapts builder Inspector tools and formula capabilities without losing any existing nodes.</p>
+                    </div>
+
+                    <div>
                         <label class="block text-xs font-semibold text-[#171A21] uppercase mb-1">Funnel Title <span class="text-rose-500">*</span></label>
                         <input type="text" name="name" value="<?= e($funnel['name']) ?>" required
                                class="w-full px-3 py-2 rounded-lg border border-[#E4E7EC] text-xs text-[#171A21] focus:ring-2 focus:ring-[#5B5BD6] focus:border-[#5B5BD6]">
@@ -436,9 +445,13 @@
                         <h3 class="text-sm font-semibold text-[#171A21]">Publication Status</h3>
                         <p class="text-xs text-[#687080]">Public access for respondents.</p>
                     </div>
-                    <?php if ($funnel['status'] === 'published'): ?>
+                    <?php if ($funnel['status'] === 'published' && empty($funnel['has_unpublished_changes'])): ?>
                         <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                             ● Published
+                        </span>
+                    <?php elseif ($funnel['status'] === 'published' && !empty($funnel['has_unpublished_changes'])): ?>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-300" title="Changes saved in draft — Click Publish in Builder to update live quiz">
+                            ● Not Published (Draft Changes)
                         </span>
                     <?php else: ?>
                         <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">

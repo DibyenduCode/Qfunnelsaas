@@ -66,11 +66,11 @@ class FunnelService
     public static function getPublishedFunnelBySlug(string $slug): ?array
     {
         return Database::fetchOne(
-            "SELECT f.*, t.name as tenant_name, t.slug as tenant_slug, fv.graph_snapshot_json, fv.form_schema_snapshot_json, fv.settings_snapshot_json, fv.version_number
+            "SELECT f.*, t.name as tenant_name, t.slug as tenant_slug, t.status as tenant_status, fv.graph_snapshot_json, fv.form_schema_snapshot_json, fv.settings_snapshot_json, fv.version_number
              FROM funnels f
              JOIN tenants t ON f.tenant_id = t.id
              JOIN funnel_versions fv ON f.current_published_version_id = fv.id
-             WHERE f.slug = ? AND f.status = 'published' AND t.status = 'active'",
+             WHERE f.slug = ? AND f.status = 'published' AND t.status IN ('active', 'suspended')",
             [$slug]
         );
     }
@@ -102,24 +102,234 @@ class FunnelService
         }
 
         $description = $data['description'] ?? null;
+        $funnelMode = (!empty($data['funnel_mode']) && in_array($data['funnel_mode'], ['quiz', 'calculator'], true)) ? $data['funnel_mode'] : 'quiz';
+        
+        if ($funnelMode === 'calculator' && !UsageLimitService::hasFeature($tenantId, 'calculator_mode') && !AuthorizationService::isPlatformAdmin()) {
+            throw new RuntimeException("Calculator & Quote Mode is not enabled in your current subscription plan. Please upgrade to unlock interactive calculators.");
+        }
+
         $settings = json_encode([
             'theme' => $data['theme'] ?? 'light',
-            'accent_color' => $data['accent_color'] ?? '#5B5BD6',
+            'accent_color' => $data['accent_color'] ?? ($funnelMode === 'calculator' ? '#10B981' : '#5B5BD6'),
             'enable_back_button' => true,
             'show_progress_bar' => true,
             'auto_redirect' => false,
             'redirect_delay_seconds' => 3,
         ]);
 
-        return Database::transaction(function () use ($tenantId, $name, $slug, $description, $settings, $userId) {
+        return Database::transaction(function () use ($tenantId, $name, $slug, $description, $funnelMode, $settings, $userId) {
             Database::execute(
-                "INSERT INTO funnels (tenant_id, name, slug, description, status, settings_json, created_by) VALUES (?, ?, ?, ?, 'draft', ?, ?)",
-                [$tenantId, $name, $slug, $description, $settings, $userId]
+                "INSERT INTO funnels (tenant_id, name, slug, description, funnel_mode, status, settings_json, created_by) VALUES (?, ?, ?, ?, ?, 'draft', ?, ?)",
+                [$tenantId, $name, $slug, $description, $funnelMode, $settings, $userId]
             );
             $funnelId = (int) Database::lastInsertId();
 
-            // Start with a completely blank canvas so the user can drag & drop any nodes they choose
-            AuditLogService::log($tenantId, $userId, 'create_funnel', 'funnel', $funnelId, ['name' => $name, 'slug' => $slug]);
+            if ($funnelMode === 'calculator') {
+                // Seed Calculator Starter Graph
+                // 1. Start Node
+                Database::execute(
+                    "INSERT INTO funnel_nodes (tenant_id, funnel_id, node_key, node_type, title, is_start, position_x, position_y) VALUES (?, ?, 'start_1', 'start', 'Start', 1, 80, 200)",
+                    [$tenantId, $funnelId]
+                );
+                $startNodeId = (int) Database::lastInsertId();
+
+                // 2. Slider Question Node (@Q1)
+                $sliderConfig = json_encode([
+                    'variable_key' => 'Q1',
+                    'input_type' => 'slider',
+                    'slider_config' => [
+                        'min_value' => 1,
+                        'max_value' => 50,
+                        'step_value' => 1,
+                        'default_value' => 10,
+                        'unit_label' => 'Pages',
+                        'unit_prefix' => ''
+                    ]
+                ], JSON_UNESCAPED_SLASHES);
+
+                Database::execute(
+                    "INSERT INTO funnel_nodes (tenant_id, funnel_id, node_key, node_type, title, is_start, position_x, position_y, config_json) VALUES (?, ?, 'q_slider_1', 'question', 'Scope / Units Required', 0, 360, 200, ?)",
+                    [$tenantId, $funnelId, $sliderConfig]
+                );
+                $sliderNodeId = (int) Database::lastInsertId();
+
+                Database::execute(
+                    "INSERT INTO questions (tenant_id, funnel_id, node_id, question_text, help_text, question_type, is_required, display_order) VALUES (?, ?, ?, 'How many units or pages do you need?', 'Move the slider to estimate your project scale', 'number', 1, 1)",
+                    [$tenantId, $funnelId, $sliderNodeId]
+                );
+
+                // 3. Single-Choice Question Node (@Q2) with numeric values
+                $choiceConfig = json_encode([
+                    'variable_key' => 'Q2',
+                    'input_type' => 'single_choice'
+                ], JSON_UNESCAPED_SLASHES);
+
+                Database::execute(
+                    "INSERT INTO funnel_nodes (tenant_id, funnel_id, node_key, node_type, title, is_start, position_x, position_y, config_json) VALUES (?, ?, 'q_choice_2', 'question', 'Package Tier', 0, 680, 200, ?)",
+                    [$tenantId, $funnelId, $choiceConfig]
+                );
+                $choiceNodeId = (int) Database::lastInsertId();
+
+                Database::execute(
+                    "INSERT INTO questions (tenant_id, funnel_id, node_id, question_text, help_text, question_type, is_required, display_order) VALUES (?, ?, ?, 'Select your desired quality or service tier:', 'Each option includes tailored features', 'single_choice', 1, 2)",
+                    [$tenantId, $funnelId, $choiceNodeId]
+                );
+                $choiceQId = (int) Database::lastInsertId();
+
+                Database::execute(
+                    "INSERT INTO question_options (tenant_id, question_id, option_key, label, value, display_order) VALUES 
+                    (?, ?, 'opt_standard', 'Standard Plan (+₹500)', '500', 1),
+                    (?, ?, 'opt_premium', 'Enterprise / Custom Plan (+₹1,500)', '1500', 2)",
+                    [$tenantId, $choiceQId, $tenantId, $choiceQId]
+                );
+                $optStandardId = (int) Database::lastInsertId();
+                $optPremiumId = $optStandardId + 1;
+
+                // 4. Lead Form Node
+                $formConfig = json_encode([
+                    'fields' => [
+                        ['id' => 1, 'field_key' => 'full_name', 'label' => 'Full Name', 'field_type' => 'text', 'placeholder' => 'Enter your full name', 'is_required' => 1],
+                        ['id' => 2, 'field_key' => 'email', 'label' => 'Email Address', 'field_type' => 'email', 'placeholder' => 'name@company.com', 'is_required' => 1],
+                        ['id' => 3, 'field_key' => 'phone', 'label' => 'Phone / WhatsApp', 'field_type' => 'phone', 'placeholder' => '+91 98765 43210', 'is_required' => 0]
+                    ],
+                    'submit_action' => 'redirect',
+                    'button_text' => 'Unlock Instant Quote',
+                    'success_heading' => 'Quote Generated!',
+                    'success_message' => 'Your instant estimate is ready below.'
+                ], JSON_UNESCAPED_SLASHES);
+
+                Database::execute(
+                    "INSERT INTO funnel_nodes (tenant_id, funnel_id, node_key, node_type, title, is_start, position_x, position_y, config_json) VALUES (?, ?, 'form_lead_3', 'form', 'Unlock Instant Quote', 0, 1000, 200, ?)",
+                    [$tenantId, $funnelId, $formConfig]
+                );
+                $formNodeId = (int) Database::lastInsertId();
+
+                // 5. Quote Outcome Node
+                $calcConfig = [
+                    'enabled' => true,
+                    'formula_expression' => '(@Q1 * 1000) + @Q2',
+                    'result_label' => 'Your Estimated Project Cost',
+                    'result_prefix' => '₹',
+                    'result_suffix' => ' Total',
+                    'decimal_places' => 0
+                ];
+                $destNodeConfig = json_encode(['calculator' => $calcConfig], JSON_UNESCAPED_SLASHES);
+
+                Database::execute(
+                    "INSERT INTO funnel_nodes (tenant_id, funnel_id, node_key, node_type, title, is_start, position_x, position_y, config_json) VALUES (?, ?, 'dest_quote_4', 'destination', 'Instant Quote Outcome', 0, 1320, 200, ?)",
+                    [$tenantId, $funnelId, $destNodeConfig]
+                );
+                $destNodeId = (int) Database::lastInsertId();
+
+                Database::execute(
+                    "INSERT INTO destinations (tenant_id, funnel_id, node_id, name, url, tracking_config_json) VALUES (?, ?, ?, 'Instant Quote Result', 'https://example.com/quote-result', ?)",
+                    [$tenantId, $funnelId, $destNodeId, json_encode(['calculator' => $calcConfig], JSON_UNESCAPED_SLASHES)]
+                );
+
+                // Wire up all edges
+                // Start -> Slider Question
+                Database::execute(
+                    "INSERT INTO funnel_edges (tenant_id, funnel_id, source_node_id, source_option_id, target_node_id) VALUES (?, ?, ?, NULL, ?)",
+                    [$tenantId, $funnelId, $startNodeId, $sliderNodeId]
+                );
+                // Slider Question -> Choice Question
+                Database::execute(
+                    "INSERT INTO funnel_edges (tenant_id, funnel_id, source_node_id, source_option_id, target_node_id) VALUES (?, ?, ?, NULL, ?)",
+                    [$tenantId, $funnelId, $sliderNodeId, $choiceNodeId]
+                );
+                // Choice Question (Option 1) -> Form
+                Database::execute(
+                    "INSERT INTO funnel_edges (tenant_id, funnel_id, source_node_id, source_option_id, target_node_id) VALUES (?, ?, ?, ?, ?)",
+                    [$tenantId, $funnelId, $choiceNodeId, $optStandardId, $formNodeId]
+                );
+                // Choice Question (Option 2) -> Form
+                Database::execute(
+                    "INSERT INTO funnel_edges (tenant_id, funnel_id, source_node_id, source_option_id, target_node_id) VALUES (?, ?, ?, ?, ?)",
+                    [$tenantId, $funnelId, $choiceNodeId, $optPremiumId, $formNodeId]
+                );
+                // Form -> Quote Outcome
+                Database::execute(
+                    "INSERT INTO funnel_edges (tenant_id, funnel_id, source_node_id, source_option_id, target_node_id) VALUES (?, ?, ?, NULL, ?)",
+                    [$tenantId, $funnelId, $formNodeId, $destNodeId]
+                );
+            } else {
+                // Seed standard Quiz Starter Graph: Start -> Question -> Lead Form -> Outcome
+                Database::execute(
+                    "INSERT INTO funnel_nodes (tenant_id, funnel_id, node_key, node_type, title, is_start, position_x, position_y) VALUES (?, ?, 'start_1', 'start', 'Start', 1, 80, 200)",
+                    [$tenantId, $funnelId]
+                );
+                $startNodeId = (int) Database::lastInsertId();
+
+                $qConfig = json_encode(['variable_key' => 'Q1', 'input_type' => 'single_choice'], JSON_UNESCAPED_SLASHES);
+                Database::execute(
+                    "INSERT INTO funnel_nodes (tenant_id, funnel_id, node_key, node_type, title, is_start, position_x, position_y, config_json) VALUES (?, ?, 'q_1', 'question', 'Primary Goal', 0, 360, 200, ?)",
+                    [$tenantId, $funnelId, $qConfig]
+                );
+                $qNodeId = (int) Database::lastInsertId();
+
+                Database::execute(
+                    "INSERT INTO questions (tenant_id, funnel_id, node_id, question_text, help_text, question_type, is_required, display_order) VALUES (?, ?, ?, 'What is your primary business goal?', 'Select the option that best describes your objective', 'single_choice', 1, 1)",
+                    [$tenantId, $funnelId, $qNodeId]
+                );
+                $qId = (int) Database::lastInsertId();
+
+                Database::execute(
+                    "INSERT INTO question_options (tenant_id, question_id, option_key, label, value, display_order) VALUES 
+                    (?, ?, 'opt_1', 'Increase Lead Conversions', '10', 1),
+                    (?, ?, 'opt_2', 'Automate Quote Estimation', '20', 2)",
+                    [$tenantId, $qId, $tenantId, $qId]
+                );
+                $opt1Id = (int) Database::lastInsertId();
+                $opt2Id = $opt1Id + 1;
+
+                $formConfig = json_encode([
+                    'fields' => [
+                        ['id' => 1, 'field_key' => 'full_name', 'label' => 'Full Name', 'field_type' => 'text', 'placeholder' => 'Enter your name', 'is_required' => 1],
+                        ['id' => 2, 'field_key' => 'email', 'label' => 'Email Address', 'field_type' => 'email', 'placeholder' => 'Enter your email', 'is_required' => 1]
+                    ],
+                    'submit_action' => 'redirect',
+                    'button_text' => 'See My Recommendation',
+                    'success_heading' => 'Thank You!',
+                    'success_message' => 'Your personalized plan is ready.'
+                ], JSON_UNESCAPED_SLASHES);
+
+                Database::execute(
+                    "INSERT INTO funnel_nodes (tenant_id, funnel_id, node_key, node_type, title, is_start, position_x, position_y, config_json) VALUES (?, ?, 'form_1', 'form', 'Lead Capture', 0, 680, 200, ?)",
+                    [$tenantId, $funnelId, $formConfig]
+                );
+                $formNodeId = (int) Database::lastInsertId();
+
+                Database::execute(
+                    "INSERT INTO funnel_nodes (tenant_id, funnel_id, node_key, node_type, title, is_start, position_x, position_y) VALUES (?, ?, 'dest_1', 'destination', 'Outcome Page', 0, 1000, 200)",
+                    [$tenantId, $funnelId]
+                );
+                $destNodeId = (int) Database::lastInsertId();
+
+                Database::execute(
+                    "INSERT INTO destinations (tenant_id, funnel_id, node_id, name, url) VALUES (?, ?, ?, 'Recommended Solution', 'https://example.com/recommendation')",
+                    [$tenantId, $funnelId, $destNodeId]
+                );
+
+                // Wire up Start -> Q1 -> (Opt 1, Opt 2) -> Form -> Dest
+                Database::execute(
+                    "INSERT INTO funnel_edges (tenant_id, funnel_id, source_node_id, source_option_id, target_node_id) VALUES (?, ?, ?, NULL, ?)",
+                    [$tenantId, $funnelId, $startNodeId, $qNodeId]
+                );
+                Database::execute(
+                    "INSERT INTO funnel_edges (tenant_id, funnel_id, source_node_id, source_option_id, target_node_id) VALUES (?, ?, ?, ?, ?)",
+                    [$tenantId, $funnelId, $qNodeId, $opt1Id, $formNodeId]
+                );
+                Database::execute(
+                    "INSERT INTO funnel_edges (tenant_id, funnel_id, source_node_id, source_option_id, target_node_id) VALUES (?, ?, ?, ?, ?)",
+                    [$tenantId, $funnelId, $qNodeId, $opt2Id, $formNodeId]
+                );
+                Database::execute(
+                    "INSERT INTO funnel_edges (tenant_id, funnel_id, source_node_id, source_option_id, target_node_id) VALUES (?, ?, ?, NULL, ?)",
+                    [$tenantId, $funnelId, $formNodeId, $destNodeId]
+                );
+            }
+
+            AuditLogService::log($tenantId, $userId, 'create_funnel', 'funnel', $funnelId, ['name' => $name, 'slug' => $slug, 'funnel_mode' => $funnelMode]);
 
             return self::getFunnel($tenantId, $funnelId);
         });
@@ -134,14 +344,18 @@ class FunnelService
 
         $name = trim($data['name'] ?? $funnel['name']);
         $description = $data['description'] ?? $funnel['description'];
+        $funnelMode = in_array($data['funnel_mode'] ?? $funnel['funnel_mode'] ?? 'quiz', ['quiz', 'calculator'], true) 
+            ? ($data['funnel_mode'] ?? $funnel['funnel_mode'] ?? 'quiz') 
+            : 'quiz';
 
         $existingSettings = json_decode($funnel['settings_json'] ?? '{}', true) ?: [];
         $newSettings = array_merge($existingSettings, $data['settings'] ?? []);
 
         Database::execute(
-            "UPDATE funnels SET name = ?, description = ?, settings_json = ? WHERE tenant_id = ? AND id = ?",
-            [$name, $description, json_encode($newSettings), $tenantId, $funnelId]
+            "UPDATE funnels SET name = ?, description = ?, funnel_mode = ?, settings_json = ? WHERE tenant_id = ? AND id = ?",
+            [$name, $description, $funnelMode, json_encode($newSettings), $tenantId, $funnelId]
         );
+
 
         AuditLogService::log($tenantId, $userId, 'update_funnel_settings', 'funnel', $funnelId);
 

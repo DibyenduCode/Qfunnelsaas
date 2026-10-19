@@ -20,7 +20,7 @@ class TenantContextService
             return null;
         }
 
-        $tenant = Database::fetchOne("SELECT * FROM tenants WHERE id = ? AND status = 'active'", [$tenantId]);
+        $tenant = Database::fetchOne("SELECT * FROM tenants WHERE id = ? AND status != 'deleted'", [$tenantId]);
         if ($tenant) {
             self::$activeTenant = $tenant;
         }
@@ -40,7 +40,7 @@ class TenantContextService
         $isPlatformAdmin = $user && !empty($user['is_platform_admin']);
 
         if ($isPlatformAdmin) {
-            $tenant = Database::fetchOne("SELECT * FROM tenants WHERE id = ? AND status = 'active'", [$tenantId]);
+            $tenant = Database::fetchOne("SELECT * FROM tenants WHERE id = ? AND status != 'deleted'", [$tenantId]);
             if (!$tenant) {
                 return false;
             }
@@ -56,7 +56,7 @@ class TenantContextService
                 "SELECT tm.*, t.name as tenant_name, t.slug as tenant_slug, t.status as tenant_status 
                  FROM tenant_memberships tm 
                  JOIN tenants t ON tm.tenant_id = t.id 
-                 WHERE tm.tenant_id = ? AND tm.user_id = ? AND t.status = 'active'",
+                 WHERE tm.tenant_id = ? AND tm.user_id = ? AND t.status != 'deleted'",
                 [$tenantId, $userId]
             );
         }

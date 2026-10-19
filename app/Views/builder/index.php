@@ -8,99 +8,116 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Inter', system-ui, sans-serif;
-            background-color: #F7F8FA;
-            color: #171A21;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #F8FAFC;
+            color: #0F172A;
             user-select: none;
             overflow: hidden;
+            -webkit-font-smoothing: antialiased;
         }
         .canvas-grid {
-            background-image: radial-gradient(#D5D9E2 1px, transparent 1px);
-            background-size: 20px 20px;
+            background-image: radial-gradient(#CBD5E1 1.25px, transparent 1.25px);
+            background-size: 24px 24px;
         }
         .node-card {
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.04);
-            transition: box-shadow 0.15s ease, border-color 0.15s ease;
+            border: 1px solid #E2E8F0;
+            background: #FFFFFF;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 2px 4px -1px rgba(15, 23, 42, 0.02);
+            transition: box-shadow 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
             cursor: default !important;
         }
         .node-card * {
             cursor: default;
         }
         .node-card .node-header {
-            cursor: move !important;
+            cursor: grab !important;
+        }
+        .node-card .node-header:active {
+            cursor: grabbing !important;
         }
         .node-card .port-handle {
             cursor: crosshair !important;
+            width: 14px;
+            height: 14px;
+            border-radius: 9999px;
+            border: 2px solid #ffffff;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
+            position: absolute !important;
+            z-index: 10;
+            transition: transform 0.15s ease;
+            box-sizing: border-box;
         }
-        .node-card button, .node-card a {
+        .node-card .port-handle:hover {
+            transform: scale(1.3) !important;
+        }
+        .node-card .port-handle[data-port-type="output"] {
+            right: -7px !important;
+            top: 50% !important;
+            margin-top: -7px !important;
+        }
+        .node-card .port-handle[data-port-type="input"] {
+            left: -7px !important;
+            top: 14px !important;
+            margin-top: 0 !important;
+            cursor: pointer !important;
+        }
+        .node-card button, .node-card a, .node-card input, .node-card select {
             cursor: pointer !important;
         }
         .node-card:hover {
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            box-shadow: 0 6px 18px 0 rgba(15, 23, 42, 0.08), 0 2px 4px 0 rgba(15, 23, 42, 0.03);
+            border-color: #CBD5E1;
         }
         .node-card.selected {
-            border-color: #5B5BD6 !important;
-            box-shadow: 0 0 0 2px rgba(91, 91, 214, 0.3), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border-color: #6366F1 !important;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.22), 0 10px 24px -3px rgba(15, 23, 42, 0.1);
         }
         .wire-path {
-            stroke: #8E95A5;
-            stroke-width: 2.5;
-            fill: none;
-            transition: stroke 0.15s ease;
-        }
-        .wire-path:hover {
-            stroke: #5B5BD6;
-            stroke-width: 3.5;
-            cursor: pointer;
-        }
-        .wire-path.selected {
-            stroke: #5B5BD6;
-            stroke-width: 3.5;
-        }
-        .port-handle {
-            transition: transform 0.15s ease, background-color 0.15s ease;
-        }
-        .port-handle:hover {
-            transform: scale(1.3);
-            background-color: #5B5BD6;
-        }
-        .wire-path {
-            stroke: #8E95A5;
-            stroke-width: 2.5;
+            stroke: #94A3B8;
+            stroke-width: 2.2;
             fill: none;
             transition: stroke 0.15s ease, stroke-width 0.15s ease;
         }
         .wire-path:hover {
-            stroke: #5B5BD6 !important;
-            stroke-width: 4 !important;
+            stroke: #6366F1 !important;
+            stroke-width: 3.5 !important;
             cursor: pointer;
-            filter: drop-shadow(0 0 4px rgba(91, 91, 214, 0.4));
+            filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.35));
         }
         .wire-path.selected {
-            stroke: #5B5BD6 !important;
-            stroke-width: 4 !important;
-            filter: drop-shadow(0 0 6px rgba(91, 91, 214, 0.5));
+            stroke: #6366F1 !important;
+            stroke-width: 3.5 !important;
+            filter: drop-shadow(0 2px 6px rgba(99, 102, 241, 0.45));
+        }
+        .port-handle {
+            transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s ease, background-color 0.15s ease;
+        }
+        .port-handle:hover {
+            transform: scale(1.35) !important;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.25);
         }
         .wire-delete-btn {
             cursor: pointer;
             transition: transform 0.15s ease, opacity 0.15s ease;
         }
         .wire-delete-btn:hover {
-            transform: scale(1.2);
+            transform: scale(1.15);
         }
         .palette-card {
             cursor: grab;
-            transition: all 0.15s ease;
+            transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .palette-card:active {
             cursor: grabbing;
         }
         .palette-card:hover {
             transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
         }
         .canvas-drag-over {
-            background-color: rgba(91, 91, 214, 0.04) !important;
-            outline: 2px dashed #5B5BD6;
+            background-color: rgba(99, 102, 241, 0.03) !important;
+            outline: 2px dashed #6366F1;
             outline-offset: -4px;
         }
         #toastContainer {
@@ -111,65 +128,86 @@
 <body class="h-screen w-screen flex flex-col bg-[#F7F8FA]">
 
     <!-- Top Workspace Header -->
-    <header class="h-14 bg-white border-b border-[#E4E7EC] px-4 flex items-center justify-between z-20 shrink-0">
-        <div class="flex items-center gap-3">
-            <a href="<?= url('/admin/funnels') ?>" class="p-1.5 rounded-lg text-[#687080] hover:text-[#171A21] hover:bg-[#F1F3F6]" title="Back to Funnels">
+    <header class="h-14 bg-white border-b border-[#E4E7EC] px-3 sm:px-4 flex items-center justify-between z-20 shrink-0 gap-3 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden min-w-0">
+        <div class="flex items-center gap-2.5 sm:gap-3 shrink-0 min-w-0">
+            <a href="<?= url('/admin/funnels') ?>" class="p-1.5 rounded-lg text-[#687080] hover:text-[#171A21] hover:bg-[#F1F3F6] shrink-0" title="Back to Funnels">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
             </a>
-            <div class="h-4 w-px bg-[#E4E7EC]"></div>
-            <div>
-                <h1 class="text-xs font-bold text-[#171A21] truncate max-w-xs"><?= e($funnel['name']) ?></h1>
-                <div class="flex items-center gap-2">
-                    <span class="text-[10px] text-[#687080]">/quiz/<?= e($funnel['slug']) ?></span>
-                    <button type="button" onclick="copyFunnelUrl()" class="text-[#687080] hover:text-[#5B5BD6] transition-colors p-0.5 rounded hover:bg-slate-100" title="Copy Public Funnel URL">
+            <div class="h-4 w-px bg-[#E4E7EC] shrink-0"></div>
+            <div class="min-w-0 shrink">
+                <h1 class="text-xs font-bold text-[#171A21] truncate max-w-[140px] sm:max-w-[200px]"><?= e($funnel['name']) ?></h1>
+                <div class="flex items-center gap-1.5 sm:gap-2">
+                    <span class="text-[10px] text-[#687080] truncate max-w-[100px] sm:max-w-none">/quiz/<?= e($funnel['slug']) ?></span>
+                    <button type="button" onclick="copyFunnelUrl()" class="text-[#687080] hover:text-[#5B5BD6] transition-colors p-0.5 rounded hover:bg-slate-100 shrink-0" title="Copy Public Funnel URL">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                     </button>
-                    <?php if ($funnel['status'] === 'published'): ?>
-                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Published</span>
-                    <?php else: ?>
-                        <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">Draft</span>
-                    <?php endif; ?>
+                    <span id="funnelPublishStatusBadge" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold shrink-0 whitespace-nowrap <?= ($funnel['status'] === 'published' && empty($funnel['has_unpublished_changes'])) ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-800 border border-amber-300' ?>" title="<?= ($funnel['status'] === 'published' && empty($funnel['has_unpublished_changes'])) ? 'Published & Live' : 'Changes saved in draft — Click Publish Version to update the live public URL' ?>">
+                        <span class="w-1.5 h-1.5 rounded-full <?= ($funnel['status'] === 'published' && empty($funnel['has_unpublished_changes'])) ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse' ?>"></span>
+                        <span id="funnelPublishStatusText"><?= ($funnel['status'] === 'published' && empty($funnel['has_unpublished_changes'])) ? 'Published' : 'Not Published' ?></span>
+                    </span>
                 </div>
+            </div>
+
+            <div class="h-4 w-px bg-[#E4E7EC] shrink-0"></div>
+
+            <!-- Mode Switcher Dropdown -->
+            <div class="relative inline-flex items-center rounded-lg bg-slate-100/90 hover:bg-slate-200/80 border border-slate-200/90 text-xs shadow-2xs shrink-0 whitespace-nowrap transition-colors">
+                <span id="funnelModeIcon" class="pl-2.5 pointer-events-none flex items-center justify-center shrink-0">
+                    <?php if (($funnel['funnel_mode'] ?? 'quiz') === 'calculator'): ?>
+                        <svg class="w-3.5 h-3.5 text-purple-600" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="2" width="11" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><rect x="4.5" y="4" width="7" height="2.5" rx="0.5" stroke="currentColor" stroke-width="1"/><path d="M5 9h1.5M8 9h1.5M5 11.5h1.5M8 11.5h1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                    <?php else: ?>
+                        <svg class="w-3.5 h-3.5 text-indigo-600" viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="4.5" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="2" y="9" width="12" height="4.5" rx="1.5" stroke="currentColor" stroke-width="1.3"/><circle cx="4.5" cy="4.75" r="1" fill="currentColor"/><circle cx="4.5" cy="11.25" r="1" fill="currentColor"/></svg>
+                    <?php endif; ?>
+                </span>
+                <select id="funnelModeSelector" onchange="switchFunnelMode(this.value)" class="appearance-none bg-transparent pl-1.5 pr-7 py-1.5 text-[11px] font-semibold text-slate-800 focus:outline-none cursor-pointer">
+                    <option value="quiz" <?= ($funnel['funnel_mode'] ?? 'quiz') === 'quiz' ? 'selected' : '' ?>>Quiz Mode</option>
+                    <option value="calculator" <?= ($funnel['funnel_mode'] ?? 'quiz') === 'calculator' ? 'selected' : '' ?>>Calculator Mode</option>
+                </select>
+                <span class="absolute right-2 pointer-events-none text-slate-400 flex items-center">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </span>
             </div>
         </div>
 
         <!-- Center: Save Status & Actions -->
-        <div class="flex items-center gap-4">
-            <div id="saveStatusIndicator" class="flex items-center gap-1.5 text-xs text-[#687080]">
-                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span>Saved</span>
+        <div class="flex items-center gap-3 sm:gap-4 shrink-0 whitespace-nowrap">
+            <div id="saveStatusIndicator" class="flex items-center gap-1.5 text-xs text-slate-500 font-medium shrink-0 whitespace-nowrap min-w-[70px]">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                <span class="whitespace-nowrap">Saved</span>
             </div>
 
-            <div class="flex items-center bg-[#F1F3F6] rounded-lg p-0.5 border border-[#E4E7EC]">
-                <button type="button" onclick="zoomCanvas(0.85)" class="px-2 py-1 text-xs text-[#687080] hover:text-[#171A21] rounded" title="Zoom Out (−)">−</button>
-                <button type="button" onclick="resetZoom()" class="px-2 py-1 text-xs text-[#687080] hover:text-[#171A21] rounded font-mono" id="zoomLevelText">100%</button>
-                <button type="button" onclick="zoomCanvas(1.15)" class="px-2 py-1 text-xs text-[#687080] hover:text-[#171A21] rounded" title="Zoom In (+)">+</button>
-                <button type="button" onclick="centerCanvas()" class="px-2 py-1 text-xs text-[#687080] hover:text-[#171A21] rounded ml-1" title="Center Canvas (Ctrl+0)">Fit</button>
-                <button type="button" onclick="autoArrangeNodes()" class="px-2 py-1 text-xs text-[#5B5BD6] font-semibold hover:bg-indigo-50 rounded ml-1 flex items-center gap-1 transition-colors" title="Auto-arrange canvas tree layout (L)">
-                    <span>✨</span>
-                    <span>Auto Layout</span>
+            <div class="flex items-center bg-[#F1F3F6] rounded-lg p-0.5 border border-slate-200 shrink-0 whitespace-nowrap">
+                <button type="button" onclick="zoomCanvas(0.85)" class="px-1.5 py-1 text-xs text-slate-600 hover:text-slate-900 rounded shrink-0" title="Zoom Out (−)">−</button>
+                <button type="button" onclick="resetZoom()" class="px-1.5 py-1 text-xs text-slate-600 hover:text-slate-900 rounded font-mono shrink-0" id="zoomLevelText">100%</button>
+                <button type="button" onclick="zoomCanvas(1.15)" class="px-1.5 py-1 text-xs text-slate-600 hover:text-slate-900 rounded shrink-0" title="Zoom In (+)">+</button>
+                <button type="button" onclick="centerCanvas()" class="px-2 py-1 text-xs text-slate-600 hover:text-slate-900 rounded ml-0.5 shrink-0" title="Center Canvas (Ctrl+0)">Fit</button>
+                <button type="button" onclick="autoArrangeNodes()" class="px-2 py-1 text-xs text-[#5B5BD6] font-semibold hover:bg-indigo-50 rounded ml-0.5 flex items-center gap-1 transition-colors shrink-0 whitespace-nowrap" title="Auto-arrange canvas tree layout (L)">
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h16"/></svg>
+                    <span class="whitespace-nowrap">Auto Layout</span>
                 </button>
             </div>
         </div>
 
         <!-- Right: Flow Validation, Preview, Publish -->
-        <div class="flex items-center gap-2">
-            <button type="button" onclick="openValidationDrawer()" id="validateBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs font-semibold text-[#171A21] hover:bg-[#F7F8FA] transition-colors" title="Shortcut: V">
-                <svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                Validate Flow
+        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap pr-2">
+            <button type="button" onclick="openValidationDrawer()" id="validateBtn" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs font-semibold text-[#171A21] hover:bg-[#F7F8FA] transition-colors shrink-0 whitespace-nowrap" title="Validate Flow (V)">
+                <svg class="w-3.5 h-3.5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <span class="whitespace-nowrap">Validate</span>
             </button>
 
-            <button type="button" onclick="openPreviewModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs font-semibold text-[#171A21] hover:bg-[#F7F8FA] transition-colors" title="Shortcut: P">
-                <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                Preview Quiz
+            <button type="button" onclick="openPreviewModal()" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs font-semibold text-[#171A21] hover:bg-[#F7F8FA] transition-colors shrink-0 whitespace-nowrap" title="Preview Quiz (P)">
+                <svg class="w-3.5 h-3.5 text-indigo-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span class="whitespace-nowrap">Preview</span>
             </button>
 
-            <button type="button" onclick="saveGraphNow()" id="saveBtn" class="px-3 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs font-semibold text-[#171A21] hover:bg-[#F7F8FA]" title="Shortcut: Ctrl+S">
+            <button type="button" onclick="saveGraphNow()" id="saveBtn" class="px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs font-semibold text-[#171A21] hover:bg-[#F7F8FA] shrink-0 whitespace-nowrap" title="Save Flow (Ctrl+S)">
                 Save
             </button>
 
-            <button type="button" onclick="publishFunnel()" id="publishBtn" class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[#5B5BD6] text-white text-xs font-semibold shadow hover:bg-[#4B4BC0] transition-colors">
-                Publish Version
+            <?php $isLive = ($funnel['status'] === 'published' && empty($funnel['has_unpublished_changes'])); ?>
+            <button type="button" onclick="publishFunnel()" id="publishBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors shrink-0 whitespace-nowrap <?= $isLive ? 'bg-[#5B5BD6] text-white hover:bg-[#4B4BC0] font-semibold' : 'bg-amber-600 text-white hover:bg-amber-700 font-bold shadow-sm' ?>">
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                <span id="publishBtnText"><?= $isLive ? 'Published' : 'Publish Changes' ?></span>
             </button>
         </div>
     </header>
@@ -192,54 +230,83 @@
             <div class="p-3 space-y-2.5 overflow-y-auto flex-1">
 
                 <!-- Question Node -->
-                <div draggable="true" ondragstart="handlePaletteDragStart(event, 'question')" onclick="addNodeToCanvas('question')" class="palette-card w-full p-2.5 rounded-xl border border-[#E4E7EC] bg-white hover:border-indigo-400 hover:bg-indigo-50/40 text-left transition-all flex items-start gap-2.5 shadow-xs select-none group">
-                    <div class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0 group-hover:scale-110 transition-transform">
-                        ?
+                <div draggable="true" ondragstart="handlePaletteDragStart(event, 'question')" onclick="addNodeToCanvas('question')" class="palette-card w-full p-2.5 rounded-xl border border-slate-200/80 bg-white hover:border-indigo-400 hover:bg-indigo-50/20 text-left transition-all flex items-start gap-2.5 shadow-2xs select-none group">
+                    <div class="w-7 h-7 rounded-lg bg-slate-50 text-indigo-600 border border-slate-200/80 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-indigo-50/50 transition-all">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="4.5" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="2" y="9" width="12" height="4.5" rx="1.5" stroke="currentColor" stroke-width="1.3"/><circle cx="4.5" cy="4.75" r="1" fill="currentColor"/><circle cx="4.5" cy="11.25" r="1" fill="currentColor"/><line x1="7.5" y1="4.75" x2="11.5" y2="4.75" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="7.5" y1="11.25" x2="11.5" y2="11.25" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
                     </div>
                     <div>
                         <div class="flex items-center gap-1.5">
-                            <span class="block text-xs font-semibold text-[#171A21]">Question Node</span>
-                            <kbd class="text-[9px] font-mono font-bold bg-indigo-50 text-[#5B5BD6] px-1 rounded border border-indigo-100">Q</kbd>
+                            <span class="block text-xs font-semibold text-slate-800">Choice Question</span>
+                            <kbd class="text-[9px] font-mono font-semibold bg-slate-100 text-slate-600 px-1 rounded border border-slate-200">Q</kbd>
                         </div>
-                        <span class="block text-[10px] text-[#687080] leading-tight mt-0.5">Branching options & rules</span>
+                        <span class="block text-[10px] text-slate-500 leading-tight mt-0.5">Single / multiple choices</span>
+                    </div>
+                </div>
+
+                <!-- Number / Slider Node (Calculator Input) -->
+                <div draggable="true" ondragstart="handlePaletteDragStart(event, 'slider')" onclick="addNodeToCanvas('slider')" class="palette-card w-full p-2.5 rounded-xl border border-slate-200/80 bg-white hover:border-emerald-400 hover:bg-emerald-50/20 text-left transition-all flex items-start gap-2.5 shadow-2xs select-none group">
+                    <div class="w-7 h-7 rounded-lg bg-slate-50 text-emerald-600 border border-slate-200/80 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-emerald-50/50 transition-all">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"><line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="6" cy="8" r="2.5" fill="white" stroke="currentColor" stroke-width="1.4"/><path d="M6 3.5V5M6 11v1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="block text-xs font-semibold text-slate-800">Number / Slider</span>
+                            <kbd class="text-[9px] font-mono font-semibold bg-slate-100 text-slate-600 px-1 rounded border border-slate-200">S</kbd>
+                        </div>
+                        <span id="sliderPaletteSubtitle" class="block text-[10px] text-slate-500 leading-tight mt-0.5"><?= ($funnel['funnel_mode'] ?? 'quiz') === 'calculator' ? 'Numeric quantity & variable' : 'Numeric quantity & range' ?></span>
                     </div>
                 </div>
 
                 <!-- Form Node (Lead Capture) -->
-                <div draggable="true" ondragstart="handlePaletteDragStart(event, 'form')" onclick="addNodeToCanvas('form')" class="palette-card w-full p-2.5 rounded-xl border border-[#E4E7EC] bg-white hover:border-amber-400 hover:bg-amber-50/40 text-left transition-all flex items-start gap-2.5 shadow-xs select-none group">
-                    <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs shrink-0 group-hover:scale-110 transition-transform">
-                        📋
+                <div draggable="true" ondragstart="handlePaletteDragStart(event, 'form')" onclick="addNodeToCanvas('form')" class="palette-card w-full p-2.5 rounded-xl border border-slate-200/80 bg-white hover:border-sky-400 hover:bg-sky-50/20 text-left transition-all flex items-start gap-2.5 shadow-2xs select-none group">
+                    <div class="w-7 h-7 rounded-lg bg-slate-50 text-sky-600 border border-slate-200/80 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-sky-50/50 transition-all">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><line x1="5" y1="5.5" x2="11" y2="5.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="5" y1="8.5" x2="9" y2="8.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="10" cy="10.5" r="1" fill="currentColor"/></svg>
                     </div>
                     <div>
                         <div class="flex items-center gap-1.5">
-                            <span class="block text-xs font-semibold text-[#171A21]">Form Node</span>
-                            <kbd class="text-[9px] font-mono font-bold bg-amber-50 text-amber-700 px-1 rounded border border-amber-100">F</kbd>
+                            <span class="block text-xs font-semibold text-slate-800">Form Node</span>
+                            <kbd class="text-[9px] font-mono font-semibold bg-slate-100 text-slate-600 px-1 rounded border border-slate-200">F</kbd>
                         </div>
-                        <span class="block text-[10px] text-[#687080] leading-tight mt-0.5">Lead capture & custom data</span>
+                        <span class="block text-[10px] text-slate-500 leading-tight mt-0.5">Lead capture & custom data</span>
                     </div>
                 </div>
 
                 <!-- Destination Node -->
-                <div draggable="true" ondragstart="handlePaletteDragStart(event, 'destination')" onclick="addNodeToCanvas('destination')" class="palette-card w-full p-2.5 rounded-xl border border-[#E4E7EC] bg-white hover:border-purple-400 hover:bg-purple-50/40 text-left transition-all flex items-start gap-2.5 shadow-xs select-none group">
-                    <div class="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs shrink-0 group-hover:scale-110 transition-transform">
-                        ⚐
+                <div draggable="true" ondragstart="handlePaletteDragStart(event, 'destination')" onclick="addNodeToCanvas('destination')" class="palette-card w-full p-2.5 rounded-xl border border-slate-200/80 bg-white hover:border-purple-400 hover:bg-purple-50/20 text-left transition-all flex items-start gap-2.5 shadow-2xs select-none group">
+                    <div class="w-7 h-7 rounded-lg bg-slate-50 text-purple-600 border border-slate-200/80 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-purple-50/50 transition-all">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 10.5L10.5 5.5M10.5 5.5H7.5M10.5 5.5V8.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </div>
                     <div>
                         <div class="flex items-center gap-1.5">
-                            <span class="block text-xs font-semibold text-[#171A21]">Destination Node</span>
-                            <kbd class="text-[9px] font-mono font-bold bg-purple-50 text-purple-700 px-1 rounded border border-purple-100">D</kbd>
+                            <span class="block text-xs font-semibold text-slate-800">Destination Node</span>
+                            <kbd class="text-[9px] font-mono font-semibold bg-slate-100 text-slate-600 px-1 rounded border border-slate-200">D</kbd>
                         </div>
-                        <span class="block text-[10px] text-[#687080] leading-tight mt-0.5">Terminal landing page URL</span>
+                        <span class="block text-[10px] text-slate-500 leading-tight mt-0.5">Terminal landing page URL</span>
+                    </div>
+                </div>
+
+                <!-- 1-Click Call & WhatsApp Connect Node -->
+                <div draggable="true" ondragstart="handlePaletteDragStart(event, 'connect')" onclick="addNodeToCanvas('connect')" class="palette-card w-full p-2.5 rounded-xl border border-slate-200/80 bg-white hover:border-emerald-400 hover:bg-emerald-50/20 text-left transition-all flex items-start gap-2.5 shadow-2xs select-none group">
+                    <div class="w-7 h-7 rounded-lg bg-slate-50 text-emerald-600 border border-slate-200/80 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-emerald-50/50 transition-all">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"><path d="M2.5 4.5A2 2 0 014.5 2.5h1.2a1 1 0 011 .76l.6 2.37a1 1 0 01-.28.98l-.8.8a8.3 8.3 0 003.87 3.87l.8-.8a1 1 0 01.98-.28l2.37.6a1 1 0 01.76 1v1.2a2 2 0 01-2 2c-6.07 0-11-4.93-11-11v-1.2z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="block text-xs font-semibold text-slate-800">Call & WhatsApp</span>
+                            <kbd class="text-[9px] font-mono font-semibold bg-slate-100 text-slate-600 px-1 rounded border border-slate-200">C</kbd>
+                        </div>
+                        <span class="block text-[10px] text-slate-500 leading-tight mt-0.5">1-click direct call / chat</span>
                     </div>
                 </div>
 
                 <!-- Quick Help / Workflow Tip -->
-                <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 text-[11px] text-[#687080] space-y-1">
-                    <div class="flex items-center gap-1 font-semibold text-[#171A21] text-[10px] uppercase tracking-wider">
-                        <span>💡 Flow Strategy</span>
+                <div class="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200/60 text-[11px] text-slate-500 space-y-1">
+                    <div class="flex items-center gap-1.5 font-semibold text-slate-700 text-[10px] uppercase tracking-wider">
+                        <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span>Flow Strategy</span>
                     </div>
-                    <p class="leading-relaxed text-[10px]">
-                        Place a Form Node anywhere: at the start, mid-flow, or at the end to capture contact info.
+                    <p class="leading-relaxed text-[10px] text-slate-500">
+                        Connect output ports on the right to input ports on the left to create dynamic branching paths.
                     </p>
                 </div>
             </div>
@@ -262,8 +329,10 @@
                     <div class="flex items-center justify-between"><span class="font-medium">Deselect / Cancel</span><kbd class="px-1.5 py-0.5 bg-white border border-[#D0D5DD] rounded text-[9px] font-mono shadow-xs">Esc</kbd></div>
                     <div class="flex items-center justify-between"><span class="font-medium">Zoom In / Out</span><kbd class="px-1.5 py-0.5 bg-white border border-[#D0D5DD] rounded text-[9px] font-mono shadow-xs">+ / -</kbd></div>
                     <div class="flex items-center justify-between"><span class="font-medium">Add Question</span><kbd class="px-1.5 py-0.5 bg-white border border-[#D0D5DD] rounded text-[9px] font-mono shadow-xs">Q</kbd></div>
+                    <div class="flex items-center justify-between"><span class="font-medium">Add Number Slider</span><kbd class="px-1.5 py-0.5 bg-white border border-[#D0D5DD] rounded text-[9px] font-mono shadow-xs">S</kbd></div>
                     <div class="flex items-center justify-between"><span class="font-medium">Add Form Node</span><kbd class="px-1.5 py-0.5 bg-white border border-[#D0D5DD] rounded text-[9px] font-mono shadow-xs">F</kbd></div>
                     <div class="flex items-center justify-between"><span class="font-medium">Add Destination</span><kbd class="px-1.5 py-0.5 bg-white border border-[#D0D5DD] rounded text-[9px] font-mono shadow-xs">D</kbd></div>
+                    <div class="flex items-center justify-between"><span class="font-medium">Add Call/WhatsApp</span><kbd class="px-1.5 py-0.5 bg-white border border-[#D0D5DD] rounded text-[9px] font-mono shadow-xs">C</kbd></div>
                     <div class="flex items-center justify-between"><span class="font-medium">Live Preview</span><kbd class="px-1.5 py-0.5 bg-white border border-[#D0D5DD] rounded text-[9px] font-mono shadow-xs">P</kbd></div>
                     <div class="flex items-center justify-between"><span class="font-medium">Validate Flow</span><kbd class="px-1.5 py-0.5 bg-white border border-[#D0D5DD] rounded text-[9px] font-mono shadow-xs">V</kbd></div>
                 </div>
@@ -414,6 +483,7 @@
     <!-- Global Application Config for JS -->
     <script>
         window.FUNNEL_ID = <?= (int)$funnel['id'] ?>;
+        window.FUNNEL_MODE = '<?= e($funnel['funnel_mode'] ?? 'quiz') ?>';
         window.CSRF_TOKEN = '<?= csrf_token() ?>';
         window.API_BASE = '<?= url('') ?>';
     </script>

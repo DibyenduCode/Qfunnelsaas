@@ -40,6 +40,9 @@
             <?php if ($stats['suspended_tenants'] > 0): ?>
                 <span class="text-[11px] text-rose-500 block mt-1"><?= (int)$stats['suspended_tenants'] ?> suspended</span>
             <?php endif; ?>
+            <?php if (!empty($stats['termination_due_count'])): ?>
+                <a href="<?= url('/admin/platform/customers') ?>" class="text-[11px] text-amber-600 font-bold block hover:underline">⚠️ <?= (int)$stats['termination_due_count'] ?> in termination queue</a>
+            <?php endif; ?>
         </div>
 
         <!-- Total Users -->

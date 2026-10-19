@@ -87,7 +87,7 @@ class FunnelPublishService
 
             // Update Funnel Status
             Database::execute(
-                "UPDATE funnels SET status = 'published', current_published_version_id = ?, updated_at = NOW() WHERE id = ?",
+                "UPDATE funnels SET status = 'published', current_published_version_id = ?, has_unpublished_changes = 0, updated_at = NOW() WHERE id = ?",
                 [$versionId, $funnelId]
             );
 

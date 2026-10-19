@@ -82,12 +82,19 @@
                                     </div>
                                 </td>
                                 <td class="py-3.5 px-4">
-                                    <?php if ($f['status'] === 'published'): ?>
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <?php if ($f['status'] === 'published' && empty($f['has_unpublished_changes'])): ?>
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                             Published
                                         </span>
+                                    <?php elseif ($f['status'] === 'published' && !empty($f['has_unpublished_changes'])): ?>
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-300" title="Changes saved in draft — Click Publish to update live link">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                            Not Published
+                                        </span>
                                     <?php elseif ($f['status'] === 'draft'): ?>
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
                                             Draft
                                         </span>
                                     <?php else: ?>

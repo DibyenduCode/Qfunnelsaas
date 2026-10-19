@@ -276,12 +276,13 @@ foreach ($featureCatalog as $key => $meta) {
                             <p class="text-[11px] text-slate-500">Enable or disable specific platform modules and premium capabilities for subscribers.</p>
                         </div>
                         <!-- Presets Toolbar -->
-                        <div class="flex items-center gap-1.5 text-[11px]">
-                            <span class="text-slate-400 font-medium mr-1">Presets:</span>
-                            <button type="button" onclick="applyFeaturePreset('create', 'all')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold transition-colors">All</button>
+                        <div class="flex items-center gap-1.5 text-[11px] flex-wrap">
+                            <span class="text-slate-400 font-medium mr-1">Quick Presets:</span>
+                            <button type="button" onclick="applyFeaturePreset('create', 'free')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold transition-colors">Free</button>
+                            <button type="button" onclick="applyFeaturePreset('create', 'starter')" class="px-2 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold transition-colors">Starter</button>
                             <button type="button" onclick="applyFeaturePreset('create', 'standard')" class="px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold transition-colors">Standard</button>
                             <button type="button" onclick="applyFeaturePreset('create', 'pro')" class="px-2 py-0.5 rounded bg-purple-50 hover:bg-purple-100 text-purple-700 font-semibold transition-colors">Pro / All</button>
-                            <button type="button" onclick="applyFeaturePreset('create', 'none')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 font-semibold transition-colors">Clear</button>
+                            <button type="button" onclick="applyFeaturePreset('create', 'none')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 font-semibold transition-colors">Clear All</button>
                         </div>
                     </div>
 
@@ -404,12 +405,13 @@ foreach ($featureCatalog as $key => $meta) {
                             <p class="text-[11px] text-slate-500">Toggle enabled features and premium perks for this subscription tier.</p>
                         </div>
                         <!-- Presets Toolbar -->
-                        <div class="flex items-center gap-1.5 text-[11px]">
-                            <span class="text-slate-400 font-medium mr-1">Presets:</span>
-                            <button type="button" onclick="applyFeaturePreset('edit', 'all')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold transition-colors">All</button>
+                        <div class="flex items-center gap-1.5 text-[11px] flex-wrap">
+                            <span class="text-slate-400 font-medium mr-1">Quick Presets:</span>
+                            <button type="button" onclick="applyFeaturePreset('edit', 'free')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold transition-colors">Free</button>
+                            <button type="button" onclick="applyFeaturePreset('edit', 'starter')" class="px-2 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold transition-colors">Starter</button>
                             <button type="button" onclick="applyFeaturePreset('edit', 'standard')" class="px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold transition-colors">Standard</button>
                             <button type="button" onclick="applyFeaturePreset('edit', 'pro')" class="px-2 py-0.5 rounded bg-purple-50 hover:bg-purple-100 text-purple-700 font-semibold transition-colors">Pro / All</button>
-                            <button type="button" onclick="applyFeaturePreset('edit', 'none')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 font-semibold transition-colors">Clear</button>
+                            <button type="button" onclick="applyFeaturePreset('edit', 'none')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 font-semibold transition-colors">Clear All</button>
                         </div>
                     </div>
 
@@ -526,24 +528,24 @@ function closeEditPlanModal() {
 }
 
 function applyFeaturePreset(formPrefix, preset) {
+    const freeKeys = ['visual_builder', 'conditional_logic', 'lead_capture_forms', 'dynamic_scoring', 'back_navigation', 'analytics', 'journey_inspector'];
+    const starterKeys = [...freeKeys, 'calculator_mode', 'quick_connect', 'custom_branding', 'custom_footer', 'auto_redirect', 'embed_widgets'];
+    const standardKeys = [...starterKeys, 'white_label', 'custom_trust_badges', 'csv_export', 'step_dropoff_analytics', 'webhooks', 'team_collaboration'];
+
     for (const key in featureCatalog) {
         const el = document.getElementById(formPrefix + '_feat_' + key);
         if (!el) continue;
-        const meta = featureCatalog[key];
 
         if (preset === 'all' || preset === 'pro') {
             el.checked = true;
         } else if (preset === 'none') {
             el.checked = false;
-        } else if (preset === 'standard') {
-            // Standard includes all non-premium, plus selected standard pro features
-            if (!meta.is_premium || ['custom_branding', 'csv_export', 'analytics', 'webhooks', 'embed_widgets'].includes(key)) {
-                el.checked = true;
-            } else {
-                el.checked = false;
-            }
         } else if (preset === 'free') {
-            el.checked = !meta.is_premium && ['visual_builder', 'lead_capture_forms', 'dynamic_scoring', 'back_navigation', 'analytics', 'journey_inspector'].includes(key);
+            el.checked = freeKeys.includes(key);
+        } else if (preset === 'starter') {
+            el.checked = starterKeys.includes(key);
+        } else if (preset === 'standard') {
+            el.checked = standardKeys.includes(key);
         }
     }
 }

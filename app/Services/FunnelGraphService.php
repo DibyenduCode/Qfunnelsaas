@@ -53,6 +53,7 @@ class FunnelGraphService
         // Enrich nodes
         $enrichedNodes = [];
         $startNodeId = null;
+        $qCounter = 1;
         foreach ($nodes as $node) {
             $node['id'] = (int)$node['id'];
             $node['position_x'] = (float)$node['position_x'];
@@ -61,12 +62,59 @@ class FunnelGraphService
             if ($node['is_start'] && !$startNodeId) {
                 $startNodeId = (int)$node['id'];
             }
+
+            $nodeConfig = !empty($node['config_json']) ? (json_decode($node['config_json'], true) ?: []) : [];
+
             if ($node['node_type'] === 'question') {
+                $node['variable_key'] = $nodeConfig['variable_key'] ?? ('Q' . ($qCounter++));
+                $node['input_type'] = $nodeConfig['input_type'] ?? 'single_choice';
+                $node['slider_config'] = $nodeConfig['slider_config'] ?? [
+                    'min_value' => 1,
+                    'max_value' => 100,
+                    'step_value' => 1,
+                    'default_value' => 10,
+                    'unit_label' => 'Units',
+                    'unit_prefix' => ''
+                ];
                 $node['question'] = $questionsByNode[$node['id']] ?? null;
             } elseif ($node['node_type'] === 'destination') {
-                $node['destination'] = $destinationsByNode[$node['id']] ?? null;
+                $destObj = $destinationsByNode[$node['id']] ?? null;
+                $calcObj = $nodeConfig['calculator'] ?? null;
+                $quickConnectObj = $nodeConfig['quick_connect'] ?? null;
+                if (!empty($destObj['tracking_config_json'])) {
+                    $tConf = json_decode($destObj['tracking_config_json'], true) ?: [];
+                    if (!$calcObj) $calcObj = $tConf['calculator'] ?? null;
+                    if (!$quickConnectObj) $quickConnectObj = $tConf['quick_connect'] ?? null;
+                }
+                $node['calculator'] = $calcObj ?? [
+                    'enabled' => ($funnel['funnel_mode'] ?? 'quiz') === 'calculator',
+                    'formula_expression' => '@Q1 * 1000',
+                    'result_label' => 'Your Estimated Quote',
+                    'result_prefix' => '₹',
+                    'result_suffix' => '',
+                    'decimal_places' => 0
+                ];
+                $node['quick_connect'] = $quickConnectObj ?? [
+                    'enabled' => false,
+                    'action_type' => 'both',
+                    'phone_number' => '',
+                    'call_button_text' => 'Call Specialist Now',
+                    'whatsapp_number' => '',
+                    'whatsapp_button_text' => 'Chat on WhatsApp',
+                    'whatsapp_message' => 'Hi! I just completed the {{funnel_name}} and received my quote: {{formatted_quote}}.'
+                ];
+                $node['destination'] = $destObj;
             } elseif ($node['node_type'] === 'form') {
-                $formData = !empty($node['config_json']) ? (json_decode($node['config_json'], true) ?: []) : [];
+                $formData = !empty($nodeConfig['fields']) ? $nodeConfig : (!empty($node['config_json']) ? (json_decode($node['config_json'], true) ?: []) : []);
+                if (empty($formData['heading']) && !empty($node['title'])) {
+                    $formData['heading'] = $node['title'];
+                }
+                if (empty($formData['subheading']) && !empty($node['description'])) {
+                    $formData['subheading'] = $node['description'];
+                }
+                if (empty($formData['button_text'])) {
+                    $formData['button_text'] = 'Submit Details';
+                }
                 if (!empty($formData['fields']) && is_array($formData['fields'])) {
                     foreach ($formData['fields'] as $fIdx => &$fld) {
                         if (empty($fld['id'])) {
@@ -139,13 +187,31 @@ class FunnelGraphService
                 $isStart = (!empty($node['is_start']) && $nodeType !== 'destination') ? 1 : 0;
 
                 $configJson = null;
+                $configPayload = !empty($node['config_json']) ? (is_array($node['config_json']) ? $node['config_json'] : (json_decode($node['config_json'], true) ?: [])) : [];
+
                 if ($nodeType === 'form') {
-                    $formPayload = $node['form'] ?? $node['config_json'] ?? [];
+                    $formPayload = $node['form'] ?? [];
                     if (is_string($formPayload)) {
                         $formPayload = json_decode($formPayload, true) ?: [];
                     }
-                    $configJson = json_encode($formPayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                    if (!isset($formPayload['heading']) && !empty($title)) {
+                        $formPayload['heading'] = $title;
+                    }
+                    if (!isset($formPayload['subheading']) && !empty($node['description'])) {
+                        $formPayload['subheading'] = $node['description'];
+                    }
+                    $configPayload = array_merge($configPayload, $formPayload);
+                } elseif ($nodeType === 'question') {
+                    if (isset($node['variable_key'])) $configPayload['variable_key'] = $node['variable_key'];
+                    if (isset($node['input_type'])) $configPayload['input_type'] = $node['input_type'];
+                    if (isset($node['slider_config'])) $configPayload['slider_config'] = $node['slider_config'];
+                } elseif ($nodeType === 'destination') {
+                    if (isset($node['destination_mode'])) $configPayload['destination_mode'] = $node['destination_mode'];
+                    if (isset($node['calculator'])) $configPayload['calculator'] = $node['calculator'];
+                    if (isset($node['quick_connect'])) $configPayload['quick_connect'] = $node['quick_connect'];
                 }
+
+                $configJson = !empty($configPayload) ? json_encode($configPayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null;
 
                 if (isset($existingNodeMap[$nodeKey])) {
                     $dbNodeId = $existingNodeMap[$nodeKey];
@@ -172,7 +238,8 @@ class FunnelGraphService
                     $qData = $node['question'];
                     $qText = trim($qData['question_text'] ?? 'Untitled Question');
                     $helpText = $qData['help_text'] ?? null;
-                    $qType = $qData['question_type'] ?? 'single_choice';
+                    $inputType = $node['input_type'] ?? ($configPayload['input_type'] ?? 'single_choice');
+                    $qType = ($inputType === 'slider') ? 'number' : ($qData['question_type'] ?? 'single_choice');
                     $isRequired = !empty($qData['is_required']) ? 1 : 0;
 
                     $existingQ = Database::fetchOne("SELECT id FROM questions WHERE node_id = ?", [$dbNodeId]);
@@ -191,7 +258,7 @@ class FunnelGraphService
                     }
 
                     // Handle Options
-                    $options = $qData['options'] ?? [];
+                    $options = ($inputType === 'slider') ? [] : ($qData['options'] ?? []);
                     $touchedOptionIds = [];
                     $optOrder = 1;
 
@@ -226,6 +293,8 @@ class FunnelGraphService
                     if (!empty($touchedOptionIds)) {
                         $placeholders = implode(',', array_fill(0, count($touchedOptionIds), '?'));
                         Database::execute("DELETE FROM question_options WHERE question_id = ? AND id NOT IN ({$placeholders})", array_merge([$qId], $touchedOptionIds));
+                    } elseif ($inputType === 'slider') {
+                        Database::execute("DELETE FROM question_options WHERE question_id = ?", [$qId]);
                     }
                 }
 
@@ -234,17 +303,23 @@ class FunnelGraphService
                     $dData = $node['destination'];
                     $name = trim($dData['name'] ?? $title);
                     $url = trim($dData['url'] ?? '');
+                    $calcPayload = $node['calculator'] ?? ($configPayload['calculator'] ?? null);
+                    $qcPayload = $node['quick_connect'] ?? ($configPayload['quick_connect'] ?? null);
+                    $trackingJson = json_encode([
+                        'calculator' => $calcPayload,
+                        'quick_connect' => $qcPayload
+                    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
                     $existingDest = Database::fetchOne("SELECT id FROM destinations WHERE node_id = ?", [$dbNodeId]);
                     if ($existingDest) {
                         Database::execute(
-                            "UPDATE destinations SET name = ?, url = ? WHERE id = ?",
-                            [$name, $url, $existingDest['id']]
+                            "UPDATE destinations SET name = ?, url = ?, tracking_config_json = ? WHERE id = ?",
+                            [$name, $url, $trackingJson, $existingDest['id']]
                         );
                     } else {
                         Database::execute(
-                            "INSERT INTO destinations (tenant_id, funnel_id, node_id, name, url) VALUES (?, ?, ?, ?, ?)",
-                            [$tenantId, $funnelId, $dbNodeId, $name, $url]
+                            "INSERT INTO destinations (tenant_id, funnel_id, node_id, name, url, tracking_config_json) VALUES (?, ?, ?, ?, ?, ?)",
+                            [$tenantId, $funnelId, $dbNodeId, $name, $url, $trackingJson]
                         );
                     }
                 }
@@ -254,6 +329,10 @@ class FunnelGraphService
             if (!empty($touchedNodeIds)) {
                 $placeholders = implode(',', array_fill(0, count($touchedNodeIds), '?'));
                 Database::execute("DELETE FROM funnel_nodes WHERE funnel_id = ? AND id NOT IN ({$placeholders})", array_merge([$funnelId], $touchedNodeIds));
+            } else {
+                Database::execute("DELETE FROM destinations WHERE funnel_id = ?", [$funnelId]);
+                Database::execute("DELETE FROM questions WHERE funnel_id = ?", [$funnelId]);
+                Database::execute("DELETE FROM funnel_nodes WHERE funnel_id = ?", [$funnelId]);
             }
 
             // Ensure exactly one node is designated as start if any valid nodes exist
@@ -290,8 +369,8 @@ class FunnelGraphService
                 }
             }
 
-            // Update funnel timestamp
-            Database::execute("UPDATE funnels SET updated_at = NOW() WHERE id = ?", [$funnelId]);
+            // Update funnel timestamp and mark draft as having unpublished changes
+            Database::execute("UPDATE funnels SET has_unpublished_changes = 1, updated_at = NOW() WHERE id = ?", [$funnelId]);
 
             AuditLogService::log($tenantId, $userId, 'save_funnel_graph', 'funnel', $funnelId);
 
@@ -352,36 +431,79 @@ class FunnelGraphService
 
         foreach ($nodes as $node) {
             if ($node['node_type'] === 'question') {
-                $q = $node['question'];
-                if (!$q || empty($q['options'])) {
-                    $issues[] = [
-                        'type' => 'question_no_options',
-                        'severity' => 'error',
-                        'message' => "Question '{$node['title']}' has no answer options configured.",
-                        'node_id' => $node['id'],
-                    ];
+                $inputType = $node['input_type'] ?? 'single_choice';
+                if ($inputType === 'slider') {
+                    // Number / Slider Question routes from the node handle directly
+                    $sliderEdges = $edgesBySourceNode[$node['id']] ?? [];
+                    if (empty($sliderEdges)) {
+                        $issues[] = [
+                            'type' => 'slider_missing_route',
+                            'severity' => 'error',
+                            'message' => "Slider Question '{$node['title']}' has no next step connected.",
+                            'node_id' => $node['id'],
+                        ];
+                    }
                 } else {
-                    foreach ($q['options'] as $opt) {
-                        if (!isset($edgesBySourceOption[$opt['id']])) {
-                            $issues[] = [
-                                'type' => 'option_missing_route',
-                                'severity' => 'error',
-                                'message' => "Option '{$opt['label']}' in '{$node['title']}' has no next step connected.",
-                                'node_id' => $node['id'],
-                                'option_id' => $opt['id'],
-                            ];
+                    $q = $node['question'];
+                    if (!$q || empty($q['options'])) {
+                        $issues[] = [
+                            'type' => 'question_no_options',
+                            'severity' => 'error',
+                            'message' => "Question '{$node['title']}' has no answer options configured.",
+                            'node_id' => $node['id'],
+                        ];
+                    } else {
+                        foreach ($q['options'] as $opt) {
+                            if (!isset($edgesBySourceOption[$opt['id']])) {
+                                $issues[] = [
+                                    'type' => 'option_missing_route',
+                                    'severity' => 'error',
+                                    'message' => "Option '{$opt['label']}' in '{$node['title']}' has no next step connected.",
+                                    'node_id' => $node['id'],
+                                    'option_id' => $opt['id'],
+                                ];
+                            }
                         }
                     }
                 }
             } elseif ($node['node_type'] === 'destination') {
-                $d = $node['destination'];
-                if (!$d || empty($d['url']) || !filter_var($d['url'], FILTER_VALIDATE_URL)) {
-                    $issues[] = [
-                        'type' => 'invalid_destination_url',
-                        'severity' => 'error',
-                        'message' => "Destination '{$node['title']}' has an invalid or missing landing page URL.",
-                        'node_id' => $node['id'],
-                    ];
+                $qc = $node['quick_connect'] ?? null;
+                $isQC = $qc && !empty($qc['enabled']);
+                if (!$isQC) {
+                    $d = $node['destination'];
+                    if (!$d || empty($d['url']) || !filter_var($d['url'], FILTER_VALIDATE_URL)) {
+                        $issues[] = [
+                            'type' => 'invalid_destination_url',
+                            'severity' => 'error',
+                            'message' => "Destination '{$node['title']}' has an invalid or missing landing page URL.",
+                            'node_id' => $node['id'],
+                        ];
+                    }
+                }
+
+                // Validate calculator formula if enabled
+                $calc = $node['calculator'] ?? null;
+                if ($calc && !empty($calc['enabled'])) {
+                    $formula = trim($calc['formula_expression'] ?? '');
+                    if ($formula === '') {
+                        $issues[] = [
+                            'type' => 'empty_calculator_formula',
+                            'severity' => 'error',
+                            'message' => "Quote Destination '{$node['title']}' has calculation enabled but the formula expression is empty.",
+                            'node_id' => $node['id'],
+                        ];
+                    } else {
+                        $openParen = substr_count($formula, '(');
+                        $closeParen = substr_count($formula, ')');
+                        if ($openParen !== $closeParen) {
+                            $issues[] = [
+                                'type' => 'unbalanced_formula_parentheses',
+                                'severity' => 'error',
+                                'message' => "Formula in '{$node['title']}' has unbalanced parentheses: {$openParen} open '(' vs {$closeParen} close ')'.",
+                                'node_id' => $node['id'],
+                            ];
+                        }
+                    }
                 }
             } elseif ($node['node_type'] === 'form') {
                 $form = $node['form'] ?? [];

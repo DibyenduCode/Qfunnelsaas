@@ -27,6 +27,37 @@ class QuizController
             ", 404);
         }
 
+        // If the workspace is suspended, display a polite and professional pause notice
+        if (($funnel['tenant_status'] ?? 'active') === 'suspended') {
+            return Response::html("
+                <!DOCTYPE html>
+                <html lang='en'>
+                <head>
+                    <meta charset='UTF-8'>
+                    <title>" . htmlspecialchars($funnel['name']) . " — Temporarily Paused</title>
+                    <script src='https://cdn.tailwindcss.com'></script>
+                </head>
+                <body class='bg-[#F8FAFC] min-h-screen flex items-center justify-center p-6 font-sans antialiased text-slate-800'>
+                    <div class='max-w-md w-full bg-white border border-amber-200 rounded-2xl p-8 text-center shadow-lg'>
+                        <div class='w-16 h-16 bg-amber-50 border border-amber-200 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-4'>
+                            <svg class='w-8 h-8' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                                <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z'></path>
+                            </svg>
+                        </div>
+                        <h2 class='text-xl font-extrabold text-slate-900 mb-2'>" . htmlspecialchars($funnel['name']) . "</h2>
+                        <span class='inline-block px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full mb-4'>Temporarily Paused</span>
+                        <p class='text-slate-600 text-sm leading-relaxed mb-6'>
+                            This quiz funnel is temporarily unavailable while the organizer updates their workspace account. Please check back shortly.
+                        </p>
+                        <div class='text-xs text-slate-400 border-t border-slate-100 pt-4'>
+                            Powered by QuizFunnel SaaS
+                        </div>
+                    </div>
+                </body>
+                </html>
+            ", 503);
+        }
+
         $settings = json_decode($funnel['settings_snapshot_json'] ?? '{}', true) ?: [];
 
         return view('quiz.runner', [
@@ -39,6 +70,11 @@ class QuizController
 
     public function apiInit(Request $request, string $slug): Response
     {
+        $funnel = FunnelService::getPublishedFunnelBySlug($slug);
+        if ($funnel && ($funnel['tenant_status'] ?? 'active') === 'suspended') {
+            return Response::error("This quiz is temporarily paused by the organizer.", 'QUIZ_PAUSED', null, 503);
+        }
+
         try {
             $data = QuizEngineService::initializeSession($slug);
             return Response::success($data);

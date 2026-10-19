@@ -19,16 +19,41 @@ class AnalyticsService
         $completionRate = $totalStarts > 0 ? round(($totalCompletions / $totalStarts) * 100, 1) : 0.0;
 
         // Recent Submissions
+        $nameExpr = "(SELECT fsv.value_text FROM form_submissions fs JOIN form_submission_values fsv ON fsv.form_submission_id = fs.id WHERE fs.session_id = qs.id AND (fsv.field_key_snapshot IN ('full_name', 'name', 'first_name', 'your_name', 'contact_name') OR fsv.field_type_snapshot = 'name' OR LOWER(fsv.field_label_snapshot) LIKE '%name%') ORDER BY fsv.id ASC LIMIT 1)";
+        $emailExpr = "(SELECT fsv.value_text FROM form_submissions fs JOIN form_submission_values fsv ON fsv.form_submission_id = fs.id WHERE fs.session_id = qs.id AND (fsv.field_key_snapshot IN ('email', 'email_address') OR fsv.field_type_snapshot = 'email' OR LOWER(fsv.field_label_snapshot) LIKE '%email%') ORDER BY fsv.id ASC LIMIT 1)";
+
         $recentSubmissions = Database::query(
-            "SELECT qs.id, qs.status, qs.created_at, f.name as funnel_name,
-                    (SELECT fsv.value_text FROM form_submissions fs JOIN form_submission_values fsv ON fsv.form_submission_id = fs.id WHERE fs.session_id = qs.id AND fsv.field_key_snapshot = 'full_name' LIMIT 1) as lead_name,
-                    (SELECT fsv.value_text FROM form_submissions fs JOIN form_submission_values fsv ON fsv.form_submission_id = fs.id WHERE fs.session_id = qs.id AND fsv.field_key_snapshot = 'email' LIMIT 1) as lead_email
+            "SELECT qs.id, qs.status, qs.lead_status, qs.created_at, f.name as funnel_name,
+                    {$nameExpr} as lead_name,
+                    {$emailExpr} as lead_email
              FROM quiz_sessions qs
              JOIN funnels f ON qs.funnel_id = f.id
              WHERE qs.tenant_id = ?
              ORDER BY qs.created_at DESC LIMIT 5",
             [$tenantId]
         );
+
+        // Fallback for in-quiz form nodes where lead data was captured in quiz_answers
+        foreach ($recentSubmissions as &$sub) {
+            if (empty($sub['lead_name']) || empty($sub['lead_email'])) {
+                $formAnswer = Database::fetchOne(
+                    "SELECT answer_value_text FROM quiz_answers WHERE session_id = ? AND answer_type = 'form' ORDER BY id DESC LIMIT 1",
+                    [$sub['id']]
+                );
+                if ($formAnswer && !empty($formAnswer['answer_value_text'])) {
+                    $json = json_decode($formAnswer['answer_value_text'], true);
+                    if (is_array($json)) {
+                        if (empty($sub['lead_name'])) {
+                            $sub['lead_name'] = $json['name'] ?? $json['full_name'] ?? $json['first_name'] ?? null;
+                        }
+                        if (empty($sub['lead_email'])) {
+                            $sub['lead_email'] = $json['email'] ?? $json['email_address'] ?? null;
+                        }
+                    }
+                }
+            }
+        }
+        unset($sub);
 
         // Recent Funnels
         $recentFunnels = Database::query(
@@ -41,6 +66,88 @@ class AnalyticsService
             [$tenantId]
         );
 
+        // 7-Day Performance Trend (Daily Starts vs Completions)
+        $trendRows = Database::query(
+            "SELECT DATE(created_at) as session_date,
+                    COUNT(*) as starts,
+                    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completions
+             FROM quiz_sessions
+             WHERE tenant_id = ? AND created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+             GROUP BY DATE(created_at)
+             ORDER BY session_date ASC",
+            [$tenantId]
+        );
+
+        $trendMap = [];
+        foreach ($trendRows as $row) {
+            $trendMap[$row['session_date']] = [
+                'starts' => (int)$row['starts'],
+                'completions' => (int)$row['completions'],
+            ];
+        }
+
+        $dates = [];
+        $startsData = [];
+        $completionsData = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = date('Y-m-d', strtotime("-{$i} days"));
+            $displayDate = date('M d', strtotime($date));
+            $dates[] = $displayDate;
+            $startsData[] = $trendMap[$date]['starts'] ?? 0;
+            $completionsData[] = $trendMap[$date]['completions'] ?? 0;
+        }
+
+        $activityTrend = [
+            'labels' => $dates,
+            'starts' => $startsData,
+            'completions' => $completionsData,
+            'total_week_starts' => array_sum($startsData),
+            'total_week_completions' => array_sum($completionsData),
+        ];
+
+        // Pipeline Stage Distribution
+        $stages = LeadStageService::getStagesForTenant($tenantId);
+        $stageCounts = Database::query(
+            "SELECT lead_status, COUNT(*) as count 
+             FROM quiz_sessions 
+             WHERE tenant_id = ? 
+             GROUP BY lead_status",
+            [$tenantId]
+        );
+        $countMap = [];
+        foreach ($stageCounts as $sc) {
+            $countMap[$sc['lead_status']] = (int)$sc['count'];
+        }
+
+        $stageLabels = [];
+        $stageData = [];
+        $stageColors = [];
+        $stageDetails = [];
+        $totalPipelineLeads = 0;
+
+        foreach ($stages as $st) {
+            $cnt = $countMap[$st['slug']] ?? 0;
+            $stageLabels[] = $st['name'];
+            $stageData[] = $cnt;
+            $stageColors[] = $st['color'] ?? '#6366F1';
+            $totalPipelineLeads += $cnt;
+            $stageDetails[] = [
+                'name' => $st['name'],
+                'slug' => $st['slug'],
+                'color' => $st['color'] ?? '#6366F1',
+                'count' => $cnt,
+                'emoji' => LeadStageService::getStageEmoji($st['slug'] ?? '', $st['color'] ?? ''),
+            ];
+        }
+
+        $stageDistribution = [
+            'labels' => $stageLabels,
+            'data' => $stageData,
+            'colors' => $stageColors,
+            'details' => $stageDetails,
+            'total' => $totalPipelineLeads,
+        ];
+
         return [
             'total_funnels' => $totalFunnels,
             'published_funnels' => $publishedFunnels,
@@ -51,6 +158,8 @@ class AnalyticsService
             'completion_rate' => $completionRate,
             'recent_submissions' => $recentSubmissions,
             'recent_funnels' => $recentFunnels,
+            'activity_trend' => $activityTrend,
+            'stage_distribution' => $stageDistribution,
         ];
     }
 

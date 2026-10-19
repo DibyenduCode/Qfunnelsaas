@@ -10,6 +10,7 @@ use App\Services\AuditLogService;
 use App\Services\PlatformSettingService;
 use App\Services\UsageLimitService;
 use App\Services\LegalPageService;
+use App\Services\SubscriptionService;
 
 class PlatformAdminController
 {
@@ -21,6 +22,7 @@ class PlatformAdminController
         $totalTenants = (int) Database::fetchColumn("SELECT COUNT(*) FROM tenants");
         $activeTenants = (int) Database::fetchColumn("SELECT COUNT(*) FROM tenants WHERE status = 'active'");
         $suspendedTenants = (int) Database::fetchColumn("SELECT COUNT(*) FROM tenants WHERE status = 'suspended'");
+        $terminationDueCount = count(SubscriptionService::getTerminationDueWorkspaces());
         
         $totalUsers = (int) Database::fetchColumn("SELECT COUNT(*) FROM users");
         $activeUsers = (int) Database::fetchColumn("SELECT COUNT(*) FROM users WHERE status = 'active'");
@@ -68,6 +70,7 @@ class PlatformAdminController
                 'total_tenants' => $totalTenants,
                 'active_tenants' => $activeTenants,
                 'suspended_tenants' => $suspendedTenants,
+                'termination_due_count' => $terminationDueCount,
                 'total_users' => $totalUsers,
                 'active_users' => $activeUsers,
                 'total_funnels' => $totalFunnels,
@@ -105,11 +108,19 @@ class PlatformAdminController
                        p.id as current_plan_id,
                        p.name as plan_name,
                        p.slug as plan_slug,
+                       p.price as plan_price,
                        ts.id as subscription_id,
                        ts.status as subscription_status,
-                       ts.ends_at as subscription_ends_at
+                       ts.billing_interval,
+                       ts.current_period_start,
+                       ts.current_period_end,
+                       ts.next_billing_date,
+                       ts.ends_at as subscription_ends_at,
+                       ts.auto_renew,
+                       ts.amount as subscription_amount,
+                       ts.currency as subscription_currency
                 FROM tenants t
-                LEFT JOIN tenant_subscriptions ts ON ts.tenant_id = t.id AND ts.status IN ('active', 'trial')
+                LEFT JOIN tenant_subscriptions ts ON ts.tenant_id = t.id AND ts.id = (SELECT MAX(id) FROM tenant_subscriptions WHERE tenant_id = t.id)
                 LEFT JOIN plans p ON ts.plan_id = p.id
                 WHERE 1=1";
 
@@ -132,7 +143,7 @@ class PlatformAdminController
         $totalTenants = (int) Database::fetchColumn($countSql, $params);
 
         $offset = ($page - 1) * $perPage;
-        $sql .= " LIMIT {$perPage} OFFSET {$offset}";
+        $sql .= " ORDER BY t.created_at DESC LIMIT {$perPage} OFFSET {$offset}";
         $tenantItems = Database::query($sql, $params);
 
         $tenantsPagination = [
@@ -142,6 +153,12 @@ class PlatformAdminController
             'per_page' => $perPage,
             'total_pages' => (int)ceil($totalTenants / $perPage),
         ];
+
+        // Termination Due list for Super Admin Manual Review Queue
+        $terminationDueList = SubscriptionService::getTerminationDueWorkspaces();
+
+        // Platform invoices (last 50)
+        $invoices = SubscriptionService::getAllInvoices(50);
 
         // All Users with pagination
         $userPage = max(1, (int)$request->query('user_page', 1));
@@ -165,12 +182,14 @@ class PlatformAdminController
             'total_pages' => (int)ceil($totalUsers / $userPerPage),
         ];
 
-        // Plans for assignment modal
+        // Plans for assignment and billing cycle modal
         $plans = Database::query("SELECT id, name, slug, price, billing_interval FROM plans WHERE is_active = 1 ORDER BY price ASC, id ASC");
 
         return view('platform.customers', [
-            'title' => 'Customer & User Management — Super Admin',
+            'title' => 'Customer & Billing Management — Super Admin',
             'tenants' => $tenantsPagination,
+            'terminationDueList' => $terminationDueList,
+            'invoices' => $invoices,
             'users' => $usersPagination,
             'plans' => $plans,
             'search' => $search,
@@ -262,6 +281,168 @@ class PlatformAdminController
         ]);
 
         Session::setFlash('success', "Assigned plan '{$plan['name']}' to workspace '{$tenant['name']}'.");
+        return Response::redirect(url('/admin/platform/customers'));
+    }
+
+    /**
+     * 4b. Modify Billing Cycle (Interval, Dates, Plan, Auto-Renew)
+     */
+    public function updateBillingCycle(Request $request, string $id): Response
+    {
+        $tenantId = (int)$id;
+        $adminUserId = (int)current_user()['id'];
+
+        try {
+            SubscriptionService::modifyBillingCycle($tenantId, [
+                'plan_id' => (int)$request->input('plan_id'),
+                'billing_interval' => (string)$request->input('billing_interval', 'monthly'),
+                'current_period_start' => (string)$request->input('current_period_start'),
+                'current_period_end' => (string)$request->input('current_period_end'),
+                'status' => (string)$request->input('status', 'active'),
+                'auto_renew' => !empty($request->input('auto_renew')),
+                'amount' => (float)$request->input('amount', 0),
+                'currency' => (string)$request->input('currency', 'INR'),
+            ], $adminUserId);
+
+            Session::setFlash('success', "Billing cycle and subscription terms successfully updated.");
+        } catch (\Throwable $e) {
+            Session::setFlash('error', "Failed to update billing cycle: " . $e->getMessage());
+        }
+
+        return Response::redirect(url('/admin/platform/customers'));
+    }
+
+    /**
+     * 4c. Record Offline/Manual Payment (Cash, UPI, Bank Transfer, Invoice)
+     */
+    public function recordPayment(Request $request, string $id): Response
+    {
+        $tenantId = (int)$id;
+        $adminUserId = (int)current_user()['id'];
+
+        try {
+            $invoice = SubscriptionService::recordManualPayment($tenantId, [
+                'plan_id' => (int)$request->input('plan_id'),
+                'amount' => (float)$request->input('amount', 0),
+                'currency' => (string)$request->input('currency', 'INR'),
+                'billing_interval' => (string)$request->input('billing_interval', 'monthly'),
+                'payment_method' => (string)$request->input('payment_method', 'bank_transfer'),
+                'transaction_reference' => (string)$request->input('transaction_reference', ''),
+                'notes' => (string)$request->input('notes', ''),
+            ], $adminUserId);
+
+            Session::setFlash('success', "Payment recorded! Invoice #{$invoice['invoice_number']} generated and billing cycle extended.");
+        } catch (\Throwable $e) {
+            Session::setFlash('error', "Failed to record payment: " . $e->getMessage());
+        }
+
+        return Response::redirect(url('/admin/platform/customers'));
+    }
+
+    /**
+     * 4d. Suspend Workspace (Zero data deletion - Data Stays)
+     */
+    public function suspendTenant(Request $request, string $id): Response
+    {
+        $tenantId = (int)$id;
+        $adminUserId = (int)current_user()['id'];
+        $reason = trim((string)$request->input('reason', 'Overdue subscription payment'));
+        $notes = trim((string)$request->input('notes', ''));
+
+        try {
+            SubscriptionService::suspendWorkspace($tenantId, $reason, $notes, $adminUserId);
+            Session::setFlash('success', "Workspace suspended. All customer funnels and lead data remain 100% securely preserved.");
+        } catch (\Throwable $e) {
+            Session::setFlash('error', "Failed to suspend workspace: " . $e->getMessage());
+        }
+
+        return Response::redirect(url('/admin/platform/customers'));
+    }
+
+    /**
+     * 4e. Unsuspend (Reactivate) Workspace
+     */
+    public function unsuspendTenant(Request $request, string $id): Response
+    {
+        $tenantId = (int)$id;
+        $adminUserId = (int)current_user()['id'];
+        $extendUntil = trim((string)$request->input('extend_until', ''));
+
+        try {
+            SubscriptionService::unsuspendWorkspace($tenantId, !empty($extendUntil) ? $extendUntil : null, $adminUserId);
+            Session::setFlash('success', "Workspace successfully reactivated! Normal service resumed.");
+        } catch (\Throwable $e) {
+            Session::setFlash('error', "Failed to unsuspend workspace: " . $e->getMessage());
+        }
+
+        return Response::redirect(url('/admin/platform/customers'));
+    }
+
+    /**
+     * 4f. Flag for Termination Due Review Queue
+     */
+    public function markTerminationDue(Request $request, string $id): Response
+    {
+        $tenantId = (int)$id;
+        $adminUserId = (int)current_user()['id'];
+        $reason = trim((string)$request->input('reason', 'Account marked for termination review'));
+
+        try {
+            SubscriptionService::markTerminationDue($tenantId, $reason, $adminUserId);
+            Session::setFlash('success', "Workspace added to Termination Due review queue.");
+        } catch (\Throwable $e) {
+            Session::setFlash('error', "Error: " . $e->getMessage());
+        }
+
+        return Response::redirect(url('/admin/platform/customers'));
+    }
+
+    /**
+     * 4g. Dismiss / Postpone Termination Due
+     */
+    public function dismissTerminationDue(Request $request, string $id): Response
+    {
+        $tenantId = (int)$id;
+        $adminUserId = (int)current_user()['id'];
+
+        try {
+            SubscriptionService::dismissTerminationDue($tenantId, $adminUserId);
+            Session::setFlash('success', "Workspace dismissed from Termination Due queue.");
+        } catch (\Throwable $e) {
+            Session::setFlash('error', "Error: " . $e->getMessage());
+        }
+
+        return Response::redirect(url('/admin/platform/customers'));
+    }
+
+    /**
+     * 4h. Manual Workspace Termination (Super Admin ONLY - Never automated)
+     */
+    public function terminateTenant(Request $request, string $id): Response
+    {
+        $tenantId = (int)$id;
+        $adminUserId = (int)current_user()['id'];
+        $confirmSlug = trim((string)$request->input('confirm_slug', ''));
+        $reason = trim((string)$request->input('reason', 'Administrative manual contract termination'));
+
+        $tenant = Database::fetchOne("SELECT * FROM tenants WHERE id = ?", [$tenantId]);
+        if (!$tenant) {
+            Session::setFlash('error', "Workspace not found.");
+            return Response::redirect(url('/admin/platform/customers'));
+        }
+
+        if (strtolower($confirmSlug) !== strtolower($tenant['slug'])) {
+            Session::setFlash('error', "Confirmation failed: You must type '{$tenant['slug']}' to confirm manual termination.");
+            return Response::redirect(url('/admin/platform/customers'));
+        }
+
+        try {
+            SubscriptionService::terminateWorkspace($tenantId, $reason, $adminUserId);
+            Session::setFlash('success', "Workspace '{$tenant['name']}' has been manually terminated. Historical data is archived.");
+        } catch (\Throwable $e) {
+            Session::setFlash('error', "Failed to terminate workspace: " . $e->getMessage());
+        }
+
         return Response::redirect(url('/admin/platform/customers'));
     }
 

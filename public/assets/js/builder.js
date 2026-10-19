@@ -289,6 +289,16 @@
                 addNodeToCanvas('destination');
                 return;
             }
+            if (e.key.toLowerCase() === 's' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                e.preventDefault();
+                addNodeToCanvas('slider');
+                return;
+            }
+            if (e.key.toLowerCase() === 'c' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                e.preventDefault();
+                addNodeToCanvas('connect');
+                return;
+            }
             if (e.key.toLowerCase() === 'l' && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 e.preventDefault();
                 autoArrangeNodes();
@@ -390,27 +400,71 @@
     function renderNodeElement(node) {
         const div = document.createElement('div');
         div.id = `node-${node.id}`;
-        div.className = `absolute node-card w-64 rounded-xl bg-white border border-[#E4E7EC] text-xs select-none cursor-default ${selectedNodeId === node.id ? 'selected' : ''}`;
-        div.style.left = `${node.position_x}px`;
-        div.style.top = `${node.position_y}px`;
 
-        let headerColor = 'bg-indigo-50 border-indigo-100 text-indigo-700';
-        let badgeText = 'Question';
-        let icon = '?';
+        const isCalc = node.node_type === 'destination' && node.calculator && node.calculator.enabled;
+        const hasQC = node.node_type === 'destination' && node.quick_connect && node.quick_connect.enabled;
+        const isRichDest = isCalc || hasQC;
+        const cardWidthClass = 'w-72';
+
+        let topBorderColor = 'border-t-indigo-500';
+        let badgeText = 'Choice Question';
+        // Choice Options widget
+        let iconSvg = `<svg class="w-3.5 h-3.5 text-indigo-600" viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="4.5" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="2" y="9" width="12" height="4.5" rx="1.5" stroke="currentColor" stroke-width="1.3"/><circle cx="4.5" cy="4.75" r="1" fill="currentColor"/><circle cx="4.5" cy="11.25" r="1" fill="currentColor"/><line x1="7.5" y1="4.75" x2="11.5" y2="4.75" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="7.5" y1="11.25" x2="11.5" y2="11.25" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`;
+        let iconBg = 'bg-slate-50 border-slate-200/80';
 
         if (node.node_type === 'start') {
-            headerColor = 'bg-emerald-50 border-emerald-100 text-emerald-700';
+            topBorderColor = 'border-t-emerald-500';
             badgeText = 'Start';
-            icon = '▶';
+            // Flow Trigger Bullseye
+            iconSvg = `<svg class="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r="2" fill="currentColor"/></svg>`;
+            iconBg = 'bg-slate-50 border-slate-200/80';
+        } else if (node.node_type === 'question') {
+            const q = node.question || { question_text: 'Untitled Question', options: [] };
+            const inputType = node.input_type || q.question_type || 'single_choice';
+            if (inputType === 'slider') {
+                topBorderColor = 'border-t-emerald-500';
+                badgeText = 'Range Slider';
+                // Precision Slider Track & Thumb
+                iconSvg = `<svg class="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 16 16" fill="none"><line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="6" cy="8" r="2.5" fill="white" stroke="currentColor" stroke-width="1.4"/><path d="M6 3.5V5M6 11v1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`;
+                iconBg = 'bg-slate-50 border-slate-200/80';
+            } else {
+                topBorderColor = 'border-t-indigo-500';
+                badgeText = inputType === 'multiple_choice' ? 'Multiple Choice' : 'Choice Question';
+            }
         } else if (node.node_type === 'destination') {
-            headerColor = 'bg-purple-50 border-purple-100 text-purple-700';
-            badgeText = 'Destination';
-            icon = '⚐';
+            topBorderColor = 'border-t-purple-500';
+            if (hasQC && !isCalc) {
+                badgeText = 'Direct Connect';
+                // Direct Contact Receiver
+                iconSvg = `<svg class="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 16 16" fill="none"><path d="M2.5 4.5A2 2 0 014.5 2.5h1.2a1 1 0 011 .76l.6 2.37a1 1 0 01-.28.98l-.8.8a8.3 8.3 0 003.87 3.87l.8-.8a1 1 0 01.98-.28l2.37.6a1 1 0 01.76 1v1.2a2 2 0 01-2 2c-6.07 0-11-4.93-11-11v-1.2z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+                iconBg = 'bg-slate-50 border-slate-200/80';
+            } else if (hasQC && isCalc) {
+                badgeText = 'Quote & Connect';
+                // Fast Calculation Bolt
+                iconSvg = `<svg class="w-3.5 h-3.5 text-purple-600" viewBox="0 0 16 16" fill="none"><path d="M8.5 2L3 9.5H7.5L6.5 14L13 6.5H8.5L9.5 2H8.5Z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+                iconBg = 'bg-slate-50 border-slate-200/80';
+            } else if (isCalc) {
+                badgeText = 'Calculated Quote';
+                // Calculator Display & Keys
+                iconSvg = `<svg class="w-3.5 h-3.5 text-purple-600" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="2" width="11" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><rect x="4.5" y="4" width="7" height="2.5" rx="0.5" stroke="currentColor" stroke-width="1"/><path d="M5 9h1.5M8 9h1.5M5 11.5h1.5M8 11.5h1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`;
+                iconBg = 'bg-slate-50 border-slate-200/80';
+            } else {
+                badgeText = 'Destination';
+                // Terminal Portal Window
+                iconSvg = `<svg class="w-3.5 h-3.5 text-purple-600" viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 10.5L10.5 5.5M10.5 5.5H7.5M10.5 5.5V8.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+                iconBg = 'bg-slate-50 border-slate-200/80';
+            }
         } else if (node.node_type === 'form') {
-            headerColor = 'bg-sky-50 border-sky-100 text-sky-700';
-            badgeText = 'Form';
-            icon = '📋';
+            topBorderColor = 'border-t-sky-500';
+            badgeText = 'Lead Form';
+            // Input Fields Card
+            iconSvg = `<svg class="w-3.5 h-3.5 text-sky-600" viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><line x1="5" y1="5.5" x2="11" y2="5.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="5" y1="8.5" x2="9" y2="8.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="10" cy="10.5" r="1" fill="currentColor"/></svg>`;
+            iconBg = 'bg-slate-50 border-slate-200/80';
         }
+
+        div.className = `absolute node-card ${cardWidthClass} rounded-xl bg-white border border-slate-200/90 border-t-2 ${topBorderColor} text-xs select-none cursor-default shadow-xs hover:shadow-md transition-all ${selectedNodeId === node.id ? 'selected' : ''}`;
+        div.style.left = `${node.position_x}px`;
+        div.style.top = `${node.position_y}px`;
 
         let bodyHtml = '';
         let statusBadgeHtml = '';
@@ -418,78 +472,199 @@
         if (node.node_type === 'start') {
             const hasStartEdge = (graphData.edges || []).some(e => e.source_node_id == node.id);
             statusBadgeHtml = hasStartEdge
-                ? `<span class="text-[9px] font-semibold text-emerald-700 bg-emerald-100/90 px-1.5 py-0.5 rounded border border-emerald-200">✓ Linked</span>`
-                : `<span class="text-[9px] font-semibold text-amber-700 bg-amber-100/90 px-1.5 py-0.5 rounded border border-amber-200">⚠️ Needs Route</span>`;
+                ? `<span class="inline-flex items-center gap-1 text-[9px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span><span>Linked</span></span>`
+                : `<span class="inline-flex items-center gap-1 text-[9px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/70"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span><span>Unlinked</span></span>`;
 
             bodyHtml = `
-                <div class="p-3 text-[11px] text-[#687080] leading-relaxed">
-                    Public Entry Point. Connects visitors to the first question in the funnel.
+                <div class="p-3 text-[11px] text-slate-500 leading-relaxed">
+                    Public Entry Point. Connects visitors to the first step in the funnel.
                 </div>
-                <div class="px-3 py-2.5 bg-[#F7F8FA] border-t border-[#E4E7EC] flex items-center justify-between text-[11px] rounded-b-xl relative">
-                    <span class="font-medium text-[#171A21] flex items-center gap-1.5">
+                <div class="px-3 py-2 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between text-[11px] rounded-b-xl relative">
+                    <span class="font-medium text-slate-700 flex items-center gap-1.5">
                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                         <span>Proceed to flow</span>
                     </span>
-                    <div class="port-handle w-3.5 h-3.5 rounded-full ${hasStartEdge ? 'bg-emerald-500' : 'bg-amber-400'} border-2 border-white shadow cursor-crosshair absolute -right-1.5 top-3"
-                         data-port-type="output" data-node-id="${node.id}" data-option-id="null" title="${hasStartEdge ? 'Connected to first step' : 'Drag to connect first question'}"></div>
+                    <div class="port-handle ${hasStartEdge ? 'bg-emerald-500' : 'bg-amber-400'}"
+                         data-port-type="output" data-node-id="${node.id}" data-option-id="null" title="${hasStartEdge ? 'Connected to first step' : 'Drag to connect first step'}"></div>
                 </div>
             `;
         } else if (node.node_type === 'question') {
             const q = node.question || { question_text: 'Untitled Question', options: [] };
-            const options = q.options || [];
+            const inputType = node.input_type || q.question_type || 'single_choice';
+            const isSlider = inputType === 'slider';
 
-            const unmappedCount = options.filter(opt => !(graphData.edges || []).some(e => e.source_node_id == node.id && e.source_option_id == opt.id)).length;
-            if (unmappedCount > 0) {
-                statusBadgeHtml = `<span class="text-[9px] font-semibold text-amber-700 bg-amber-100/90 px-1.5 py-0.5 rounded border border-amber-200" title="${unmappedCount} option(s) missing route">⚠️ ${unmappedCount} unmapped</span>`;
-            } else if (options.length > 0) {
-                statusBadgeHtml = `<span class="text-[9px] font-semibold text-emerald-700 bg-emerald-100/90 px-1.5 py-0.5 rounded border border-emerald-200">✓ Mapped</span>`;
-            }
+            if (isSlider) {
+                const sliderCfg = node.slider_config || { min_value: 1, max_value: 100, step_value: 1, default_value: 10, unit_label: 'Units', unit_prefix: '' };
+                const outgoingEdge = (graphData.edges || []).find(e => e.source_node_id == node.id && (e.source_option_id === null || e.source_option_id === undefined));
+                const targetNode = outgoingEdge ? graphData.nodes.find(n => n.id == outgoingEdge.target_node_id) : null;
+                const targetLabel = targetNode ? `→ ${targetNode.title || targetNode.node_type}` : null;
 
-            bodyHtml = `
-                <div class="p-3">
-                    <p class="font-semibold text-[#171A21] line-clamp-2 leading-snug">${escapeHtml(q.question_text || 'Untitled Question')}</p>
-                    <span class="text-[10px] text-[#687080] mt-1 block">${q.question_type || 'single_choice'} • ${options.length} options</span>
-                </div>
-                <div class="p-2 border-t border-[#E4E7EC] bg-[#F7F8FA] rounded-b-xl space-y-1.5">
-            `;
+                statusBadgeHtml = outgoingEdge 
+                    ? `<span class="inline-flex items-center gap-1 text-[9px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span><span>Mapped</span></span>`
+                    : `<span class="inline-flex items-center gap-1 text-[9px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/70"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span><span>Unlinked</span></span>`;
 
-            if (options.length === 0) {
-                bodyHtml += `<div class="p-2 text-center text-[10px] text-rose-500 font-medium bg-rose-50 rounded-lg">No options configured!</div>`;
-            } else {
-                options.forEach(opt => {
-                    const edge = (graphData.edges || []).find(e => e.source_node_id == node.id && e.source_option_id == opt.id);
-                    const targetNode = edge ? graphData.nodes.find(n => n.id == edge.target_node_id) : null;
-                    const targetLabel = targetNode ? `→ ${targetNode.title || targetNode.node_type}` : null;
-
-                    bodyHtml += `
-                        <div class="px-2.5 py-1.5 rounded-lg border ${edge ? 'border-slate-200 bg-white' : 'border-amber-200 bg-amber-50/40'} flex items-center justify-between text-[11px] relative group hover:border-[#5B5BD6] transition-all">
-                            <div class="truncate max-w-[195px]">
-                                <span class="block truncate font-medium text-[#171A21] leading-tight">${escapeHtml(opt.label)}</span>
-                                ${targetLabel ? `<span class="block text-[9px] font-semibold text-indigo-600 truncate mt-0.5">${escapeHtml(targetLabel)}</span>` : `<span class="block text-[9px] font-semibold text-amber-600 mt-0.5">⚠️ Unlinked route</span>`}
+                bodyHtml = `
+                    <div class="p-3">
+                        <p class="font-semibold text-xs text-slate-800 line-clamp-2 leading-snug">${escapeHtml(q.question_text || 'Untitled Question')}</p>
+                        <div class="mt-2.5 p-2 rounded-lg bg-slate-50 border border-slate-200/70">
+                            <div class="flex items-center justify-between text-[10px] text-slate-600 font-medium mb-1.5">
+                                <span>Default Preview</span>
+                                <span class="px-1.5 py-0.5 rounded bg-emerald-600 text-white font-mono text-[9px] font-semibold">${escapeHtml(sliderCfg.unit_prefix || '')}${sliderCfg.default_value ?? 10} ${escapeHtml(sliderCfg.unit_label || '')}</span>
                             </div>
-                            <div class="port-handle w-3.5 h-3.5 rounded-full ${edge ? 'bg-[#5B5BD6]' : 'bg-amber-400'} border-2 border-white shadow cursor-crosshair absolute -right-1.5 top-3"
-                                 data-port-type="output" data-node-id="${node.id}" data-option-id="${opt.id}" title="${edge ? `Connected: ${escapeHtml(targetLabel)}` : 'Missing route! Drag to target step'}"></div>
+                            <div class="w-full bg-slate-200/80 h-1.5 rounded-full overflow-hidden">
+                                <div class="bg-emerald-500 h-full w-1/2 rounded-full"></div>
+                            </div>
+                            <div class="flex justify-between text-[9px] text-slate-400 font-mono mt-1.5">
+                                <span>Min: ${sliderCfg.min_value ?? 1}</span>
+                                <span>Max: ${sliderCfg.max_value ?? 100}</span>
+                            </div>
                         </div>
-                    `;
-                });
-            }
+                    </div>
+                    <div class="px-3 py-2 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between text-[11px] rounded-b-xl relative">
+                        <span class="font-medium text-slate-700 flex items-center gap-1.5 truncate max-w-[190px]">
+                            <span class="w-1.5 h-1.5 rounded-full ${outgoingEdge ? 'bg-emerald-500' : 'bg-amber-400'} shrink-0"></span>
+                            <span class="text-[10px] text-slate-700 truncate">${targetLabel || 'Route on slide'}</span>
+                        </span>
+                        <div class="port-handle ${outgoingEdge ? 'bg-emerald-500' : 'bg-amber-400'}"
+                             data-port-type="output" data-node-id="${node.id}" data-option-id="null" title="${outgoingEdge ? `Connected: ${escapeHtml(targetLabel)}` : 'Drag to connect route'}"></div>
+                    </div>
+                `;
+            } else {
+                const options = q.options || [];
+                const unmappedCount = options.filter(opt => !(graphData.edges || []).some(e => e.source_node_id == node.id && e.source_option_id == opt.id)).length;
+                if (unmappedCount > 0) {
+                    statusBadgeHtml = `<span class="inline-flex items-center gap-1 text-[9px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/70" title="${unmappedCount} option(s) missing route"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span><span>${unmappedCount} unlinked</span></span>`;
+                } else if (options.length > 0) {
+                    statusBadgeHtml = `<span class="inline-flex items-center gap-1 text-[9px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span><span>Routed</span></span>`;
+                }
 
-            bodyHtml += `</div>`;
+                bodyHtml = `
+                    <div class="p-3">
+                        <p class="font-semibold text-xs text-slate-800 line-clamp-2 leading-snug">${escapeHtml(q.question_text || 'Untitled Question')}</p>
+                        <span class="text-[10px] text-slate-400 mt-0.5 block">${inputType === 'multiple_choice' ? 'Multiple Choice' : 'Single Choice'} • ${options.length} options</span>
+                    </div>
+                    <div class="p-2 border-t border-slate-100 bg-slate-50/50 rounded-b-xl space-y-1.5">
+                `;
+
+                if (options.length === 0) {
+                    bodyHtml += `<div class="p-2 text-center text-[10px] text-rose-500 font-medium bg-rose-50/60 border border-rose-100 rounded-lg">No options configured yet</div>`;
+                } else {
+                    options.forEach((opt, idx) => {
+                        const edge = (graphData.edges || []).find(e => e.source_node_id == node.id && e.source_option_id == opt.id);
+                        const targetNode = edge ? graphData.nodes.find(n => n.id == edge.target_node_id) : null;
+                        const targetLabel = targetNode ? `→ ${targetNode.title || targetNode.node_type}` : null;
+                        const isCalcMode = window.FUNNEL_MODE === 'calculator';
+                        const valDisplay = (isCalcMode && opt.value !== undefined && opt.value !== null && opt.value !== '' && opt.value !== opt.label) 
+                            ? `<span class="text-[9px] font-mono text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200/60 ml-1">v: ${escapeHtml(opt.value)}</span>` 
+                            : '';
+                        const letter = String.fromCharCode(65 + (idx % 26));
+
+                        bodyHtml += `
+                            <div class="px-2.5 py-1.5 rounded-lg border ${edge ? 'border-slate-200/80 bg-white hover:border-slate-300 shadow-2xs' : 'border-amber-200/70 bg-amber-50/30'} flex items-center justify-between text-[11px] relative group transition-all">
+                                <div class="flex items-center truncate max-w-[210px] pr-2">
+                                    <span class="w-4 h-4 rounded bg-slate-100 border border-slate-200/90 text-[10px] font-bold text-slate-500 flex items-center justify-center shrink-0 mr-1.5 select-none">${letter}</span>
+                                    <div class="truncate">
+                                        <div class="flex items-center truncate">
+                                            <span class="truncate font-medium text-slate-800 leading-tight">${escapeHtml(opt.label)}</span>
+                                            ${valDisplay}
+                                        </div>
+                                        ${targetLabel ? `<span class="block text-[10px] font-medium text-indigo-600 truncate mt-0.5">${escapeHtml(targetLabel)}</span>` : `<span class="block text-[10px] text-amber-600 font-medium mt-0.5">Route needed</span>`}
+                                    </div>
+                                </div>
+                                <div class="port-handle ${edge ? 'bg-[#5B5BD6]' : 'bg-amber-400'}"
+                                     data-port-type="output" data-node-id="${node.id}" data-option-id="${opt.id}" title="${edge ? `Connected: ${escapeHtml(targetLabel)}` : 'Missing route! Drag to target step'}"></div>
+                            </div>
+                        `;
+                    });
+                }
+                bodyHtml += `</div>`;
+            }
         } else if (node.node_type === 'destination') {
             const dest = node.destination || { name: 'Landing Page', url: 'https://example.com' };
+            const isCalc = node.calculator && node.calculator.enabled;
+            const hasQC = node.quick_connect && node.quick_connect.enabled;
+            const destMode = node.destination_mode || (hasQC ? 'direct_connect' : 'redirect');
+            const isDirectConnect = destMode === 'direct_connect';
             const incomingCount = (graphData.edges || []).filter(e => e.target_node_id == node.id).length;
             statusBadgeHtml = incomingCount > 0
-                ? `<span class="text-[9px] font-semibold text-purple-700 bg-purple-100/90 px-1.5 py-0.5 rounded border border-purple-200">${incomingCount} routes in</span>`
-                : `<span class="text-[9px] font-semibold text-amber-700 bg-amber-100/90 px-1.5 py-0.5 rounded border border-amber-200">Unreached</span>`;
+                ? `<span class="inline-flex items-center gap-1 text-[9px] font-medium text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200/60"><span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span><span>${incomingCount} route${incomingCount === 1 ? '' : 's'}</span></span>`
+                : `<span class="inline-flex items-center gap-1 text-[9px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/70"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span><span>Unreached</span></span>`;
+
+            const hasValidUrl = dest.url && dest.url.trim() !== '' && dest.url.trim() !== '#' && dest.url.trim() !== 'https://example.com';
 
             bodyHtml = `
-                <div class="p-3">
-                    <p class="font-semibold text-[#171A21] truncate">${escapeHtml(dest.name)}</p>
-                    <p class="text-[10px] text-[#687080] truncate mt-0.5 font-mono">${escapeHtml(dest.url || 'No URL configured')}</p>
+                <div class="p-3 space-y-2.5">
+                    <div>
+                        <p class="font-semibold text-xs text-slate-800 truncate leading-snug">${escapeHtml(dest.name || node.title || (isDirectConnect ? 'Direct Connect' : 'Landing Destination'))}</p>
+                        ${!isDirectConnect ? (hasValidUrl ? `
+                            <p class="text-[10px] text-slate-500 truncate mt-0.5 font-mono flex items-center gap-1">
+                                <svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                                <span class="truncate">${escapeHtml(dest.url)}</span>
+                            </p>
+                        ` : `
+                            <p class="text-[10px] text-emerald-700 font-medium mt-0.5 flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                                <span>Direct On-Page Outcome</span>
+                            </p>
+                        `) : ''}
+                    </div>
+
+                    ${isCalc ? `
+                        <div class="p-2 rounded-lg bg-slate-50 border border-slate-200/80 space-y-1">
+                            <div class="flex items-center justify-between text-[10px]">
+                                <span class="font-semibold text-slate-700 flex items-center gap-1">
+                                    <svg class="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                                    <span>Formula</span>
+                                </span>
+                                <span class="text-[9px] font-mono font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200/60">
+                                    ${escapeHtml(node.calculator.result_prefix || '₹')} Quote
+                                </span>
+                            </div>
+                            <div class="font-mono text-[11px] font-semibold text-slate-800 bg-white px-2 py-1 rounded border border-slate-200/80 truncate">
+                                ${escapeHtml(node.calculator.formula_expression || '@Q1 * 100')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${isDirectConnect ? `
+                        <div class="p-2 rounded-lg bg-emerald-50/50 border border-emerald-200/70 space-y-1.5">
+                            <div class="flex items-center justify-between text-[10px]">
+                                <span class="font-semibold text-emerald-900 flex items-center gap-1">
+                                    <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                    <span>${node.quick_connect.action_type === 'call' ? 'Instant Call' : (node.quick_connect.action_type === 'whatsapp' ? 'WhatsApp Chat' : 'Call & WhatsApp')}</span>
+                                </span>
+                                <span class="inline-flex items-center gap-1 text-[9px] font-medium text-emerald-700">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <span>1-Click</span>
+                                </span>
+                            </div>
+                            <div class="grid grid-cols-${(node.quick_connect.phone_number && node.quick_connect.whatsapp_number && (node.quick_connect.action_type === 'both' || !node.quick_connect.action_type)) ? '2' : '1'} gap-1.5 text-[10px] font-mono">
+                                ${((node.quick_connect.action_type === 'both' || !node.quick_connect.action_type || node.quick_connect.action_type === 'call') && node.quick_connect.phone_number) ? `
+                                    <div class="px-2 py-1 rounded bg-white border border-emerald-200/60 text-slate-700 truncate flex items-center gap-1 shadow-2xs">
+                                        <svg class="w-2.5 h-2.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                                        <span class="truncate font-medium">${escapeHtml(node.quick_connect.phone_number)}</span>
+                                    </div>
+                                ` : ''}
+                                ${((node.quick_connect.action_type === 'both' || !node.quick_connect.action_type || node.quick_connect.action_type === 'whatsapp') && node.quick_connect.whatsapp_number) ? `
+                                    <div class="px-2 py-1 rounded bg-white border border-emerald-200/60 text-emerald-800 truncate flex items-center gap-1 shadow-2xs">
+                                        <svg class="w-2.5 h-2.5 text-emerald-600 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/></svg>
+                                        <span class="truncate font-medium">${escapeHtml(node.quick_connect.whatsapp_number)}</span>
+                                    </div>
+                                ` : ''}
+                                ${(!node.quick_connect.phone_number && !node.quick_connect.whatsapp_number) ? `
+                                    <div class="px-2 py-1 rounded bg-amber-50 border border-amber-200/80 text-amber-700 text-[10px] text-center font-sans font-medium">
+                                        Click to configure contact numbers
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    ` : ''}
                 </div>
-                <div class="px-3 py-2 bg-[#F7F8FA] border-t border-[#E4E7EC] text-[10px] text-[#687080] rounded-b-xl flex items-center justify-between">
-                    <span class="flex items-center gap-1 font-medium">🏁 Terminal Step</span>
-                    <span class="text-purple-600 font-semibold">Redirect</span>
+                <div class="px-3 py-2 bg-slate-50/70 border-t border-slate-100 text-[10px] text-slate-500 rounded-b-xl flex items-center justify-between">
+                    <span class="flex items-center gap-1 font-medium text-slate-600">Terminal Outcome</span>
+                    <span class="font-medium text-slate-700">
+                        ${isDirectConnect ? (isCalc ? 'Quote + Direct Connect' : (node.quick_connect.action_type === 'call' ? 'Instant Call' : (node.quick_connect.action_type === 'whatsapp' ? 'WhatsApp Chat' : 'Call & WhatsApp'))) : (isCalc ? 'Quote + Redirect' : 'Redirect Link')}
+                    </span>
                 </div>
             `;
         } else if (node.node_type === 'form') {
@@ -507,64 +682,74 @@
             const targetLabel = targetNode ? `→ ${targetNode.title || targetNode.node_type}` : null;
 
             if (submitAction === 'message') {
-                statusBadgeHtml = `<span class="text-[9px] font-semibold text-emerald-700 bg-emerald-100/90 px-1.5 py-0.5 rounded border border-emerald-200">🏁 Message (End)</span>`;
+                statusBadgeHtml = `<span class="inline-flex items-center gap-1 text-[9px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span><span>Displays Message</span></span>`;
             } else if (edge) {
-                statusBadgeHtml = `<span class="text-[9px] font-semibold text-sky-700 bg-sky-100/90 px-1.5 py-0.5 rounded border border-sky-200">✓ Linked</span>`;
+                statusBadgeHtml = `<span class="inline-flex items-center gap-1 text-[9px] font-medium text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-200/60"><span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span><span>Linked</span></span>`;
             } else {
-                statusBadgeHtml = `<span class="text-[9px] font-semibold text-amber-700 bg-amber-100/90 px-1.5 py-0.5 rounded border border-amber-200">⚠️ Needs Route</span>`;
+                statusBadgeHtml = `<span class="inline-flex items-center gap-1 text-[9px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/70"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span><span>Unlinked</span></span>`;
             }
 
             bodyHtml = `
                 <div class="p-3">
-                    <p class="font-semibold text-[#171A21] line-clamp-1">${escapeHtml(node.title || 'Lead Capture Form')}</p>
-                    <span class="text-[10px] text-[#687080] mt-0.5 block">${fields.length} field${fields.length === 1 ? '' : 's'} • ${submitAction === 'message' ? 'No redirect' : 'Redirects on submit'}</span>
+                    <p class="font-semibold text-xs text-slate-800 line-clamp-1">${escapeHtml(node.title || 'Lead Capture Form')}</p>
+                    <span class="text-[10px] text-slate-400 mt-0.5 block">${fields.length} field${fields.length === 1 ? '' : 's'} • ${submitAction === 'message' ? 'On-screen thank you' : 'Forward to next step'}</span>
                     
                     <div class="mt-2 space-y-1">
-                        ${fields.slice(0, 6).map(f => `
-                            <div class="px-2 py-1 rounded bg-slate-50 border border-slate-200/60 text-[10px] text-[#344054] flex items-center justify-between">
-                                <span class="truncate max-w-[150px]">${escapeHtml(f.label || f.field_key)}</span>
+                        ${fields.slice(0, 5).map(f => `
+                            <div class="px-2 py-1 rounded-md bg-slate-50 border border-slate-200/60 text-[10px] text-slate-600 flex items-center justify-between">
+                                <span class="truncate max-w-[150px] font-medium">${escapeHtml(f.label || f.field_key)}</span>
                                 <span class="text-[9px] text-slate-400 font-mono">${escapeHtml(f.field_type || 'text')}${f.is_required ? '*' : ''}</span>
                             </div>
                         `).join('')}
-                        ${fields.length > 6 ? `<div class="text-[9px] text-[#687080] text-center font-medium">+${fields.length - 6} more field${fields.length - 6 === 1 ? '' : 's'}</div>` : ''}
-                        ${fields.length === 0 ? `<div class="text-[10px] text-amber-600 bg-amber-50 p-1.5 rounded text-center">No fields configured yet</div>` : ''}
+                        ${fields.length > 5 ? `<div class="text-[9px] text-slate-400 text-center font-medium pt-0.5">+${fields.length - 5} more field${fields.length - 5 === 1 ? '' : 's'}</div>` : ''}
+                        ${fields.length === 0 ? `<div class="text-[10px] text-amber-600 bg-amber-50/70 border border-amber-200/60 p-1.5 rounded-md text-center">No fields configured yet</div>` : ''}
                     </div>
                 </div>
-                <div class="px-3 py-2.5 bg-[#F7F8FA] border-t border-[#E4E7EC] flex items-center justify-between text-[11px] rounded-b-xl relative">
-                    <span class="font-medium text-[#171A21] flex items-center gap-1.5 truncate max-w-[190px]">
+                <div class="px-3 py-2 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between text-[11px] rounded-b-xl relative">
+                    <span class="font-medium text-slate-700 flex items-center gap-1.5 truncate max-w-[190px]">
                         ${submitAction === 'message' 
-                            ? `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span><span class="text-[10px] text-emerald-800 font-semibold truncate">Show success message</span>`
-                            : `<span class="w-1.5 h-1.5 rounded-full ${edge ? 'bg-sky-500' : 'bg-amber-400'} shrink-0"></span><span class="text-[10px] text-[#171A21] truncate">${targetLabel || 'Route on submit'}</span>`
+                            ? `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span><span class="text-[10px] text-emerald-700 font-medium truncate">Displays Thank You</span>`
+                            : `<span class="w-1.5 h-1.5 rounded-full ${edge ? 'bg-sky-500' : 'bg-amber-400'} shrink-0"></span><span class="text-[10px] text-slate-700 truncate">${targetLabel || 'Route on submit'}</span>`
                         }
                     </span>
                     ${submitAction === 'redirect' ? `
-                        <div class="port-handle w-3.5 h-3.5 rounded-full ${edge ? 'bg-sky-500' : 'bg-amber-400'} border-2 border-white shadow cursor-crosshair absolute -right-1.5 top-3"
-                             data-port-type="output" data-node-id="${node.id}" data-option-id="null" title="${edge ? `Connected: ${escapeHtml(targetLabel)}` : 'Drag to connect next step'}"></div>
+                        <div class="port-handle ${edge ? 'bg-sky-500' : 'bg-amber-400'}"
+                             data-port-type="output" data-node-id="${node.id}" data-option-id="null" title="${edge ? `Connected: ${escapeHtml(targetLabel)}` : 'Drag to connect route'}"></div>
                     ` : ''}
                 </div>
             `;
         }
 
-        // Left input port handle (for question and destination nodes)
+        // Left input port handle (for question, form, and destination nodes)
         let inputPortHtml = '';
         if (node.node_type !== 'start') {
             inputPortHtml = `
-                <div class="port-handle w-3.5 h-3.5 rounded-full bg-slate-400 border-2 border-white shadow cursor-pointer absolute -left-1.5 top-4 hover:bg-[#5B5BD6]"
+                <div class="port-handle bg-slate-300 hover:bg-[#5B5BD6]"
                      data-port-type="input" data-node-id="${node.id}" title="Input connection port"></div>
             `;
         }
 
+        // Header right badges (Question variable, Start badge, Route count)
+        let rightBadgesHtml = '';
+        if (node.is_start && node.node_type !== 'start') {
+            rightBadgesHtml += `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-900 text-white tracking-wide">START</span>`;
+        }
+        if (node.node_type === 'question' && window.FUNNEL_MODE === 'calculator') {
+            rightBadgesHtml += `<span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/80" title="Formula Variable Reference">@${escapeHtml(node.variable_key || 'Q1')}</span>`;
+        }
+        if (statusBadgeHtml) {
+            rightBadgesHtml += statusBadgeHtml;
+        }
+
         div.innerHTML = `
             ${inputPortHtml}
-            <div class="node-header px-3 py-2 border-b border-[#E4E7EC] ${headerColor} rounded-t-xl flex items-center justify-between cursor-move">
-                <div class="flex items-center gap-1.5 truncate">
-                    <span class="font-bold text-xs">${icon}</span>
-                    <span class="font-semibold truncate">${escapeHtml(node.title || badgeText)}</span>
+            <div class="node-header px-3 py-2 bg-white border-b border-slate-100 rounded-t-xl flex items-center justify-between cursor-move">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="w-5 h-5 rounded-md ${iconBg} border flex items-center justify-center shrink-0">${iconSvg}</span>
+                    <span class="font-semibold text-xs truncate text-slate-800">${escapeHtml(badgeText)}</span>
                 </div>
-                <div class="flex items-center gap-1 shrink-0">
-                    ${node.is_start ? '<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-600 text-white shadow-xs tracking-wide">★ START</span>' : ''}
-                    ${statusBadgeHtml}
-                    <span class="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-white/70">${badgeText}</span>
+                <div class="flex items-center gap-1.5 shrink-0 ml-2">
+                    ${rightBadgesHtml}
                 </div>
             </div>
             ${bodyHtml}
@@ -733,6 +918,24 @@
             });
 
             wiresGroup.appendChild(path);
+
+            if (selectedEdgeId === edge.id) {
+                const midX = (srcX + tgtX) / 2;
+                const midY = (srcY + tgtY) / 2;
+                const delGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                delGroup.setAttribute('class', 'wire-delete-btn pointer-events-auto');
+                delGroup.setAttribute('transform', `translate(${midX}, ${midY})`);
+                delGroup.style.cursor = 'pointer';
+                delGroup.innerHTML = `
+                    <circle r="9" fill="#EF4444" stroke="#FFFFFF" stroke-width="2"/>
+                    <path d="M -3 -3 L 3 3 M 3 -3 L -3 3" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+                `;
+                delGroup.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteSelectedEdge();
+                });
+                wiresGroup.appendChild(delGroup);
+            }
         });
 
         updateMinimap();
@@ -945,8 +1148,9 @@
                             <span class="text-[10px] font-bold text-[#687080] uppercase tracking-wider">Active Funnel</span>
                             <h3 class="font-bold text-sm text-[#171A21] truncate max-w-[200px]">${escapeHtml(funnel.name)}</h3>
                         </div>
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${funnel.status === 'published' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-amber-100 text-amber-700 border border-amber-200'}">
-                            ${escapeHtml(funnel.status || 'draft')}
+                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 ${(funnel.status === 'published' && !funnel.has_unpublished_changes) ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-300'}">
+                            <span class="w-1.5 h-1.5 rounded-full ${(funnel.status === 'published' && !funnel.has_unpublished_changes) ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}"></span>
+                            <span>${(funnel.status === 'published' && !funnel.has_unpublished_changes) ? 'published' : 'not published'}</span>
                         </span>
                     </div>
 
@@ -956,6 +1160,22 @@
                             Copy Link
                         </button>
                     </div>
+
+                    ${!(funnel.status === 'published' && !funnel.has_unpublished_changes) ? `
+                        <div class="p-2.5 bg-amber-50/90 border border-amber-200 rounded-lg text-amber-900 space-y-1.5 shadow-2xs mt-1">
+                            <div class="flex items-center gap-1.5 font-bold text-[11px] text-amber-800">
+                                <svg class="w-3.5 h-3.5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                <span>Changes Saved (Not Published)</span>
+                            </div>
+                            <p class="text-[10px] text-amber-800/90 leading-tight">
+                                Edits are saved in your workspace draft, but will not show in your public link until published.
+                            </p>
+                            <button type="button" onclick="publishFunnel()" class="w-full py-1 px-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-[11px] font-semibold shadow-xs transition-colors flex items-center justify-center gap-1 mt-1 cursor-pointer">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                <span>Publish Version Now</span>
+                            </button>
+                        </div>
+                    ` : ''}
                 </div>
 
                 <!-- 4-Stat Metrics Grid -->
@@ -1058,6 +1278,7 @@
 
     // Inspector Panel Rendering
     function renderInspector(preserveScroll = false) {
+        window.renderInspector = renderInspector;
         const scrollPos = (preserveScroll && inspectorContent) ? inspectorContent.scrollTop : 0;
         const activeEl = document.activeElement;
         let focusedInfo = null;
@@ -1104,9 +1325,14 @@
             `;
         } else if (node.node_type === 'question') {
             const q = node.question || { question_text: '', help_text: '', question_type: 'single_choice', is_required: 1, options: [] };
-            const options = q.options || [];
+            const inputType = node.input_type || q.question_type || 'single_choice';
+            const isSlider = inputType === 'slider';
+            const isCalcMode = window.FUNNEL_MODE === 'calculator';
+            const sliderCfg = node.slider_config || { min_value: 1, max_value: 100, step_value: 1, default_value: 10, unit_label: 'Units', unit_prefix: '' };
+            const varKey = node.variable_key || 'Q1';
 
             let optionsHtml = '';
+            const options = q.options || [];
             options.forEach((opt, idx) => {
                 const currentEdge = (graphData.edges || []).find(e => e.source_node_id == node.id && e.source_option_id == opt.id);
                 optionsHtml += `
@@ -1115,9 +1341,19 @@
                             <span class="font-bold text-[10px] text-[#687080]">Option ${idx + 1}</span>
                             <button type="button" onclick="deleteOption(${node.id}, ${opt.id})" class="text-rose-500 hover:text-rose-700 font-bold text-xs" title="Remove Option">✕</button>
                         </div>
-                        <div>
-                            <input type="text" value="${escapeHtml(opt.label)}" placeholder="Option text" oninput="updateOptionLabel(${node.id}, ${opt.id}, this.value)"
-                                   class="w-full px-2 py-1 rounded border border-[#E4E7EC] bg-white text-xs font-medium">
+                        <div class="grid grid-cols-12 gap-2">
+                            <div class="${isCalcMode ? 'col-span-8' : 'col-span-12'}">
+                                <label class="block text-[9px] font-semibold text-[#687080] mb-0.5">Label</label>
+                                <input type="text" value="${escapeHtml(opt.label)}" placeholder="Option text" oninput="updateOptionLabel(${node.id}, ${opt.id}, this.value)"
+                                       class="w-full px-2 py-1 rounded border border-[#E4E7EC] bg-white text-xs font-medium">
+                            </div>
+                            ${isCalcMode ? `
+                            <div class="col-span-4">
+                                <label class="block text-[9px] font-semibold text-emerald-800 mb-0.5">Price / Value</label>
+                                <input type="text" value="${escapeHtml(opt.value !== undefined ? opt.value : '0')}" placeholder="0" oninput="updateOptionValue(${node.id}, ${opt.id}, this.value)"
+                                       class="w-full px-2 py-1 rounded border border-emerald-300 bg-emerald-50/50 text-xs font-mono font-bold text-emerald-800 text-right">
+                            </div>
+                            ` : ''}
                         </div>
                         <div>
                             <label class="block text-[10px] font-semibold text-[#687080] mb-0.5">Routes to next node:</label>
@@ -1132,14 +1368,42 @@
                 `;
             });
 
+            // If slider, resolve single outgoing route
+            const sliderOutgoingEdge = (graphData.edges || []).find(e => e.source_node_id == node.id && (e.source_option_id === null || e.source_option_id === undefined));
+
             inspectorContent.innerHTML = `
                 <div class="space-y-4">
                     ${getStartStepWidgetHtml(node)}
+
+                    <!-- Formula Variable Reference Card (Calculator Mode Only) -->
+                    ${isCalcMode ? `
+                    <div class="p-2.5 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 flex items-center justify-between">
+                        <div>
+                            <span class="block text-[10px] uppercase font-bold text-indigo-900 tracking-wider">Formula Variable Key</span>
+                            <span class="text-[10px] text-indigo-700">Reference in formulas using <strong>@${escapeHtml(varKey)}</strong></span>
+                        </div>
+                        <div class="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-indigo-300 shadow-2xs">
+                            <span class="text-xs font-extrabold text-[#5B5BD6]">@</span>
+                            <input type="text" value="${escapeHtml(varKey)}" onchange="updateQuestionVariableKey(${node.id}, this.value)"
+                                   class="w-14 text-xs font-mono font-extrabold text-indigo-950 uppercase outline-none" title="Edit variable key">
+                        </div>
+                    </div>
+                    ` : ''}
 
                     <div>
                         <label class="block font-semibold text-[#171A21] uppercase text-[10px] mb-1">Step Title / Identifier</label>
                         <input type="text" value="${escapeHtml(node.title || '')}" oninput="updateNodeTitle(${node.id}, this.value)"
                                class="w-full px-3 py-1.5 rounded-lg border border-[#E4E7EC] text-xs">
+                    </div>
+
+                    <!-- Question Input Type Selector -->
+                    <div>
+                        <label class="block font-semibold text-[#171A21] uppercase text-[10px] mb-1">Question Input Type</label>
+                        <select onchange="updateQuestionInputType(${node.id}, this.value)" class="w-full px-3 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs font-semibold text-[#171A21]">
+                            <option value="single_choice" ${inputType === 'single_choice' ? 'selected' : ''}>🔘 Single Choice (Select One Option)</option>
+                            <option value="multiple_choice" ${inputType === 'multiple_choice' ? 'selected' : ''}>☑️ Multiple Choice (Select Many Options)</option>
+                            <option value="slider" ${inputType === 'slider' ? 'selected' : ''}>🎚️ Number / Range Slider (Visitor Inputs Number)</option>
+                        </select>
                     </div>
 
                     <div>
@@ -1154,31 +1418,91 @@
                                class="w-full px-3 py-1.5 rounded-lg border border-[#E4E7EC] text-xs" placeholder="Optional helper note">
                     </div>
 
-                    <div class="pt-2 border-t border-[#E4E7EC]">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="font-bold text-[#171A21] text-xs">Branching Options (${options.length})</span>
-                            <button type="button" onclick="addOption(${node.id})" class="text-xs text-[#5B5BD6] font-semibold hover:underline">
-                                + Add Option
-                            </button>
-                        </div>
-                        ${options.length > 1 ? `
-                            <div class="mb-3 p-2 bg-indigo-50/60 rounded-lg border border-indigo-100 flex items-center justify-between gap-2">
-                                <span class="text-[10px] font-semibold text-indigo-900 shrink-0">Set all options to:</span>
-                                <select onchange="if(this.value) setAllOptionsRoute(${node.id}, this.value)" class="text-[11px] px-2 py-1 rounded border border-indigo-200 bg-white font-medium text-[#171A21] w-full">
-                                    <option value="">-- Choose common target --</option>
+                    ${isSlider ? `
+                        <!-- Number / Slider Configuration Panel -->
+                        <div class="pt-3 border-t border-[#E4E7EC] space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-[#171A21] text-xs flex items-center gap-1.5">
+                                    <span>🎚️</span>
+                                    <span>Slider Configuration</span>
+                                </span>
+                                <span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                    ${isCalcMode ? `Value → @${escapeHtml(varKey)}` : 'Numeric Range'}
+                                </span>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <div>
+                                    <label class="block text-[10px] font-semibold text-[#687080] mb-1">Min Value</label>
+                                    <input type="number" value="${sliderCfg.min_value ?? 1}" oninput="updateSliderConfig(${node.id}, 'min_value', this.value)"
+                                           class="w-full px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] text-xs font-mono">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-semibold text-[#687080] mb-1">Max Value</label>
+                                    <input type="number" value="${sliderCfg.max_value ?? 100}" oninput="updateSliderConfig(${node.id}, 'max_value', this.value)"
+                                           class="w-full px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] text-xs font-mono">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-semibold text-[#687080] mb-1">Step Increment</label>
+                                    <input type="number" value="${sliderCfg.step_value ?? 1}" oninput="updateSliderConfig(${node.id}, 'step_value', this.value)"
+                                           class="w-full px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] text-xs font-mono">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-semibold text-[#687080] mb-1">Default Value</label>
+                                    <input type="number" value="${sliderCfg.default_value ?? 10}" oninput="updateSliderConfig(${node.id}, 'default_value', this.value)"
+                                           class="w-full px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] text-xs font-mono">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-semibold text-[#687080] mb-1">Unit Label (Suffix)</label>
+                                    <input type="text" value="${escapeHtml(sliderCfg.unit_label || '')}" placeholder="Pages, Users, Kg" oninput="updateSliderConfig(${node.id}, 'unit_label', this.value)"
+                                           class="w-full px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] text-xs">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-semibold text-[#687080] mb-1">Prefix Symbol</label>
+                                    <input type="text" value="${escapeHtml(sliderCfg.unit_prefix || '')}" placeholder="₹, $, #" oninput="updateSliderConfig(${node.id}, 'unit_prefix', this.value)"
+                                           class="w-full px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] text-xs">
+                                </div>
+                            </div>
+
+                            <!-- Next Route for Slider -->
+                            <div class="pt-2">
+                                <label class="block text-[10px] font-semibold text-[#171A21] uppercase mb-1">Connected Next Node</label>
+                                <select onchange="updateEdgeTarget(${node.id}, null, this.value)" class="w-full px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs font-semibold ${sliderOutgoingEdge ? 'text-[#5B5BD6]' : 'text-amber-600'}">
+                                    <option value="">⚠️ Disconnected (Pick next step)</option>
                                     ${graphData.nodes.filter(n => n.id !== node.id).map(n => `
-                                        <option value="${n.id}">→ ${escapeHtml(n.title)} (${n.node_type})</option>
+                                        <option value="${n.id}" ${sliderOutgoingEdge && sliderOutgoingEdge.target_node_id == n.id ? 'selected' : ''}>→ ${escapeHtml(n.title)} (${n.node_type})</option>
                                     `).join('')}
                                 </select>
                             </div>
-                        ` : ''}
-                        <div class="space-y-2">
-                            ${optionsHtml}
                         </div>
-                    </div>
+                    ` : `
+                        <!-- Choice Branching Options Panel -->
+                        <div class="pt-2 border-t border-[#E4E7EC]">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold text-[#171A21] text-xs">Branching Options (${options.length})</span>
+                                <button type="button" onclick="addOption(${node.id})" class="text-xs text-[#5B5BD6] font-semibold hover:underline">
+                                    + Add Option
+                                </button>
+                            </div>
+                            ${options.length > 1 ? `
+                                <div class="mb-3 p-2 bg-indigo-50/60 rounded-lg border border-indigo-100 flex items-center justify-between gap-2">
+                                    <span class="text-[10px] font-semibold text-indigo-900 shrink-0">Set all options to:</span>
+                                    <select onchange="if(this.value) setAllOptionsRoute(${node.id}, this.value)" class="text-[11px] px-2 py-1 rounded border border-indigo-200 bg-white font-medium text-[#171A21] w-full">
+                                        <option value="">-- Choose common target --</option>
+                                        ${graphData.nodes.filter(n => n.id !== node.id).map(n => `
+                                            <option value="${n.id}">→ ${escapeHtml(n.title)} (${n.node_type})</option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                            ` : ''}
+                            <div class="space-y-2">
+                                ${optionsHtml}
+                            </div>
+                        </div>
+                    `}
 
                     <div class="pt-4 border-t border-[#E4E7EC]">
-                        <button type="button" onclick="deleteNode(${node.id})" class="w-full py-2 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 font-semibold hover:bg-rose-100">
+                        <button type="button" onclick="deleteNode('${node.id}')" class="w-full py-2 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 font-semibold hover:bg-rose-100">
                             Delete Question Node
                         </button>
                     </div>
@@ -1186,43 +1510,324 @@
             `;
         } else if (node.node_type === 'destination') {
             const dest = node.destination || { name: 'Landing Page', url: 'https://example.com' };
+            if (!node.calculator) {
+                node.calculator = {
+                    enabled: window.FUNNEL_MODE === 'calculator',
+                    formula_expression: '@Q1 * 1000',
+                    result_label: 'Your Estimated Project Cost',
+                    result_prefix: '₹',
+                    result_suffix: '',
+                    decimal_places: 0
+                };
+            }
+            const calc = node.calculator;
+            const isCalcMode = window.FUNNEL_MODE === 'calculator';
+
+            if (!node.quick_connect) {
+                node.quick_connect = {
+                    enabled: false,
+                    action_type: 'both',
+                    phone_number: '',
+                    call_button_text: 'Call Specialist Now',
+                    whatsapp_number: '',
+                    whatsapp_button_text: 'Chat on WhatsApp',
+                    whatsapp_message: 'Hi! I just completed the {{funnel_name}} and received my quote: {{formatted_quote}}.'
+                };
+            }
+            if (!node.quick_connect.action_type) {
+                node.quick_connect.action_type = 'both';
+            }
+            if (!node.destination_mode) {
+                node.destination_mode = (node.quick_connect && node.quick_connect.enabled) ? 'direct_connect' : 'redirect';
+            }
+            const isDirectConnect = node.destination_mode === 'direct_connect';
+            const qc = node.quick_connect;
+            const cleanCallBtnLabel = (qc.call_button_text || 'Call Specialist Now').replace(/^[\s\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}💬📞📱⚡]+/u, '').trim() || 'Call Specialist Now';
+            const cleanWaBtnLabel = (qc.whatsapp_button_text || 'Chat on WhatsApp').replace(/^[\s\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}💬📞📱⚡]+/u, '').trim() || 'Chat on WhatsApp';
+
+            // Collect all Question nodes on canvas for clickable variable pills
+            const questionNodes = graphData.nodes.filter(n => n.node_type === 'question');
 
             inspectorContent.innerHTML = `
                 <div class="space-y-4">
                     <div>
                         <label class="block font-semibold text-[#171A21] uppercase text-[10px] mb-1">Destination Name</label>
-                        <input type="text" value="${escapeHtml(dest.name || '')}" oninput="updateDestinationProperty(${node.id}, 'name', this.value)"
+                        <input type="text" value="${escapeHtml(dest.name || '')}" oninput="updateDestinationProperty('${node.id}', 'name', this.value)"
                                class="w-full px-3 py-1.5 rounded-lg border border-[#E4E7EC] text-xs">
                     </div>
 
+                    <!-- Mutually Exclusive Option Choice: 1) Redirect Link vs 2) WhatsApp / Call -->
                     <div>
-                        <label class="block font-semibold text-[#171A21] uppercase text-[10px] mb-1">Landing Page URL *</label>
-                        <input type="url" value="${escapeHtml(dest.url || '')}" oninput="updateDestinationProperty(${node.id}, 'url', this.value)"
-                               placeholder="https://yourdomain.com/page" class="w-full px-3 py-1.5 rounded-lg border border-[#E4E7EC] text-xs font-mono">
+                        <label class="block font-semibold text-[#171A21] uppercase text-[10px] mb-1.5">Destination Action Type *</label>
+                        <div class="grid grid-cols-2 p-1 rounded-xl bg-slate-100 border border-slate-200/80 text-xs gap-1">
+                            <button type="button" onclick="setDestinationMode('${node.id}', 'redirect')"
+                                    class="py-2 px-2.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${!isDirectConnect ? 'bg-emerald-600 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 bg-white/50'}">
+                                <svg class="w-3.5 h-3.5 ${!isDirectConnect ? 'text-white' : 'text-slate-500'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                                <span>1) Redirect Link</span>
+                            </button>
+                            <button type="button" onclick="setDestinationMode('${node.id}', 'direct_connect')"
+                                    class="py-2 px-2.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${isDirectConnect ? 'bg-emerald-600 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 bg-white/50'}">
+                                <svg class="w-3.5 h-3.5 ${isDirectConnect ? 'text-white' : 'text-emerald-600'}" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2z"/></svg>
+                                <span>2) WhatsApp / Call</span>
+                            </button>
+                        </div>
                     </div>
 
-                    ${dest.url ? `
-                        <div>
-                            <a href="${dest.url}" target="_blank" class="inline-flex items-center gap-1.5 text-xs text-[#5B5BD6] hover:underline font-semibold">
-                                Preview URL in New Tab ↗
-                            </a>
+                    ${!isDirectConnect ? `
+                        <!-- Option 1: External Landing Page Redirect Link -->
+                        <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
+                            <div>
+                                <label class="block font-semibold text-[#171A21] uppercase text-[10px] mb-1">Landing Page URL *</label>
+                                <input type="url" value="${escapeHtml(dest.url || '')}" oninput="updateDestinationProperty('${node.id}', 'url', this.value)"
+                                       placeholder="https://yourdomain.com/quote-result" class="w-full px-3 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs font-mono">
+                                <span class="text-[10px] text-[#687080] block mt-1">Supports dynamic tags: <code class="text-[#5B5BD6] font-mono font-bold">{{calculated_value}}</code> and <code class="text-[#5B5BD6] font-mono font-bold">{{formatted_quote}}</code></span>
+                            </div>
+
+                            ${dest.url ? `
+                                <div>
+                                    <a href="${dest.url}" target="_blank" class="inline-flex items-center gap-1.5 text-xs text-[#5B5BD6] hover:underline font-semibold">
+                                        Preview URL in New Tab ↗
+                                    </a>
+                                </div>
+                            ` : ''}
                         </div>
+                    ` : `
+                        <!-- Option 2: Direct 1-Click WhatsApp & Call Connect Card -->
+                        <div class="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/20 shadow-2xs space-y-3">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                                </div>
+                                <div>
+                                    <span class="block text-xs font-semibold text-slate-800">Direct Connect</span>
+                                    <span class="block text-[10px] text-slate-500">1-click WhatsApp & Phone action</span>
+                                </div>
+                            </div>
+
+                            <div class="space-y-3 pt-2 border-t border-slate-100">
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-700 mb-1.5">Action Mode</label>
+                                    <div class="grid grid-cols-3 p-1 rounded-xl bg-slate-100 border border-slate-200/80 text-xs">
+                                        <!-- Both -->
+                                        <button type="button" id="qc_mode_both_${node.id}" onclick="updateDestinationQuickConnect('${node.id}', 'action_type', 'both')"
+                                                class="py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${qc.action_type === 'both' ? 'bg-emerald-600 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}">
+                                            <svg class="w-3.5 h-3.5 pointer-events-none ${qc.action_type === 'both' ? 'text-white' : 'text-amber-500'}" viewBox="0 0 24 24" fill="currentColor"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                            <span class="pointer-events-none">Both</span>
+                                        </button>
+
+                                        <!-- WhatsApp -->
+                                        <button type="button" id="qc_mode_wa_${node.id}" onclick="updateDestinationQuickConnect('${node.id}', 'action_type', 'whatsapp')"
+                                                class="py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${qc.action_type === 'whatsapp' ? 'bg-emerald-600 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}">
+                                            <svg class="w-3.5 h-3.5 pointer-events-none ${qc.action_type === 'whatsapp' ? 'text-white' : 'text-[#25D366]'}" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2z"/></svg>
+                                            <span class="pointer-events-none">WhatsApp</span>
+                                        </button>
+
+                                        <!-- Call Only -->
+                                        <button type="button" id="qc_mode_call_${node.id}" onclick="updateDestinationQuickConnect('${node.id}', 'action_type', 'call')"
+                                                class="py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${qc.action_type === 'call' ? 'bg-emerald-600 text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}">
+                                            <svg class="w-3.5 h-3.5 pointer-events-none ${qc.action_type === 'call' ? 'text-white' : 'text-emerald-600'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                                            <span class="pointer-events-none">Call Only</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                ${(qc.action_type === 'both' || qc.action_type === 'call') ? `
+                                    <div class="space-y-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                                        <div class="flex items-center gap-1.5 text-slate-700">
+                                            <svg class="w-3.5 h-3.5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                                            <span class="text-xs font-semibold">Phone Call Configuration</span>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-medium text-slate-500 mb-1">Phone Number (with Country Code)</label>
+                                            <input type="tel" value="${escapeHtml(qc.phone_number || '')}" placeholder="+1 (555) 123-4567 or +91 9876543210"
+                                                   oninput="updateDestinationQuickConnect('${node.id}', 'phone_number', this.value)"
+                                                   class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-medium text-slate-500 mb-1">Call Button Text</label>
+                                            <input type="text" value="${escapeHtml(cleanCallBtnLabel)}"
+                                                   oninput="updateDestinationQuickConnect('${node.id}', 'call_button_text', this.value)"
+                                                   class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors">
+                                        </div>
+                                    </div>
+                                ` : ''}
+
+                                ${(qc.action_type === 'both' || qc.action_type === 'whatsapp') ? `
+                                    <div class="space-y-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                                        <div class="flex items-center gap-1.5 text-slate-700">
+                                            <svg class="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2z"/></svg>
+                                            <span class="text-xs font-semibold">WhatsApp Configuration</span>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-medium text-slate-500 mb-1">WhatsApp Number (with Country Code)</label>
+                                            <input type="tel" value="${escapeHtml(qc.whatsapp_number || '')}" placeholder="+15551234567 or +919876543210"
+                                                   oninput="updateDestinationQuickConnect('${node.id}', 'whatsapp_number', this.value)"
+                                                   class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-medium text-slate-500 mb-1">WhatsApp Button Text</label>
+                                            <input type="text" value="${escapeHtml(cleanWaBtnLabel)}"
+                                                   oninput="updateDestinationQuickConnect('${node.id}', 'whatsapp_button_text', this.value)"
+                                                   class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-medium text-slate-500 mb-1">Pre-filled Chat Message</label>
+                                            <textarea id="waMessageInput_${node.id}" rows="2"
+                                                      oninput="updateDestinationQuickConnect('${node.id}', 'whatsapp_message', this.value)"
+                                                      placeholder="Hi! I just got my quote: {{formatted_quote}} on {{funnel_name}}."
+                                                      class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors">${escapeHtml(qc.whatsapp_message || '')}</textarea>
+                                            <div class="flex flex-wrap gap-1 mt-1.5">
+                                                <button type="button" onclick="insertQuickConnectMessageTag('${node.id}', '{{formatted_quote}}')"
+                                                        class="px-2 py-0.5 rounded-md bg-slate-200/80 hover:bg-slate-300 text-slate-700 text-[10px] font-mono font-medium transition-colors">
+                                                    + {{formatted_quote}}
+                                                </button>
+                                                <button type="button" onclick="insertQuickConnectMessageTag('${node.id}', '{{funnel_name}}')"
+                                                        class="px-2 py-0.5 rounded-md bg-slate-200/80 hover:bg-slate-300 text-slate-700 text-[10px] font-mono font-medium transition-colors">
+                                                    + {{funnel_name}}
+                                                </button>
+                                                <button type="button" onclick="insertQuickConnectMessageTag('${node.id}', '{{destination_name}}')"
+                                                        class="px-2 py-0.5 rounded-md bg-slate-200/80 hover:bg-slate-300 text-slate-700 text-[10px] font-mono font-medium transition-colors">
+                                                    + {{destination_name}}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ` : ''}
+
+                                <!-- Live Visitor Preview Chips -->
+                                <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+                                    <span class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Visitor Preview:</span>
+                                    <div class="space-y-1.5">
+                                        ${(qc.action_type === 'both' || qc.action_type === 'whatsapp') ? `
+                                            <div class="w-full py-2 px-3 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors">
+                                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2z"/></svg>
+                                                <span>${escapeHtml(cleanWaBtnLabel)}</span>
+                                            </div>
+                                        ` : ''}
+                                        ${(qc.action_type === 'both' || qc.action_type === 'call') ? `
+                                            <div class="w-full py-2 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors">
+                                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                                                <span>${escapeHtml(cleanCallBtnLabel)}</span>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `}
+
+                    ${(isCalcMode || calc.enabled) ? `
+                    <!-- Calculator & Quote Formula Engine Card -->
+                    <div class="p-3.5 rounded-xl border border-purple-200 bg-purple-50/40 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <label class="flex items-center gap-2 cursor-pointer select-none">
+                                <input type="checkbox" ${calc.enabled ? 'checked' : ''} onchange="toggleDestinationCalculator('${node.id}', this.checked)"
+                                       class="w-4 h-4 rounded text-purple-600 focus:ring-purple-500">
+                                <span class="font-bold text-xs text-purple-950">🧮 Enable Calculation / Price Quote</span>
+                            </label>
+                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded ${calc.enabled ? 'bg-purple-600 text-white' : 'bg-slate-200 text-slate-600'}">
+                                ${calc.enabled ? 'ACTIVE' : 'OFF'}
+                            </span>
+                        </div>
+
+                        ${calc.enabled ? `
+                            <div class="space-y-3 pt-2 border-t border-purple-200/80">
+                                <div>
+                                    <label class="block font-bold text-[10px] uppercase text-purple-900 mb-1">
+                                        Formula Expression
+                                    </label>
+                                    <textarea id="formulaInput_${node.id}" rows="2" oninput="updateDestinationCalculator('${node.id}', 'formula_expression', this.value)"
+                                              placeholder="e.g. (@Q1 * 1200) + @Q2 - 500"
+                                              class="w-full px-3 py-2 rounded-lg border border-purple-300 bg-white font-mono text-xs font-bold text-purple-900 focus:ring-2 focus:ring-purple-500">${escapeHtml(calc.formula_expression || '')}</textarea>
+                                </div>
+
+                                <!-- Clickable Variable Pills -->
+                                <div>
+                                    <span class="block text-[10px] font-semibold text-purple-900 mb-1.5">Click to insert question variable:</span>
+                                    <div class="flex flex-wrap gap-1.5">
+                                        ${questionNodes.length === 0 ? `
+                                            <span class="text-[10px] text-slate-400 italic">No question nodes on canvas</span>
+                                        ` : questionNodes.map(qn => `
+                                            <button type="button" onclick="insertFormulaToken('${node.id}', '@${escapeHtml(qn.variable_key || 'Q1')}')"
+                                                    class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-indigo-200 text-[#5B5BD6] hover:bg-indigo-50 font-mono text-[11px] font-bold shadow-2xs transition-all hover:scale-105"
+                                                    title="${escapeHtml(qn.title || 'Question')}">
+                                                <span>@${escapeHtml(qn.variable_key || 'Q1')}</span>
+                                                <span class="text-[9px] text-[#687080] font-normal truncate max-w-[80px]">(${escapeHtml(qn.title || 'Q')})</span>
+                                            </button>
+                                        `).join('')}
+                                    </div>
+                                    <!-- Math Operator Quick Chips -->
+                                    <div class="flex flex-wrap gap-1 mt-1.5 pt-1.5 border-t border-purple-200/60">
+                                        ${['+', '-', '*', '/', '(', ')'].map(op => `
+                                            <button type="button" onclick="insertFormulaToken('${node.id}', '${op}')"
+                                                    class="w-6 h-6 rounded bg-purple-100 hover:bg-purple-200 text-purple-900 font-mono text-xs font-bold flex items-center justify-center transition-colors">
+                                                ${op}
+                                            </button>
+                                        `).join('')}
+                                    </div>
+                                </div>
+
+                                <!-- Formatting Settings -->
+                                <div class="grid grid-cols-2 gap-2 text-xs pt-1">
+                                    <div>
+                                        <label class="block text-[10px] font-semibold text-[#687080] mb-1">Prefix (Currency)</label>
+                                        <input type="text" value="${escapeHtml(calc.result_prefix || '₹')}" oninput="updateDestinationCalculator('${node.id}', 'result_prefix', this.value)"
+                                                class="w-full px-2.5 py-1 rounded border border-[#E4E7EC] text-xs">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-semibold text-[#687080] mb-1">Suffix (Unit/Period)</label>
+                                        <input type="text" value="${escapeHtml(calc.result_suffix || '')}" placeholder="/mo, Total" oninput="updateDestinationCalculator('${node.id}', 'result_suffix', this.value)"
+                                                class="w-full px-2.5 py-1 rounded border border-[#E4E7EC] text-xs">
+                                    </div>
+                                    <div class="col-span-2">
+                                        <label class="block text-[10px] font-semibold text-[#687080] mb-1">Result Label / Heading</label>
+                                        <input type="text" value="${escapeHtml(calc.result_label || 'Your Estimated Project Cost')}" oninput="updateDestinationCalculator('${node.id}', 'result_label', this.value)"
+                                                class="w-full px-2.5 py-1 rounded border border-[#E4E7EC] text-xs">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-semibold text-[#687080] mb-1">Decimals</label>
+                                        <select onchange="updateDestinationCalculator('${node.id}', 'decimal_places', this.value)" class="w-full px-2.5 py-1 rounded border border-[#E4E7EC] text-xs bg-white">
+                                            <option value="0" ${(calc.decimal_places ?? 0) == 0 ? 'selected' : ''}>0 (e.g. ₹ 23,500)</option>
+                                            <option value="2" ${(calc.decimal_places ?? 0) == 2 ? 'selected' : ''}>2 (e.g. $ 23,500.50)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Live Formula Validator & Mini Test Calculation Preview -->
+                                <div id="formulaValidatorBox_${node.id}" class="p-2.5 rounded-lg bg-white border border-purple-200 space-y-1.5 shadow-2xs">
+                                    <div class="flex items-center justify-between text-[10px]">
+                                        <span class="font-bold text-slate-500 uppercase tracking-wider">Formula Live Test</span>
+                                        <span id="formulaSyntaxStatus_${node.id}" class="font-bold text-emerald-600">✓ Valid Syntax</span>
+                                    </div>
+                                    <div class="p-2 rounded bg-slate-50 border border-slate-200 flex items-center justify-between">
+                                        <span class="text-[11px] text-[#687080]">Sample Output:</span>
+                                        <span id="formulaSampleResult_${node.id}" class="text-sm font-extrabold font-mono text-[#5B5BD6]">
+                                            Calculating...
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
                     ` : ''}
 
-                    <div class="p-3 bg-purple-50 border border-purple-200 rounded-lg text-purple-800 text-[11px]">
-                        <strong>Terminal Node:</strong> When a visitor reaches this step, their quiz session is saved as completed and redirected to this URL.
-                    </div>
-
                     <div class="pt-4 border-t border-[#E4E7EC]">
-                        <button type="button" onclick="deleteNode(${node.id})" class="w-full py-2 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 font-semibold hover:bg-rose-100">
+                        <button type="button" onclick="deleteNode('${node.id}')" class="w-full py-2 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 font-semibold hover:bg-rose-100">
                             Delete Destination Node
                         </button>
                     </div>
                 </div>
             `;
+
+            // Trigger initial live formula validation for destination preview
+            if (calc && calc.enabled) {
+                setTimeout(() => updateFormulaLiveValidator(node.id, calc.formula_expression), 30);
+            }
         } else if (node.node_type === 'form') {
             if (!node.form) {
                 node.form = {
+                    heading: node.title || 'Lead Capture Form',
+                    subheading: node.description !== undefined ? node.description : 'Please fill out the form to proceed.',
                     fields: [],
                     submit_action: 'redirect',
                     button_text: 'Submit Details',
@@ -1230,6 +1835,9 @@
                     success_message: 'Your submission has been received.'
                 };
             }
+            if (node.form.heading === undefined) node.form.heading = node.title || 'Lead Capture Form';
+            if (node.form.subheading === undefined) node.form.subheading = node.description !== undefined ? node.description : 'Please fill out the form to proceed.';
+            if (node.form.button_text === undefined) node.form.button_text = 'Submit Details';
             if (!node.form.fields) node.form.fields = [];
 
             const form = node.form;
@@ -1306,10 +1914,27 @@
                 <div class="space-y-4">
                     ${getStartStepWidgetHtml(node)}
 
-                    <div>
-                        <label class="block font-semibold text-[#171A21] uppercase text-[10px] mb-1">Step Title / Identifier</label>
-                        <input type="text" value="${escapeHtml(node.title || '')}" oninput="updateNodeTitle('${node.id}', this.value)"
-                               class="w-full px-3 py-1.5 rounded-lg border border-[#E4E7EC] text-xs">
+                    <!-- Form Header & Copy Settings -->
+                    <div class="space-y-3 p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-700">Form Header & Content</span>
+                            <span class="text-[9px] font-medium text-slate-400">Visitor Card Display</span>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-[#171A21] text-[10px] mb-1">Form Heading *</label>
+                            <input type="text" value="${escapeHtml(form.heading || node.title || 'Lead Capture Form')}"
+                                   oninput="updateFormHeading('${node.id}', this.value)"
+                                   placeholder="Lead Capture Form"
+                                   class="w-full px-3 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#5B5BD6]">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-[#171A21] text-[10px] mb-1">Subheading / Description</label>
+                            <textarea rows="2"
+                                      oninput="updateFormProperty('${node.id}', 'subheading', this.value)"
+                                      placeholder="Please fill out the form to proceed."
+                                      class="w-full px-3 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#5B5BD6]">${escapeHtml(form.subheading !== undefined ? form.subheading : (form.description !== undefined ? form.description : (node.description || 'Please fill out the form to proceed.')))}</textarea>
+                            <span class="text-[10px] text-slate-400 block mt-0.5">Shown right below the heading on the visitor lead capture card.</span>
+                        </div>
                     </div>
 
                     <!-- Post-Submission Decision: Redirect vs No Redirection -->
@@ -1443,6 +2068,7 @@
             }
         }
     }
+    window.renderInspector = renderInspector;
 
     // Graph Mutations
     window.addNodeToCanvas = function (type, customX = null, customY = null) {
@@ -1462,23 +2088,95 @@
             position_y: Math.round(canvasY),
         };
 
-        if (type === 'question') {
+        if (type === 'slider') {
+            type = 'question';
+            const qCount = graphData.nodes.filter(n => n.node_type === 'question').length + 1;
+            node.node_type = 'question';
+            node.input_type = 'slider';
+            node.variable_key = `Q${qCount}`;
+            node.title = `Question ${qCount} (Slider)`;
+            node.question = {
+                question_text: 'Select your desired quantity or range:',
+                question_type: 'slider',
+                is_required: 1,
+                options: []
+            };
+            node.slider_config = {
+                min_value: 1,
+                max_value: 100,
+                step_value: 1,
+                default_value: 10,
+                unit_label: 'Units',
+                unit_prefix: ''
+            };
+        } else if (type === 'question') {
+            const qCount = graphData.nodes.filter(n => n.node_type === 'question').length + 1;
+            node.input_type = 'single_choice';
+            node.variable_key = `Q${qCount}`;
             node.question = {
                 question_text: 'What is your primary interest?',
                 question_type: 'single_choice',
                 is_required: 1,
                 options: [
-                    { id: Date.now() + 1, option_key: `opt_${Math.random().toString(36).substring(2, 8)}`, label: 'Option A', value: 'opt_a', display_order: 1 },
-                    { id: Date.now() + 2, option_key: `opt_${Math.random().toString(36).substring(2, 8)}`, label: 'Option B', value: 'opt_b', display_order: 2 }
+                    { id: Date.now() + 1, option_key: `opt_${Math.random().toString(36).substring(2, 8)}`, label: 'Option A', value: '100', display_order: 1 },
+                    { id: Date.now() + 2, option_key: `opt_${Math.random().toString(36).substring(2, 8)}`, label: 'Option B', value: '200', display_order: 2 }
                 ]
             };
+        } else if (type === 'connect' || type === 'quick_connect') {
+            type = 'destination';
+            node.node_type = 'destination';
+            node.title = '📞 1-Click Call & WhatsApp';
+            node.destination = {
+                name: 'Direct Call & WhatsApp Connect',
+                url: '#'
+            };
+            node.quick_connect = {
+                enabled: true,
+                action_type: 'both',
+                phone_number: '+1 (555) 019-2834',
+                call_button_text: 'Call Specialist Now',
+                whatsapp_number: '+15550192834',
+                whatsapp_button_text: 'Chat on WhatsApp',
+                whatsapp_message: 'Hi! I just completed the {{funnel_name}} and received my quote: {{formatted_quote}}.'
+            };
+            if (window.FUNNEL_MODE === 'calculator') {
+                node.calculator = {
+                    enabled: true,
+                    formula_expression: '@Q1 * 100',
+                    result_label: 'Your Estimated Quote',
+                    result_prefix: '₹',
+                    result_suffix: '',
+                    decimal_places: 0
+                };
+            }
         } else if (type === 'destination') {
             node.destination = {
                 name: 'Custom Result Page',
                 url: 'https://example.com/result'
             };
+            node.quick_connect = {
+                enabled: false,
+                action_type: 'both',
+                phone_number: '',
+                call_button_text: 'Call Specialist Now',
+                whatsapp_number: '',
+                whatsapp_button_text: 'Chat on WhatsApp',
+                whatsapp_message: 'Hi! I just completed the {{funnel_name}} and received my quote: {{formatted_quote}}.'
+            };
+            if (window.FUNNEL_MODE === 'calculator') {
+                node.calculator = {
+                    enabled: true,
+                    formula_expression: '@Q1 * 100',
+                    result_label: 'Your Estimated Quote',
+                    result_prefix: '₹',
+                    result_suffix: '',
+                    decimal_places: 0
+                };
+            }
         } else if (type === 'form') {
             node.form = {
+                heading: 'Lead Capture Form',
+                subheading: 'Please fill out the form to proceed.',
                 fields: [
                     { id: Date.now() + 1, field_key: 'name', label: 'Full Name', field_type: 'text', placeholder: 'Enter your name', is_required: 1 },
                     { id: Date.now() + 2, field_key: 'email', label: 'Email Address', field_type: 'email', placeholder: 'Enter your email', is_required: 1 }
@@ -1503,20 +2201,42 @@
     };
 
     window.updateNodeTitle = function (nodeId, title) {
-        const node = graphData.nodes.find(n => n.id === nodeId);
+        const node = findNode(nodeId);
         if (node) {
             node.title = title;
+            if (node.form) {
+                node.form.heading = title;
+            }
             const el = document.getElementById(`node-${nodeId}`);
             if (el) {
                 const titleSpan = el.querySelector('.node-header span.truncate');
-                if (titleSpan) titleSpan.textContent = title;
+                if (titleSpan) titleSpan.textContent = title || (node.node_type === 'form' ? 'Lead Capture Form' : 'Node');
+                const formCardTitle = el.querySelector('.p-3 p.font-semibold');
+                if (formCardTitle && node.node_type === 'form') formCardTitle.textContent = title || 'Lead Capture Form';
+            }
+            markDirty();
+        }
+    };
+
+    window.updateFormHeading = function (nodeId, heading) {
+        const node = findNode(nodeId);
+        if (node) {
+            node.title = heading;
+            if (!node.form) node.form = {};
+            node.form.heading = heading;
+            const el = document.getElementById(`node-${nodeId}`);
+            if (el) {
+                const titleSpan = el.querySelector('.node-header span.truncate');
+                if (titleSpan) titleSpan.textContent = heading || 'Lead Capture Form';
+                const formCardTitle = el.querySelector('.p-3 p.font-semibold');
+                if (formCardTitle) formCardTitle.textContent = heading || 'Lead Capture Form';
             }
             markDirty();
         }
     };
 
     window.updateQuestionProperty = function (nodeId, prop, value) {
-        const node = graphData.nodes.find(n => n.id === nodeId);
+        const node = findNode(nodeId);
         if (node && node.question) {
             node.question[prop] = value;
             const el = document.getElementById(`node-${nodeId}`);
@@ -1529,7 +2249,7 @@
     };
 
     window.updateDestinationProperty = function (nodeId, prop, value) {
-        const node = graphData.nodes.find(n => n.id === nodeId);
+        const node = findNode(nodeId);
         if (node && node.destination) {
             node.destination[prop] = value;
             const el = document.getElementById(`node-${nodeId}`);
@@ -1548,8 +2268,22 @@
         if (node) {
             if (!node.form) node.form = {};
             node.form[prop] = value;
-            renderCanvas();
-            if (prop === 'submit_action') {
+            if (prop === 'heading') {
+                node.title = value;
+                const el = document.getElementById(`node-${nodeId}`);
+                if (el) {
+                    const titleSpan = el.querySelector('.node-header span.truncate');
+                    if (titleSpan) titleSpan.textContent = value || 'Lead Capture Form';
+                    const formCardTitle = el.querySelector('.p-3 p.font-semibold');
+                    if (formCardTitle) formCardTitle.textContent = value || 'Lead Capture Form';
+                }
+            } else if (prop === 'subheading') {
+                node.description = value;
+                node.form.description = value;
+            } else if (prop === 'button_text') {
+                node.button_text = value;
+            } else if (prop === 'submit_action') {
+                renderCanvas();
                 renderInspector(true);
             }
             markDirty();
@@ -1695,7 +2429,7 @@
     };
 
     window.addOption = function (nodeId) {
-        const node = graphData.nodes.find(n => n.id === nodeId);
+        const node = findNode(nodeId);
         if (node && node.question) {
             const optId = Date.now();
             node.question.options.push({
@@ -1717,17 +2451,459 @@
             const opt = node.question.options.find(o => o.id === optionId);
             if (opt) {
                 opt.label = label;
-                opt.value = label;
+                if (opt.value === undefined || opt.value === null || opt.value === '') {
+                    opt.value = label;
+                }
                 renderCanvas();
                 markDirty();
             }
         }
     };
 
-    window.deleteOption = function (nodeId, optionId) {
+    window.updateOptionValue = function (nodeId, optionId, val) {
         const node = graphData.nodes.find(n => n.id === nodeId);
         if (node && node.question) {
-            node.question.options = node.question.options.filter(o => o.id !== optionId);
+            const opt = node.question.options.find(o => o.id === optionId);
+            if (opt) {
+                opt.value = val;
+                markDirty();
+            }
+        }
+    };
+
+    window.updateQuestionVariableKey = function (nodeId, key) {
+        const node = graphData.nodes.find(n => n.id === nodeId);
+        if (node) {
+            const cleanKey = (key || '').replace(/^@+/, '').replace(/[^A-Za-z0-9_]/g, '').toUpperCase();
+            node.variable_key = cleanKey || 'Q1';
+            renderCanvas();
+            renderInspector(true);
+            markDirty();
+        }
+    };
+
+    window.updateQuestionInputType = function (nodeId, inputType) {
+        const node = graphData.nodes.find(n => n.id === nodeId);
+        if (node) {
+            node.input_type = inputType;
+            if (node.question) {
+                node.question.question_type = inputType;
+            }
+            if (inputType === 'slider') {
+                if (!node.slider_config) {
+                    node.slider_config = {
+                        min_value: 1,
+                        max_value: 100,
+                        step_value: 1,
+                        default_value: 10,
+                        unit_label: 'Units',
+                        unit_prefix: ''
+                    };
+                }
+            } else {
+                if (!node.question) node.question = { question_text: 'Choose an option', question_type: inputType, options: [] };
+                if (!node.question.options || node.question.options.length === 0) {
+                    node.question.options = [
+                        { id: Date.now() + 1, option_key: `opt_${Math.random().toString(36).substring(2, 6)}`, label: 'Option 1', value: '100', display_order: 1 },
+                        { id: Date.now() + 2, option_key: `opt_${Math.random().toString(36).substring(2, 6)}`, label: 'Option 2', value: '200', display_order: 2 }
+                    ];
+                }
+            }
+            renderCanvas();
+            renderInspector();
+            markDirty();
+        }
+    };
+
+    window.updateSliderConfig = function (nodeId, field, val) {
+        const node = graphData.nodes.find(n => n.id === nodeId);
+        if (node) {
+            if (!node.slider_config) node.slider_config = {};
+            if (['min_value', 'max_value', 'step_value', 'default_value'].includes(field)) {
+                node.slider_config[field] = parseFloat(val) || 0;
+            } else {
+                node.slider_config[field] = val;
+            }
+            renderCanvas();
+            markDirty();
+        }
+    };
+
+    window.setDestinationMode = function (nodeId, mode) {
+        const node = findNode(nodeId);
+        if (node) {
+            node.destination_mode = mode;
+            if (!node.quick_connect) {
+                node.quick_connect = {
+                    enabled: false,
+                    action_type: 'both',
+                    phone_number: '',
+                    call_button_text: 'Call Specialist Now',
+                    whatsapp_number: '',
+                    whatsapp_button_text: 'Chat on WhatsApp',
+                    whatsapp_message: 'Hi! I just completed the {{funnel_name}} and received my quote: {{formatted_quote}}.'
+                };
+            }
+            if (mode === 'direct_connect') {
+                node.quick_connect.enabled = true;
+            } else {
+                node.quick_connect.enabled = false;
+            }
+            renderCanvas();
+            renderInspector(true);
+            markDirty();
+        }
+    };
+
+    window.toggleDestinationQuickConnect = function (nodeId, enabled) {
+        const node = findNode(nodeId);
+        if (node) {
+            if (!node.quick_connect) {
+                node.quick_connect = {
+                    enabled: false,
+                    action_type: 'both',
+                    phone_number: '',
+                    call_button_text: 'Call Specialist Now',
+                    whatsapp_number: '',
+                    whatsapp_button_text: 'Chat on WhatsApp',
+                    whatsapp_message: 'Hi! I just completed the {{funnel_name}} and received my quote: {{formatted_quote}}.'
+                };
+            }
+            node.quick_connect.enabled = !!enabled;
+            node.destination_mode = enabled ? 'direct_connect' : 'redirect';
+            renderCanvas();
+            renderInspector(true);
+            markDirty();
+        }
+    };
+
+    window.updateDestinationQuickConnect = function (nodeId, field, val) {
+        const node = findNode(nodeId);
+        if (node) {
+            if (!node.quick_connect) node.quick_connect = {};
+            node.quick_connect[field] = val;
+            renderCanvas();
+            if (field === 'action_type') {
+                renderInspector(true);
+            }
+            markDirty();
+        }
+    };
+
+    window.insertQuickConnectMessageTag = function (nodeId, tag) {
+        const input = document.getElementById(`waMessageInput_${nodeId}`);
+        const node = findNode(nodeId);
+        if (!node) return;
+        if (!node.quick_connect) node.quick_connect = {};
+
+        if (input) {
+            const start = input.selectionStart || 0;
+            const end = input.selectionEnd || 0;
+            const text = input.value || '';
+            const toInsert = ` ${tag} `;
+            const newText = text.substring(0, start) + toInsert + text.substring(end);
+            input.value = newText.replace(/\s+/g, ' ').trim();
+            node.quick_connect.whatsapp_message = input.value;
+            input.focus();
+            const newPos = start + toInsert.length;
+            input.setSelectionRange(newPos, newPos);
+        } else {
+            const cur = node.quick_connect.whatsapp_message || '';
+            node.quick_connect.whatsapp_message = (cur + ' ' + tag).trim();
+        }
+        markDirty();
+    };
+
+    window.toggleDestinationCalculator = function (nodeId, enabled) {
+        const node = findNode(nodeId);
+        if (node) {
+            if (!node.calculator) {
+                node.calculator = {
+                    enabled: false,
+                    formula_expression: '@Q1 * 100',
+                    result_label: 'Your Estimated Quote',
+                    result_prefix: '₹',
+                    result_suffix: '',
+                    decimal_places: 0
+                };
+            }
+            node.calculator.enabled = !!enabled;
+            renderCanvas();
+            renderInspector(true);
+            markDirty();
+        }
+    };
+
+    window.updateDestinationCalculator = function (nodeId, field, val) {
+        const node = findNode(nodeId);
+        if (node) {
+            if (!node.calculator) node.calculator = {};
+            if (field === 'decimal_places') {
+                node.calculator[field] = parseInt(val, 10) || 0;
+            } else {
+                node.calculator[field] = val;
+            }
+            if (field === 'formula_expression') {
+                updateFormulaLiveValidator(nodeId, val);
+            }
+            renderCanvas();
+            markDirty();
+        }
+    };
+
+    window.insertFormulaToken = function (nodeId, token) {
+        const input = document.getElementById(`formulaInput_${nodeId}`);
+        const node = findNode(nodeId);
+        if (!node) return;
+        if (!node.calculator) node.calculator = {};
+
+        if (input) {
+            const start = input.selectionStart || 0;
+            const end = input.selectionEnd || 0;
+            const text = input.value || '';
+            const toInsert = (token.startsWith('@') || ['+', '-', '*', '/', '(', ')'].includes(token)) ? ` ${token} ` : token;
+            const newText = text.substring(0, start) + toInsert + text.substring(end);
+            input.value = newText.replace(/\s+/g, ' ').trim();
+            node.calculator.formula_expression = input.value;
+            input.focus();
+            const newPos = start + toInsert.length;
+            input.setSelectionRange(newPos, newPos);
+        } else {
+            const cur = node.calculator.formula_expression || '';
+            node.calculator.formula_expression = (cur + ' ' + token).trim();
+        }
+        updateFormulaLiveValidator(nodeId, node.calculator.formula_expression);
+        renderCanvas();
+        markDirty();
+    };
+
+    window.switchFunnelMode = async function (newMode) {
+        if (window.FUNNEL_MODE === newMode) return;
+        const selector = document.getElementById('funnelModeSelector');
+        const iconEl = document.getElementById('funnelModeIcon');
+        const prevMode = window.FUNNEL_MODE;
+
+        try {
+            const res = await fetch(`${window.API_BASE}/api/funnels/${window.FUNNEL_ID}/mode`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-Token': window.CSRF_TOKEN
+                },
+                body: JSON.stringify({ funnel_mode: newMode })
+            });
+            const data = await res.json();
+            if (data.success || data.status === 'success') {
+                window.FUNNEL_MODE = newMode;
+                if (graphData.funnel) graphData.funnel.funnel_mode = newMode;
+                if (selector) selector.value = newMode;
+                
+                const btnQuiz = document.getElementById('modeBtnQuiz');
+                const btnCalc = document.getElementById('modeBtnCalc');
+                if (btnQuiz && btnCalc) {
+                    if (newMode === 'calculator') {
+                        btnCalc.className = 'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap bg-white text-slate-800 shadow-2xs';
+                        btnQuiz.className = 'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap text-slate-500 hover:text-slate-800';
+                    } else {
+                        btnQuiz.className = 'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap bg-white text-slate-800 shadow-2xs';
+                        btnCalc.className = 'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap text-slate-500 hover:text-slate-800';
+                    }
+                }
+
+                if (iconEl) {
+                    iconEl.innerHTML = newMode === 'calculator' 
+                        ? `<svg class="w-3.5 h-3.5 text-purple-600" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="2" width="11" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><rect x="4.5" y="4" width="7" height="2.5" rx="0.5" stroke="currentColor" stroke-width="1"/><path d="M5 9h1.5M8 9h1.5M5 11.5h1.5M8 11.5h1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`
+                        : `<svg class="w-3.5 h-3.5 text-indigo-600" viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="4.5" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="2" y="9" width="12" height="4.5" rx="1.5" stroke="currentColor" stroke-width="1.3"/><circle cx="4.5" cy="4.75" r="1" fill="currentColor"/><circle cx="4.5" cy="11.25" r="1" fill="currentColor"/></svg>`;
+                }
+                const sliderSub = document.getElementById('sliderPaletteSubtitle');
+                if (sliderSub) sliderSub.textContent = newMode === 'calculator' ? 'Numeric quantity & variable' : 'Numeric quantity & range';
+                showToast(`Switched to ${newMode === 'calculator' ? 'Calculator & Quote' : 'Lead & Quiz'} Funnel`);
+                renderCanvas();
+                if (selectedNodeId) {
+                    renderInspector(true);
+                } else {
+                    renderFunnelOverviewInspector();
+                }
+            } else {
+                if (selector) selector.value = prevMode;
+                showToast(data.error || data.message || 'Failed to update funnel mode', '⚠️');
+            }
+        } catch (e) {
+            console.error('Mode switch error:', e);
+            if (selector) selector.value = prevMode;
+            showToast('Network error while switching funnel mode', '⚠️');
+        }
+    };
+
+    // Safe Sandboxed Mathematical Evaluator (No eval())
+    window.safeEvaluateMath = function (expr, variables = {}) {
+        if (!expr || typeof expr !== 'string') return 0;
+        
+        // Clean and replace variables with numeric values
+        let parsed = expr.replace(/@([A-Za-z0-9_]+)/g, (match, vKey) => {
+            const val = variables[vKey] !== undefined ? variables[vKey] : 0;
+            const num = parseFloat(val);
+            return isNaN(num) ? '0' : String(num);
+        });
+
+        // Strip spaces
+        parsed = parsed.replace(/\s+/g, '');
+        if (!parsed) return 0;
+
+        // Ensure safe mathematical characters only
+        if (!/^[0-9.+\-*/%^()]+$/.test(parsed)) {
+            throw new Error('Disallowed characters in formula expression');
+        }
+
+        // Tokenize
+        const tokens = [];
+        let i = 0;
+        while (i < parsed.length) {
+            const ch = parsed[i];
+            if ('+-*/%^()'.includes(ch)) {
+                // Handle unary minus
+                if (ch === '-' && (tokens.length === 0 || '+-*/%^('.includes(tokens[tokens.length - 1]))) {
+                    let numStr = '-';
+                    i++;
+                    while (i < parsed.length && /[0-9.]/.test(parsed[i])) {
+                        numStr += parsed[i];
+                        i++;
+                    }
+                    if (numStr === '-') throw new Error('Incomplete unary minus');
+                    tokens.push(parseFloat(numStr));
+                    continue;
+                } else {
+                    tokens.push(ch);
+                    i++;
+                }
+            } else if (/[0-9.]/.test(ch)) {
+                let numStr = '';
+                while (i < parsed.length && /[0-9.]/.test(parsed[i])) {
+                    numStr += parsed[i];
+                    i++;
+                }
+                tokens.push(parseFloat(numStr));
+            } else {
+                throw new Error(`Unexpected character: ${ch}`);
+            }
+        }
+
+        // Shunting-Yard Infix to RPN
+        const precedence = { '+': 1, '-': 1, '*': 2, '/': 2, '%': 2, '^': 3 };
+        const associativity = { '+': 'L', '-': 'L', '*': 'L', '/': 'L', '%': 'L', '^': 'R' };
+        const outputQueue = [];
+        const opStack = [];
+
+        for (const token of tokens) {
+            if (typeof token === 'number') {
+                outputQueue.push(token);
+            } else if (token in precedence) {
+                while (
+                    opStack.length > 0 &&
+                    opStack[opStack.length - 1] in precedence &&
+                    (
+                        (associativity[token] === 'L' && precedence[token] <= precedence[opStack[opStack.length - 1]]) ||
+                        (associativity[token] === 'R' && precedence[token] < precedence[opStack[opStack.length - 1]])
+                    )
+                ) {
+                    outputQueue.push(opStack.pop());
+                }
+                opStack.push(token);
+            } else if (token === '(') {
+                opStack.push(token);
+            } else if (token === ')') {
+                while (opStack.length > 0 && opStack[opStack.length - 1] !== '(') {
+                    outputQueue.push(opStack.pop());
+                }
+                if (opStack.length === 0) throw new Error('Unbalanced parentheses');
+                opStack.pop();
+            }
+        }
+
+        while (opStack.length > 0) {
+            const top = opStack.pop();
+            if (top === '(' || top === ')') throw new Error('Unbalanced parentheses');
+            outputQueue.push(top);
+        }
+
+        // RPN evaluation
+        const evalStack = [];
+        for (const token of outputQueue) {
+            if (typeof token === 'number') {
+                evalStack.push(token);
+            } else {
+                if (evalStack.length < 2) throw new Error('Invalid math expression syntax');
+                const b = evalStack.pop();
+                const a = evalStack.pop();
+                let res = 0;
+                switch (token) {
+                    case '+': res = a + b; break;
+                    case '-': res = a - b; break;
+                    case '*': res = a * b; break;
+                    case '/':
+                        if (b === 0) throw new Error('Division by zero');
+                        res = a / b;
+                        break;
+                    case '%': res = a % b; break;
+                    case '^': res = Math.pow(a, b); break;
+                }
+                evalStack.push(res);
+            }
+        }
+
+        if (evalStack.length !== 1) throw new Error('Syntax error in formula');
+        const finalVal = evalStack[0];
+        return (isNaN(finalVal) || !isFinite(finalVal)) ? 0 : finalVal;
+    };
+
+    window.updateFormulaLiveValidator = function (nodeId, formula) {
+        const node = findNode(nodeId);
+        const statusEl = document.getElementById(`formulaSyntaxStatus_${nodeId}`);
+        const resultEl = document.getElementById(`formulaSampleResult_${nodeId}`);
+        if (!node || !statusEl || !resultEl) return;
+
+        if (!formula || !formula.trim()) {
+            statusEl.textContent = '⚠️ Formula expression is empty';
+            statusEl.className = 'font-bold text-amber-600';
+            resultEl.textContent = '--';
+            return;
+        }
+
+        // Gather mock variable values from question nodes
+        const mockVars = {};
+        (graphData.nodes || []).filter(n => n.node_type === 'question').forEach(qn => {
+            const vKey = qn.variable_key || 'Q1';
+            if (qn.input_type === 'slider') {
+                mockVars[vKey] = qn.slider_config?.default_value ?? 10;
+            } else {
+                const firstOpt = qn.question?.options?.[0];
+                mockVars[vKey] = firstOpt ? (parseFloat(firstOpt.value) || 100) : 50;
+            }
+        });
+
+        try {
+            const val = window.safeEvaluateMath(formula, mockVars);
+            const calc = node.calculator || {};
+            const decimals = calc.decimal_places ?? 0;
+            const prefix = calc.result_prefix ?? '';
+            const suffix = calc.result_suffix ?? '';
+            const formatted = `${prefix} ${Number(val).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })} ${suffix}`.trim();
+
+            statusEl.textContent = '✓ Valid Formula';
+            statusEl.className = 'font-bold text-emerald-600';
+            resultEl.textContent = formatted;
+        } catch (e) {
+            statusEl.textContent = `⚠️ ${e.message}`;
+            statusEl.className = 'font-bold text-rose-600';
+            resultEl.textContent = 'Syntax Error';
+        }
+    };
+
+    window.deleteOption = function (nodeId, optionId) {
+        const node = findNode(nodeId);
+        if (node && node.question) {
+            node.question.options = (node.question.options || []).filter(o => o.id != optionId);
             // Remove connected edges
             graphData.edges = (graphData.edges || []).filter(e => !(e.source_node_id == nodeId && e.source_option_id == optionId));
             renderCanvas();
@@ -1958,7 +3134,7 @@
     };
 
     window.deleteNode = async function (nodeId) {
-        const node = graphData.nodes.find(n => n.id == nodeId);
+        const node = findNode(nodeId);
         const nodeName = node ? `"${node.title || 'Selected Node'}"` : 'this node';
 
         const confirmed = await showConfirmDialog({
@@ -1970,12 +3146,26 @@
         });
 
         if (confirmed) {
+            const targetId = node ? node.id : nodeId;
+            const targetKey = node ? node.node_key : null;
             const wasStart = node && node.is_start;
-            graphData.nodes = graphData.nodes.filter(n => n.id !== nodeId);
-            graphData.edges = (graphData.edges || []).filter(e => e.source_node_id !== nodeId && e.target_node_id !== nodeId);
+
+            graphData.nodes = (graphData.nodes || []).filter(n => {
+                if (targetId !== null && targetId !== undefined && n.id == targetId) return false;
+                if (targetKey && n.node_key === targetKey) return false;
+                if (nodeId !== null && nodeId !== undefined && (n.id == nodeId || n.node_key == nodeId)) return false;
+                return true;
+            });
+
+            graphData.edges = (graphData.edges || []).filter(e => {
+                if (targetId !== null && targetId !== undefined && (e.source_node_id == targetId || e.target_node_id == targetId)) return false;
+                if (targetKey && (e.source_node_key === targetKey || e.target_node_key === targetKey)) return false;
+                if (nodeId !== null && nodeId !== undefined && (e.source_node_id == nodeId || e.target_node_id == nodeId || e.source_node_key == nodeId || e.target_node_key == nodeId)) return false;
+                return true;
+            });
 
             if (wasStart) {
-                const nextStart = graphData.nodes.find(n => n.node_type !== 'destination');
+                const nextStart = (graphData.nodes || []).find(n => n.node_type !== 'destination');
                 if (nextStart) {
                     nextStart.is_start = true;
                 }
@@ -1988,9 +3178,44 @@
     };
 
     // Persistence & Status
+    window.updatePublishStatusBadge = function (status, hasUnpublished) {
+        const badge = document.getElementById('funnelPublishStatusBadge');
+        const publishBtn = document.getElementById('publishBtn');
+        const publishBtnText = document.getElementById('publishBtnText');
+        const isLive = (status === 'published' && !hasUnpublished);
+
+        if (badge) {
+            if (isLive) {
+                badge.className = 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold shrink-0 whitespace-nowrap bg-emerald-50 text-emerald-700 border border-emerald-200';
+                badge.setAttribute('title', 'Published & Live');
+                badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span><span id="funnelPublishStatusText">Published</span>';
+            } else {
+                badge.className = 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold shrink-0 whitespace-nowrap bg-amber-50 text-amber-800 border border-amber-300';
+                badge.setAttribute('title', 'Changes saved in draft — Click Publish to update the live public URL');
+                badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span><span id="funnelPublishStatusText">Not Published</span>';
+            }
+        }
+
+        if (publishBtn) {
+            if (isLive) {
+                publishBtn.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors shrink-0 whitespace-nowrap bg-[#5B5BD6] text-white hover:bg-[#4B4BC0] font-semibold';
+            } else {
+                publishBtn.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors shrink-0 whitespace-nowrap bg-amber-600 text-white hover:bg-amber-700 font-bold shadow-sm';
+            }
+        }
+        if (publishBtnText) {
+            publishBtnText.textContent = isLive ? 'Published' : 'Publish Changes';
+        }
+
+        if (graphData && graphData.funnel) {
+            graphData.funnel.has_unpublished_changes = hasUnpublished ? 1 : 0;
+        }
+    };
+
     function markDirty() {
         isDirty = true;
         setSaveStatus('unsaved', 'Unsaved changes');
+        updatePublishStatusBadge(graphData && graphData.funnel ? graphData.funnel.status : 'published', true);
 
         if (autoSaveTimer) clearTimeout(autoSaveTimer);
         autoSaveTimer = setTimeout(() => {
@@ -2035,6 +3260,7 @@
                 graphData = json.data;
                 isDirty = false;
                 setSaveStatus('saved', 'Saved');
+                updatePublishStatusBadge(graphData.funnel ? graphData.funnel.status : 'published', true);
 
                 // Restore selectedNodeId using its stable node_key
                 if (prevSelectedKey) {
@@ -2051,7 +3277,10 @@
                 const isEditingInspector = inspectorContent && document.activeElement && inspectorContent.contains(document.activeElement);
                 if (selectedNodeId && (!isAuto || !isEditingInspector)) {
                     renderInspector(true);
+                } else if (!selectedNodeId) {
+                    renderFunnelOverviewInspector();
                 }
+                updateMinimap();
             } else {
                 setSaveStatus('error', json.error || 'Save failed');
             }
@@ -2068,8 +3297,8 @@
         if (type === 'error') dotColor = 'bg-rose-500';
 
         saveIndicator.innerHTML = `
-            <span class="w-2 h-2 rounded-full ${dotColor}"></span>
-            <span>${text}</span>
+            <span class="w-2 h-2 rounded-full ${dotColor} shrink-0"></span>
+            <span class="whitespace-nowrap">${text}</span>
         `;
     }
 
@@ -2135,8 +3364,13 @@
         await saveGraphNow();
 
         const btn = document.getElementById('publishBtn');
-        btn.disabled = true;
-        btn.textContent = 'Publishing...';
+        const publishBtnText = document.getElementById('publishBtnText');
+        if (btn) btn.disabled = true;
+        if (publishBtnText) {
+            publishBtnText.textContent = 'Publishing...';
+        } else if (btn) {
+            btn.textContent = 'Publishing...';
+        }
 
         try {
             const resp = await fetch(`${window.API_BASE}/admin/funnels/${window.FUNNEL_ID}/publish`, {
@@ -2183,8 +3417,13 @@
                 btnText: 'Close'
             });
         } finally {
-            btn.disabled = false;
-            btn.textContent = 'Publish Version';
+            if (btn) btn.disabled = false;
+            const isLive = graphData && graphData.funnel ? (graphData.funnel.status === 'published' && !graphData.funnel.has_unpublished_changes) : false;
+            if (publishBtnText) {
+                publishBtnText.textContent = isLive ? 'Published' : 'Publish Changes';
+            } else if (btn) {
+                btn.textContent = isLive ? 'Published' : 'Publish Changes';
+            }
         }
     };
 
@@ -2290,7 +3529,8 @@
                 <div class="space-y-4">
                     <div>
                         <span class="text-[10px] font-bold text-sky-600 uppercase tracking-wider">Form Step</span>
-                        <h3 class="text-sm font-bold text-[#171A21] mt-0.5">${escapeHtml(node.title || 'Lead Capture Form')}</h3>
+                        <h3 class="text-sm font-bold text-[#171A21] mt-0.5">${escapeHtml(form.heading || node.title || 'Lead Capture Form')}</h3>
+                        ${(form.subheading || form.description) ? `<p class="text-xs text-slate-500 mt-1">${escapeHtml(form.subheading || form.description)}</p>` : ''}
                     </div>
 
                     <form onsubmit="event.preventDefault(); submitPreviewForm(${node.id});" class="space-y-3 pt-1">
@@ -2388,14 +3628,22 @@
     }
 
     // Toast Notification Utility
-    window.showToast = function (text, icon = '✨') {
+    window.showToast = function (text, iconType = 'success') {
         const container = document.getElementById('toastContainer');
         const textEl = document.getElementById('toastText');
         const iconEl = document.getElementById('toastIcon');
         if (!container || !textEl) return;
 
         textEl.textContent = text;
-        if (iconEl) iconEl.textContent = icon;
+        if (iconEl) {
+            if (iconType === 'success' || iconType === '✨' || iconType === '📋') {
+                iconEl.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
+            } else if (iconType === 'warning' || iconType === '⚠️') {
+                iconEl.innerHTML = `<svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`;
+            } else {
+                iconEl.innerHTML = `<svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+            }
+        }
 
         container.classList.remove('opacity-0', '-translate-y-2');
         container.classList.add('opacity-100', 'translate-y-0');
@@ -2413,12 +3661,12 @@
         const url = `${window.location.origin}/quiz/${slug}`;
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(url).then(() => {
-                showToast('Public quiz URL copied to clipboard! 📋');
+                showToast('Public funnel URL copied to clipboard');
             }).catch(() => {
-                showToast(`Quiz URL: /quiz/${slug}`, '🔗');
+                showToast(`Funnel URL: /quiz/${slug}`);
             });
         } else {
-            showToast(`Quiz URL: /quiz/${slug}`, '🔗');
+            showToast(`Funnel URL: /quiz/${slug}`);
         }
     };
 
@@ -2464,7 +3712,7 @@
         const dropY = Math.max(20, Math.round((e.clientY - rect.top) / scale));
 
         addNodeToCanvas(type, dropX, dropY);
-        showToast(`Added ${type} node to canvas!`, '➕');
+        showToast(`Added ${type} node to canvas`, 'info');
     };
 
     // Mini-Map Component
@@ -2706,7 +3954,7 @@
         updateMinimap();
         centerCanvas();
         markDirty();
-        showToast('Auto-arranged flow into a neat tree layout!', '✨');
+        showToast('Auto-arranged flow into tree layout', 'success');
     };
 
 })();

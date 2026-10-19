@@ -16,6 +16,7 @@ use App\Controllers\PlatformAdminController;
 use App\Controllers\QuizController;
 use App\Controllers\ApiController;
 use App\Controllers\LegalController;
+use App\Controllers\BillingController;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\TenantMiddleware;
 use App\Middleware\PlatformAdminMiddleware;
@@ -75,6 +76,13 @@ $router->group([AuthMiddleware::class], function (Router $router) {
         $router->get('/admin/platform/customers', [PlatformAdminController::class, 'customers']);
         $router->post('/admin/platform/tenants/{id}/toggle', [PlatformAdminController::class, 'toggleTenantStatus'], [CsrfMiddleware::class]);
         $router->post('/admin/platform/tenants/{id}/assign-plan', [PlatformAdminController::class, 'assignPlan'], [CsrfMiddleware::class]);
+        $router->post('/admin/platform/tenants/{id}/billing-cycle', [PlatformAdminController::class, 'updateBillingCycle'], [CsrfMiddleware::class]);
+        $router->post('/admin/platform/tenants/{id}/record-payment', [PlatformAdminController::class, 'recordPayment'], [CsrfMiddleware::class]);
+        $router->post('/admin/platform/tenants/{id}/suspend', [PlatformAdminController::class, 'suspendTenant'], [CsrfMiddleware::class]);
+        $router->post('/admin/platform/tenants/{id}/unsuspend', [PlatformAdminController::class, 'unsuspendTenant'], [CsrfMiddleware::class]);
+        $router->post('/admin/platform/tenants/{id}/mark-termination-due', [PlatformAdminController::class, 'markTerminationDue'], [CsrfMiddleware::class]);
+        $router->post('/admin/platform/tenants/{id}/dismiss-termination-due', [PlatformAdminController::class, 'dismissTerminationDue'], [CsrfMiddleware::class]);
+        $router->post('/admin/platform/tenants/{id}/terminate', [PlatformAdminController::class, 'terminateTenant'], [CsrfMiddleware::class]);
         $router->post('/admin/platform/users/{id}/toggle-status', [PlatformAdminController::class, 'toggleUserStatus'], [CsrfMiddleware::class]);
         
         // Plans Management (Make plans for users)
@@ -109,6 +117,7 @@ $router->group([AuthMiddleware::class], function (Router $router) {
     $router->group([TenantMiddleware::class], function (Router $router) {
         // Dashboard
         $router->get('/admin/dashboard', [DashboardController::class, 'index']);
+        $router->get('/admin/workspace/suspended', [DashboardController::class, 'workspaceSuspended']);
 
         // Funnels
         $router->get('/admin/funnels', [FunnelController::class, 'index']);
@@ -126,11 +135,16 @@ $router->group([AuthMiddleware::class], function (Router $router) {
         $router->get('/api/funnels/{id}/graph', [BuilderController::class, 'getGraph']);
         $router->post('/api/funnels/{id}/graph', [BuilderController::class, 'saveGraph']);
         $router->get('/api/funnels/{id}/validate', [BuilderController::class, 'validateGraph']);
+        $router->post('/api/funnels/{id}/mode', [FunnelController::class, 'updateMode']);
         $router->post('/api/funnels/{id}/form-fields', [FunnelController::class, 'saveFormFields']);
 
         // Submissions & Journey Inspector
         $router->get('/admin/submissions', [SubmissionController::class, 'index']);
         $router->get('/admin/submissions/export', [SubmissionController::class, 'export']);
+        $router->post('/admin/submissions/stages/create', [SubmissionController::class, 'createStage'], [CsrfMiddleware::class]);
+        $router->post('/admin/submissions/stages/{id}/delete', [SubmissionController::class, 'deleteStage'], [CsrfMiddleware::class]);
+        $router->post('/admin/submissions/bulk-action', [SubmissionController::class, 'bulkAction'], [CsrfMiddleware::class]);
+        $router->post('/admin/submissions/{id}/status', [SubmissionController::class, 'updateStatus'], [CsrfMiddleware::class]);
         $router->get('/admin/submissions/{id}', [SubmissionController::class, 'show']);
 
         // Analytics
@@ -159,5 +173,9 @@ $router->group([AuthMiddleware::class], function (Router $router) {
         // Profile
         $router->get('/admin/settings/profile', [SettingsController::class, 'profile']);
         $router->post('/admin/settings/profile', [SettingsController::class, 'updateProfile'], [CsrfMiddleware::class]);
+
+        // Billing & Plan Upgrade (Self-service customer portal)
+        $router->get('/admin/billing', [BillingController::class, 'index']);
+        $router->post('/admin/billing/upgrade', [BillingController::class, 'upgrade'], [CsrfMiddleware::class]);
     });
 });

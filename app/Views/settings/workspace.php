@@ -67,7 +67,7 @@
                 <span class="text-base">🔒</span>
                 <div>
                     <strong class="block font-bold">REST API Access is locked on your current plan</strong>
-                    <p class="text-[11px] text-purple-800 mt-0.5">Upgrade your subscription plan to Pro to unlock developer API tokens, bearer authentication, and programmatic lead access.</p>
+                    <p class="text-[11px] text-purple-800 mt-0.5"><a href="<?= url('/admin/billing') ?>" class="font-bold underline text-purple-900 hover:text-indigo-700">Upgrade your subscription plan</a> to Pro to unlock developer API tokens, bearer authentication, and programmatic lead access.</p>
                 </div>
             </div>
         <?php endif; ?>
@@ -76,10 +76,19 @@
     <!-- Plan & Usage Limits Overview -->
     <div class="bg-white border border-[#E4E7EC] rounded-xl p-5 shadow-sm space-y-4">
         <div class="flex items-center justify-between">
-            <h3 class="text-sm font-bold text-[#171A21]">Subscription & Usage Quotas</h3>
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-indigo-50 text-[#5B5BD6] border border-indigo-200">
-                <?= e($usage['plan_name']) ?> (<?= ucfirst($usage['status']) ?>)
-            </span>
+            <div>
+                <h3 class="text-sm font-bold text-[#171A21]">Subscription & Usage Quotas</h3>
+                <p class="text-xs text-[#687080]">Current tier limits and resource allocations for this workspace.</p>
+            </div>
+            <div class="flex items-center gap-2.5">
+                <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-[#5B5BD6] border border-indigo-200">
+                    <?= e($usage['plan_name']) ?> (<?= ucfirst($usage['status']) ?>)
+                </span>
+                <a href="<?= url('/admin/billing') ?>" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold text-white bg-[#5B5BD6] hover:bg-[#4B4BC0] shadow-sm transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    Upgrade Plan
+                </a>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs pt-2">

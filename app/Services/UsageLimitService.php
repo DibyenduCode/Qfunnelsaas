@@ -37,6 +37,12 @@ class UsageLimitService
                 'is_premium' => false,
                 'description' => 'Score points per answer and calculate category outcomes or custom recommendations.',
             ],
+            'calculator_mode' => [
+                'name' => 'Interactive Calculator & Quote Formulas',
+                'category' => 'Builder & Logic',
+                'is_premium' => true,
+                'description' => 'Dynamic math formula engine (@Q1 * 100 + @Q2), pricing estimators, and instant quote cards.',
+            ],
             'funnel_cloning' => [
                 'name' => '1-Click Funnel Duplication',
                 'category' => 'Builder & Logic',
@@ -76,6 +82,12 @@ class UsageLimitService
                 'category' => 'Embedding & Distribution',
                 'is_premium' => true,
                 'description' => 'Embed funnels onto WordPress, Shopify, Webflow via Inline, Lightbox Popup, or Floating Bubble.',
+            ],
+            'quick_connect' => [
+                'name' => '1-Click WhatsApp & Phone Direct Connect',
+                'category' => 'Embedding & Distribution',
+                'is_premium' => false,
+                'description' => 'Direct WhatsApp click-to-chat with dynamic quote tags, and phone dialer outcome buttons.',
             ],
             'auto_redirect' => [
                 'name' => 'Instant & Delayed Outcome Redirects',

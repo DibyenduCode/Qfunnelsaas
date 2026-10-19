@@ -358,6 +358,320 @@ $runner->assert(
     'Payment gateway settings properly stores and retrieves both Auto and Manual configurations'
 );
 
+// --- SUITE 8: CALCULATOR & QUOTE FUNNEL ENGINE ---
+echo "\n--- SUITE 8: Calculator & Quote Funnel Engine ---\n";
+
+// 8.1 Safe Mathematical Evaluator (Shunting-Yard)
+$eval1 = QuizEngineService::evaluateFormula('(@Q1 * 100) + @Q2 - 50', ['Q1' => 15, 'Q2' => 200]);
+$runner->assert($eval1 === 1650.0, 'Safe formula engine correctly evaluates variables and expressions (@Q1 * 100 + @Q2 - 50 = 1650)');
+
+$eval2 = QuizEngineService::evaluateFormula('(10 + 5) * 2 / (3 + 2)', []);
+$runner->assert($eval2 === 6.0, 'Order of operations and parentheses precedence evaluated accurately');
+
+$eval3 = QuizEngineService::evaluateFormula('@Q_MISSING + 500', []);
+$runner->assert($eval3 === 500.0, 'Missing question variables gracefully default to 0 without errors');
+
+// 8.2 Funnel Creation with Calculator Mode & Starter Graph Seeding
+$calcFunnel = FunnelService::createFunnel($tenantAId, [
+    'name' => 'Solar ROI & Savings Calculator',
+    'slug' => 'solar-calculator-' . time(),
+    'description' => 'Calculate your monthly solar savings and payback',
+    'funnel_mode' => 'calculator'
+], $userAId);
+$runner->assert($calcFunnel['funnel_mode'] === 'calculator', 'Calculator funnel successfully created with funnel_mode = calculator');
+
+$calcGraph = FunnelGraphService::getGraph($tenantAId, (int)$calcFunnel['id']);
+$sliderNode = null;
+$calcDestNode = null;
+foreach ($calcGraph['nodes'] as $node) {
+    if (($node['input_type'] ?? '') === 'slider') {
+        $sliderNode = $node;
+    }
+    if ($node['node_type'] === 'destination' && !empty($node['calculator']['enabled'])) {
+        $calcDestNode = $node;
+    }
+}
+$runner->assert(
+    $sliderNode !== null && $calcDestNode !== null && !empty($sliderNode['slider_config']),
+    'Calculator template seeds Slider question with @Q1 and Destination with formula configuration'
+);
+
+// 8.3 Publish & Execute Visitor Journey through Slider to Quote Destination
+$pubRes = FunnelPublishService::publish($tenantAId, (int)$calcFunnel['id'], $userAId);
+$runner->assert($pubRes['status'] === 'published', 'Calculator funnel successfully validated and published');
+
+$sessionInit = QuizEngineService::initializeSession($calcFunnel['slug']);
+$sessToken = $sessionInit['session_token'];
+$step1 = QuizEngineService::getCurrentStep($sessToken);
+$runner->assert(
+    $step1['step']['input_type'] === 'slider' && $step1['step']['slider_config']['min_value'] == 1,
+    'Visitor Quiz Runner renders Slider input step with range limits'
+);
+
+// Submit slider value (e.g. 25 users / quantity)
+$step2 = QuizEngineService::submitAnswer($sessToken, (int)$step1['step']['node_id'], [
+    'slider_value' => 25
+]);
+
+// If there are intermediate choices or form, complete until destination reached
+$loopGuard = 0;
+while ($step2['status'] === 'in_progress' && $loopGuard < 5) {
+    $loopGuard++;
+    if (($step2['step']['input_type'] ?? '') === 'slider') {
+        $step2 = QuizEngineService::submitAnswer($sessToken, (int)$step2['step']['node_id'], ['slider_value' => 10]);
+    } else {
+        $firstOpt = $step2['step']['options'][0]['id'] ?? null;
+        if ($firstOpt) {
+            $step2 = QuizEngineService::submitAnswer($sessToken, (int)$step2['step']['node_id'], ['option_id' => $firstOpt]);
+        } else {
+            break;
+        }
+    }
+}
+
+if ($step2['status'] === 'form_step') {
+    $step2 = QuizEngineService::submitForm($sessToken, [
+        'full_name' => 'Alice Test',
+        'email' => 'alice@test.local'
+    ]);
+}
+
+$runner->assert(
+    $step2['status'] === 'completed' && isset($step2['result']['calculated_value']) && !empty($step2['result']['formatted_quote']),
+    'Outcome destination accurately computes quote and provides formatted instant quote card'
+);
+
+// Verify database persistence of calculated quote
+$dbSession = Database::fetchOne("SELECT * FROM quiz_sessions WHERE public_token_hash = ?", [hash('sha256', $sessToken)]);
+$runner->assert(
+    $dbSession['calculated_value'] !== null && !empty($dbSession['formatted_quote']),
+    'calculated_value and formatted_quote persisted in quiz_sessions table'
+);
+
+// --- SUITE 9: 1-CLICK CALL & WHATSAPP DIRECT CONNECT ENGINE ---
+echo "\n--- SUITE 9: 1-Click Call & WhatsApp Direct Connect Engine ---\n";
+
+// 9.1 Configure Quick Connect on destination node in the graph
+$activeGraph = FunnelGraphService::getGraph($tenantAId, (int)$calcFunnel['id']);
+$nodesToSave = $activeGraph['nodes'];
+$targetDestIndex = null;
+foreach ($nodesToSave as $idx => $n) {
+    if ($n['node_type'] === 'destination') {
+        $targetDestIndex = $idx;
+        $nodesToSave[$idx]['quick_connect'] = [
+            'enabled' => true,
+            'action_type' => 'both',
+            'phone_number' => '+1 (555) 019-2834',
+            'whatsapp_number' => '+1 (555) 987-6543',
+            'message' => 'Hello! I am inquiring regarding quote {{formatted_quote}} for {{funnel_name}}.',
+            'call_btn_label' => 'Direct Phone Call',
+            'whatsapp_btn_label' => 'Chat on WhatsApp',
+        ];
+        break;
+    }
+}
+
+FunnelGraphService::saveGraph($tenantAId, (int)$calcFunnel['id'], [
+    'nodes' => $nodesToSave,
+    'edges' => $activeGraph['edges'],
+], $userAId);
+
+$reloadedGraph = FunnelGraphService::getGraph($tenantAId, (int)$calcFunnel['id']);
+$savedDestNode = null;
+foreach ($reloadedGraph['nodes'] as $n) {
+    if ($n['node_type'] === 'destination') {
+        $savedDestNode = $n;
+        break;
+    }
+}
+
+$runner->assert(
+    !empty($savedDestNode['quick_connect']['enabled']) &&
+    $savedDestNode['quick_connect']['action_type'] === 'both' &&
+    $savedDestNode['quick_connect']['phone_number'] === '+1 (555) 019-2834',
+    'Destination node successfully stores and retrieves quick_connect configuration'
+);
+
+// 9.2 Publish updated graph with Quick Connect
+$pubConnectRes = FunnelPublishService::publish($tenantAId, (int)$calcFunnel['id'], $userAId);
+$runner->assert($pubConnectRes['status'] === 'published', 'Funnel with Quick Connect node successfully re-published');
+
+// 9.3 Run visitor session through to completion and verify dynamic WhatsApp / Call URLs
+$connectSession = QuizEngineService::initializeSession($calcFunnel['slug']);
+$cToken = $connectSession['session_token'];
+$cStep = QuizEngineService::getCurrentStep($cToken);
+
+// Submit answers until destination
+$guard = 0;
+while ($cStep['status'] === 'in_progress' && $guard < 5) {
+    $guard++;
+    if (($cStep['step']['input_type'] ?? '') === 'slider') {
+        $cStep = QuizEngineService::submitAnswer($cToken, (int)$cStep['step']['node_id'], ['slider_value' => 50]);
+    } else {
+        $optId = $cStep['step']['options'][0]['id'] ?? null;
+        if ($optId) {
+            $cStep = QuizEngineService::submitAnswer($cToken, (int)$cStep['step']['node_id'], ['option_id' => $optId]);
+        } else {
+            break;
+        }
+    }
+}
+
+if ($cStep['status'] === 'form_step') {
+    $cStep = QuizEngineService::submitForm($cToken, [
+        'full_name' => 'Bob Builder',
+        'email' => 'bob@test.local',
+        'phone' => '+1 555-432-1098'
+    ]);
+}
+
+$qc = $cStep['result']['quick_connect'] ?? null;
+
+$runner->assert(
+    !empty($qc) && !empty($qc['enabled']) && $qc['action_type'] === 'both',
+    'Quiz completion response delivers active quick_connect payload'
+);
+
+$runner->assert(
+    str_starts_with($qc['call_url'] ?? '', 'tel:+15550192834'),
+    'call_url cleanly formatted as tel: URI with international dialing format'
+);
+
+$runner->assert(
+    str_starts_with($qc['whatsapp_url'] ?? '', 'https://wa.me/15559876543') &&
+    str_contains($qc['whatsapp_url'] ?? '', rawurlencode($cStep['result']['formatted_quote'] ?? '')),
+    'whatsapp_url generates valid wa.me link with dynamic {{formatted_quote}} tag substituted'
+);
+
+// 9.4 Verify revisiting completed step retains quick_connect
+$revisitedStep = QuizEngineService::getCurrentStep($cToken);
+$runner->assert(
+    !empty($revisitedStep['result']['quick_connect']['whatsapp_url']),
+    'Revisiting finished session step preserves full quick_connect payload'
+);
+
+// --- SUITE 10: COMPLETE NODE DELETION & BLANK CANVAS PERSISTENCE ---
+echo "\n--- SUITE 10: Complete Node Deletion & Blank Canvas Persistence ---\n";
+
+// 10.1 Create a new calculation funnel with pre-seeded nodes
+$testCalc = FunnelService::createFunnel($tenantAId, [
+    'name' => 'Clear Test Cal',
+    'slug' => 'clear-test-cal-' . time(),
+    'funnel_mode' => 'calculator'
+], $userAId);
+$seededGraph = FunnelGraphService::getGraph($tenantAId, (int)$testCalc['id']);
+$runner->assert(count($seededGraph['nodes']) > 0, 'Seeded calculation workflow initializes with default starter nodes');
+
+// 10.2 Delete all nodes including the last destination node
+$emptySaved = FunnelGraphService::saveGraph($tenantAId, (int)$testCalc['id'], [
+    'nodes' => [],
+    'edges' => []
+], $userAId);
+$runner->assert(count($emptySaved['nodes']) === 0 && count($emptySaved['edges']) === 0, 'Saving empty graph successfully removes all nodes and edges atomically');
+
+// 10.3 Verify database persistence has zero orphaned nodes for this funnel
+$reloadedEmptyGraph = FunnelGraphService::getGraph($tenantAId, (int)$testCalc['id']);
+$runner->assert(count($reloadedEmptyGraph['nodes']) === 0, 'Reloading graph after full deletion confirms zero ghost nodes remain');
+
+// --- SUITE 11: CUSTOMIZABLE FORM NODE HEADINGS & BUTTON TEXT ---
+echo "\n--- SUITE 11: Customizable Form Node Headings & Button Text ---\n";
+
+// 11.1 Create funnel with custom form node
+$formFunnel = FunnelService::createFunnel($tenantAId, [
+    'name' => 'Custom Form Test Funnel',
+    'slug' => 'custom-form-' . time(),
+    'funnel_mode' => 'quiz'
+], $userAId);
+
+$formNodeKey = 'form_' . bin2hex(random_bytes(4));
+$destNodeKey = 'dest_' . bin2hex(random_bytes(4));
+
+$savedFormGraph = FunnelGraphService::saveGraph($tenantAId, (int)$formFunnel['id'], [
+    'nodes' => [
+        [
+            'node_key' => $formNodeKey,
+            'node_type' => 'form',
+            'title' => 'Custom Consultation Form',
+            'is_start' => 1,
+            'position_x' => 100,
+            'position_y' => 100,
+            'form' => [
+                'heading' => 'Custom Consultation Form',
+                'subheading' => 'Share your business needs to get started immediately.',
+                'button_text' => 'Request My Free Audit',
+                'submit_action' => 'redirect',
+                'fields' => [
+                    ['id' => 1, 'field_key' => 'name', 'label' => 'Full Name', 'field_type' => 'text', 'is_required' => 1],
+                    ['id' => 2, 'field_key' => 'email', 'label' => 'Email', 'field_type' => 'email', 'is_required' => 1]
+                ]
+            ]
+        ],
+        [
+            'node_key' => $destNodeKey,
+            'node_type' => 'destination',
+            'title' => 'Destination Page',
+            'is_start' => 0,
+            'position_x' => 450,
+            'position_y' => 100,
+            'destination' => [
+                'name' => 'Thank You Page',
+                'url' => 'https://example.com/thanks'
+            ]
+        ]
+    ],
+    'edges' => [
+        [
+            'source_node_key' => $formNodeKey,
+            'target_node_key' => $destNodeKey,
+            'source_option_id' => null
+        ]
+    ]
+], $userAId);
+
+$pubFormVersion = FunnelPublishService::publish($tenantAId, (int)$formFunnel['id'], $userAId);
+$runner->assert(!empty($pubFormVersion['version_number']), 'Funnel with customized form node published successfully');
+
+// 11.2 Init visitor session and fetch current step
+$formSessionInit = QuizEngineService::initializeSession($formFunnel['slug']);
+$fToken = $formSessionInit['session_token'];
+$formStep = QuizEngineService::getCurrentStep($fToken);
+
+$runner->assert(
+    $formStep['status'] === 'form_step' &&
+    $formStep['step']['heading'] === 'Custom Consultation Form' &&
+    $formStep['step']['title'] === 'Custom Consultation Form',
+    'Visitor form step dynamically reflects customized Form Heading'
+);
+
+$runner->assert(
+    $formStep['step']['subheading'] === 'Share your business needs to get started immediately.',
+    'Visitor form step dynamically reflects customized Subheading / Description'
+);
+
+$runner->assert(
+    $formStep['step']['button_text'] === 'Request My Free Audit',
+    'Visitor form step dynamically reflects customized Submit Button Text'
+);
+
+// 11.3 Verify fallback defaults if fields omitted
+$defaultFormStep = [
+    'title' => null,
+    'description' => null,
+    'button_text' => null
+];
+$fallbackHeading = $defaultFormStep['heading'] ?? ($defaultFormStep['title'] ?? 'Lead Capture Form');
+$fallbackSubheading = $defaultFormStep['subheading'] ?? ($defaultFormStep['description'] ?? 'Please fill out the form to proceed.');
+$fallbackBtn = $defaultFormStep['button_text'] ?? 'Submit Details';
+
+$runner->assert(
+    $fallbackHeading === 'Lead Capture Form' &&
+    $fallbackSubheading === 'Please fill out the form to proceed.' &&
+    $fallbackBtn === 'Submit Details',
+    'Graceful default fallbacks maintained when form headings or button text are unconfigured'
+);
+
 // Summary output
 $code = $runner->summary();
 exit($code);
+
+

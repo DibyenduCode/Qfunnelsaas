@@ -303,10 +303,13 @@ class QuizEngineService
                 'step' => [
                     'node_id' => $currentNodeId,
                     'node_type' => 'form',
-                    'title' => $node['title'] ?? 'Lead Capture Form',
+                    'title' => $formConfig['heading'] ?? ($node['title'] ?? 'Lead Capture Form'),
+                    'heading' => $formConfig['heading'] ?? ($node['title'] ?? 'Lead Capture Form'),
+                    'subheading' => $formConfig['subheading'] ?? ($formConfig['description'] ?? ($node['description'] ?? 'Please fill out the form to proceed.')),
+                    'description' => $formConfig['subheading'] ?? ($formConfig['description'] ?? ($node['description'] ?? 'Please fill out the form to proceed.')),
                     'form_fields' => $formConfig['fields'] ?? [],
                     'submit_action' => $formConfig['submit_action'] ?? 'redirect',
-                    'button_text' => $formConfig['button_text'] ?? 'Submit Details',
+                    'button_text' => $formConfig['button_text'] ?? ($node['button_text'] ?? 'Submit Details'),
                     'success_heading' => $formConfig['success_heading'] ?? 'Thank You!',
                     'success_message' => $formConfig['success_message'] ?? 'Your submission has been received.',
                     'step_number' => $historyCount + 1,
@@ -328,15 +331,30 @@ class QuizEngineService
             throw new RuntimeException("Question details missing for node {$currentNodeId}.");
         }
 
+        $nodeConfig = !empty($node['config_json']) ? (json_decode($node['config_json'], true) ?: []) : [];
+        $inputType = $node['input_type'] ?? ($nodeConfig['input_type'] ?? ($question['question_type'] ?? 'single_choice'));
+        $sliderConfig = $node['slider_config'] ?? ($nodeConfig['slider_config'] ?? [
+            'min_value' => 1,
+            'max_value' => 100,
+            'step_value' => 1,
+            'default_value' => 10,
+            'unit_label' => '',
+            'unit_prefix' => ''
+        ]);
+        $varKey = $node['variable_key'] ?? ($nodeConfig['variable_key'] ?? 'Q1');
+
         $options = [];
-        foreach ($graphSnapshot['options'] ?? [] as $opt) {
-            if ((int)$opt['question_id'] === (int)$question['id']) {
-                $options[] = [
-                    'id' => $opt['id'],
-                    'option_key' => $opt['option_key'],
-                    'label' => $opt['label'],
-                    'display_order' => $opt['display_order'],
-                ];
+        if ($inputType !== 'slider') {
+            foreach ($graphSnapshot['options'] ?? [] as $opt) {
+                if ((int)$opt['question_id'] === (int)$question['id']) {
+                    $options[] = [
+                        'id' => $opt['id'],
+                        'option_key' => $opt['option_key'],
+                        'label' => $opt['label'],
+                        'value' => $opt['value'] ?? '',
+                        'display_order' => $opt['display_order'],
+                    ];
+                }
             }
         }
 
@@ -347,8 +365,16 @@ class QuizEngineService
         );
 
         $selectedOptionIds = [];
-        if ($existingAnswer && !empty($existingAnswer['selected_option_ids_json'])) {
-            $selectedOptionIds = json_decode($existingAnswer['selected_option_ids_json'], true) ?: [];
+        $currentSliderValue = null;
+        if ($existingAnswer) {
+            if ($existingAnswer['answer_type'] === 'slider' || $inputType === 'slider') {
+                $currentSliderValue = is_numeric($existingAnswer['answer_value_text']) ? (float)$existingAnswer['answer_value_text'] : null;
+            } elseif (!empty($existingAnswer['selected_option_ids_json'])) {
+                $selectedOptionIds = json_decode($existingAnswer['selected_option_ids_json'], true) ?: [];
+            }
+        }
+        if ($currentSliderValue === null && $inputType === 'slider') {
+            $currentSliderValue = (float)($sliderConfig['default_value'] ?? 10);
         }
 
         // History count (for progress indication)
@@ -370,6 +396,10 @@ class QuizEngineService
                 'question_text' => $question['question_text'],
                 'help_text' => $question['help_text'],
                 'question_type' => $question['question_type'],
+                'input_type' => $inputType,
+                'slider_config' => $sliderConfig,
+                'variable_key' => $varKey,
+                'current_slider_value' => $currentSliderValue,
                 'is_required' => (bool)$question['is_required'],
                 'options' => $options,
                 'selected_option_ids' => $selectedOptionIds,
@@ -420,6 +450,74 @@ class QuizEngineService
 
         if (!$question) {
             throw new RuntimeException("Question not found.");
+        }
+
+        $nodeConfig = !empty($node['config_json']) ? (json_decode($node['config_json'], true) ?: []) : [];
+        $isSlider = ($node['input_type'] ?? '') === 'slider' 
+            || ($nodeConfig['input_type'] ?? '') === 'slider' 
+            || ($question['question_type'] ?? '') === 'slider' 
+            || isset($answerPayload['slider_value']);
+
+        if ($isSlider) {
+            $sliderValue = (float)($answerPayload['slider_value'] ?? $answerPayload['answer_value'] ?? $answerPayload['value'] ?? 0);
+
+            // For slider questions, find edge connected to this question node (source_option_id is NULL)
+            $targetNodeId = null;
+            foreach ($graphSnapshot['edges'] ?? [] as $edge) {
+                if ((int)$edge['source_node_id'] === $nodeId && empty($edge['source_option_id'])) {
+                    $targetNodeId = (int)$edge['target_node_id'];
+                    break;
+                }
+            }
+
+            if (!$targetNodeId) {
+                // If edge had an option attached or fallback to any edge from this node
+                foreach ($graphSnapshot['edges'] ?? [] as $edge) {
+                    if ((int)$edge['source_node_id'] === $nodeId) {
+                        $targetNodeId = (int)$edge['target_node_id'];
+                        break;
+                    }
+                }
+            }
+
+            if (!$targetNodeId) {
+                throw new RuntimeException("Routing error: No destination connected for this slider question.");
+            }
+
+            Database::transaction(function () use ($session, $nodeId, $question, $sliderValue, $targetNodeId) {
+                Database::execute(
+                    "UPDATE quiz_answers SET superseded_at = NOW() WHERE session_id = ? AND node_id = ? AND superseded_at IS NULL",
+                    [$session['id'], $nodeId]
+                );
+
+                Database::execute(
+                    "INSERT INTO quiz_answers (tenant_id, session_id, funnel_version_id, node_id, question_id, question_text_snapshot, answer_type, answer_value_text, selected_option_ids_json, answered_at) 
+                     VALUES (?, ?, ?, ?, ?, ?, 'slider', ?, ?, NOW())",
+                    [
+                        $session['tenant_id'],
+                        $session['id'],
+                        $session['funnel_version_id'],
+                        $nodeId,
+                        $question['id'],
+                        $question['question_text'],
+                        (string)$sliderValue,
+                        json_encode(['value' => $sliderValue])
+                    ]
+                );
+
+                Database::execute(
+                    "INSERT INTO quiz_step_events (tenant_id, funnel_id, funnel_version_id, session_id, event_type, node_id, occurred_at) 
+                     VALUES (?, ?, ?, ?, 'slider_submitted', ?, NOW())",
+                    [$session['tenant_id'], $session['funnel_id'], $session['funnel_version_id'], $session['id'], $nodeId]
+                );
+
+                Database::execute(
+                    "UPDATE quiz_sessions SET current_node_id = ?, last_activity_at = NOW() WHERE id = ?",
+                    [$targetNodeId, $session['id']]
+                );
+            });
+
+            return self::getCurrentStep($rawToken);
         }
 
         $selectedOptionId = isset($answerPayload['option_id']) ? (int)$answerPayload['option_id'] : null;
@@ -558,26 +656,117 @@ class QuizEngineService
             [$session['id']]
         );
 
+        // Check for Calculator & Quote Configuration
+        $destConfig = !empty($destNode['config_json']) ? (json_decode($destNode['config_json'], true) ?: []) : [];
+        $calcConfig = $destNode['calculator'] ?? ($destConfig['calculator'] ?? null);
+
+        $calculatedValue = null;
+        $formattedQuote = null;
+        $quoteCard = null;
+
+        if ($calcConfig && !empty($calcConfig['enabled']) && !empty($calcConfig['formula_expression'])) {
+            $variables = self::extractSessionVariables((int)$session['id'], $graphSnapshot);
+            $calculatedValue = self::evaluateFormula($calcConfig['formula_expression'], $variables);
+            $decimals = (int)($calcConfig['decimal_places'] ?? 0);
+            $prefix = $calcConfig['result_prefix'] ?? '';
+            $suffix = $calcConfig['result_suffix'] ?? '';
+            $formattedQuote = trim($prefix . ' ' . number_format($calculatedValue, $decimals) . ' ' . $suffix);
+
+            $quoteCard = [
+                'enabled' => true,
+                'result_label' => $calcConfig['result_label'] ?? 'Your Estimated Quote',
+                'calculated_value' => $calculatedValue,
+                'formatted_quote' => $formattedQuote,
+                'prefix' => $prefix,
+                'suffix' => $suffix,
+                'formula' => $calcConfig['formula_expression'],
+                'variables' => $variables
+            ];
+
+            // Dynamic Tag Replacement in Destination URL and Name
+            $destUrl = str_replace(
+                ['{{calculated_value}}', '{{formatted_quote}}', '%7B%7Bcalculated_value%7D%7D', '%7B%7Bformatted_quote%7D%7D'],
+                [(string)$calculatedValue, urlencode($formattedQuote), (string)$calculatedValue, urlencode($formattedQuote)],
+                $destUrl
+            );
+            $destName = str_replace(
+                ['{{calculated_value}}', '{{formatted_quote}}'],
+                [(string)$calculatedValue, $formattedQuote],
+                $destName
+            );
+        }
+
+        // Check for Quick Connect (1-Click Call / WhatsApp / Both)
+        $destTracking = !empty($destNode['tracking_config_json']) ? (json_decode($destNode['tracking_config_json'], true) ?: []) : [];
+        $qcConfig = $destNode['quick_connect'] ?? ($destConfig['quick_connect'] ?? ($destTracking['quick_connect'] ?? null));
+        $quickConnect = null;
+
+        if ($qcConfig && !empty($qcConfig['enabled'])) {
+            $rawPhone = trim($qcConfig['phone_number'] ?? '');
+            $rawWa = trim($qcConfig['whatsapp_number'] ?? '');
+            $cleanPhone = preg_replace('/[^0-9+]/', '', $rawPhone);
+            $cleanWa = preg_replace('/[^0-9]/', '', $rawWa);
+            $actionType = $qcConfig['action_type'] ?? 'both';
+
+            $rawMsg = trim($qcConfig['whatsapp_message'] ?? ($qcConfig['message'] ?? 'Hi! I just completed the {{funnel_name}}.'));
+            $replacements = [
+                '{{funnel_name}}' => $session['funnel_name'],
+                '{{destination_name}}' => $destName,
+                '{{calculated_value}}' => (string)($calculatedValue ?? ''),
+                '{{formatted_quote}}' => (string)($formattedQuote ?? '')
+            ];
+            $customMsg = str_replace(array_keys($replacements), array_values($replacements), $rawMsg);
+
+            $callUrl = $cleanPhone ? ('tel:' . $cleanPhone) : '';
+            $waUrl = $cleanWa ? ('https://wa.me/' . $cleanWa . ($customMsg ? ('?text=' . rawurlencode($customMsg)) : '')) : '';
+
+            $quickConnect = [
+                'enabled' => true,
+                'action_type' => $actionType,
+                'phone_number' => $rawPhone,
+                'clean_phone' => $cleanPhone,
+                'call_button_text' => !empty($qcConfig['call_button_text']) ? $qcConfig['call_button_text'] : 'Call Now',
+                'call_url' => $callUrl,
+                'whatsapp_number' => $rawWa,
+                'clean_whatsapp' => $cleanWa,
+                'whatsapp_button_text' => !empty($qcConfig['whatsapp_button_text']) ? $qcConfig['whatsapp_button_text'] : 'Chat on WhatsApp',
+                'whatsapp_message' => $customMsg,
+                'whatsapp_url' => $waUrl
+            ];
+            // When Direct Connect (Call/WhatsApp) is chosen, do not treat as an external redirect
+            $destUrl = '';
+        }
+
         $summary = [
             'funnel_name' => $session['funnel_name'],
             'lead_fields' => $formVals,
             'answers' => $answers,
             'destination_name' => $destName,
             'destination_url' => $destUrl,
+            'calculated_value' => $calculatedValue,
+            'formatted_quote' => $formattedQuote,
+            'calculator' => $quoteCard,
+            'quote_card' => $quoteCard,
+            'quick_connect' => $quickConnect,
             'completed_at' => date('Y-m-d H:i:s'),
         ];
 
-        Database::transaction(function () use ($session, $destNode, $destId, $resultTokenHash, $summary) {
+        Database::transaction(function () use ($session, $destNode, $destId, $resultTokenHash, $summary, $calculatedValue, $formattedQuote) {
             Database::execute(
-                "UPDATE quiz_sessions SET status = 'completed', completed_at = NOW(), final_destination_id = ?, last_activity_at = NOW() WHERE id = ?",
-                [$destId, $session['id']]
+                "UPDATE quiz_sessions SET status = 'completed', completed_at = NOW(), final_destination_id = ?, calculated_value = ?, formatted_quote = ?, last_activity_at = NOW() WHERE id = ?",
+                [$destId, $calculatedValue, $formattedQuote, $session['id']]
             );
 
             Database::execute(
-                "INSERT INTO quiz_results (tenant_id, funnel_id, funnel_version_id, session_id, result_token_hash, summary_json, destination_id, redirect_status, completed_at) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW()) 
-                 ON DUPLICATE KEY UPDATE summary_json = VALUES(summary_json), destination_id = VALUES(destination_id)",
-                [$session['tenant_id'], $session['funnel_id'], $session['funnel_version_id'], $session['id'], $resultTokenHash, json_encode($summary, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $destId]
+                "UPDATE form_submissions SET calculated_value = ?, formatted_quote = ? WHERE session_id = ?",
+                [$calculatedValue, $formattedQuote, $session['id']]
+            );
+
+            Database::execute(
+                "INSERT INTO quiz_results (tenant_id, funnel_id, funnel_version_id, session_id, result_token_hash, summary_json, destination_id, calculated_value, formatted_quote, redirect_status, completed_at) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW()) 
+                 ON DUPLICATE KEY UPDATE summary_json = VALUES(summary_json), destination_id = VALUES(destination_id), calculated_value = VALUES(calculated_value), formatted_quote = VALUES(formatted_quote)",
+                [$session['tenant_id'], $session['funnel_id'], $session['funnel_version_id'], $session['id'], $resultTokenHash, json_encode($summary, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $destId, $calculatedValue, $formattedQuote]
             );
 
             Database::execute(
@@ -595,6 +784,10 @@ class QuizEngineService
                 'funnel_name' => $session['funnel_name'],
                 'destination_name' => $destName,
                 'destination_url' => $destUrl,
+                'calculated_value' => $calculatedValue,
+                'formatted_quote' => $formattedQuote,
+                'quote_card' => $quoteCard,
+                'quick_connect' => $quickConnect,
                 'lead_fields' => $formVals,
                 'answers' => $answers,
                 'completed_at' => date('Y-m-d H:i:s'),
@@ -612,6 +805,10 @@ class QuizEngineService
                 'result_token' => $rawResultToken,
                 'destination_name' => $destName,
                 'destination_url' => $destUrl,
+                'calculated_value' => $calculatedValue,
+                'formatted_quote' => $formattedQuote,
+                'quote_card' => $quoteCard,
+                'quick_connect' => $quickConnect,
                 'summary' => $summary,
                 'auto_redirect' => !empty($settingsSnapshot['auto_redirect']),
                 'redirect_delay_seconds' => (int)($settingsSnapshot['redirect_delay_seconds'] ?? 3),
@@ -811,6 +1008,10 @@ class QuizEngineService
     {
         $result = Database::fetchOne("SELECT * FROM quiz_results WHERE session_id = ?", [$session['id']]);
         $summary = $result ? json_decode($result['summary_json'], true) : [];
+        $calculatedValue = $result['calculated_value'] ?? ($summary['calculated_value'] ?? null);
+        $formattedQuote = $result['formatted_quote'] ?? ($summary['formatted_quote'] ?? null);
+        $quoteCard = $summary['quote_card'] ?? ($summary['calculator'] ?? null);
+        $quickConnect = $summary['quick_connect'] ?? null;
 
         if (($summary['completion_type'] ?? '') === 'message') {
             return [
@@ -822,6 +1023,10 @@ class QuizEngineService
                     'completion_type' => 'message',
                     'success_heading' => $summary['success_heading'] ?? 'Thank You!',
                     'success_message' => $summary['success_message'] ?? 'Your submission has been received.',
+                    'calculated_value' => $calculatedValue,
+                    'formatted_quote' => $formattedQuote,
+                    'quote_card' => $quoteCard,
+                    'quick_connect' => $quickConnect,
                     'summary' => $summary,
                     'auto_redirect' => false,
                 ]
@@ -839,10 +1044,216 @@ class QuizEngineService
             'result' => [
                 'destination_name' => $destName,
                 'destination_url' => $destUrl,
+                'calculated_value' => $calculatedValue,
+                'formatted_quote' => $formattedQuote,
+                'quote_card' => $quoteCard,
+                'quick_connect' => $quickConnect,
                 'summary' => $summary,
                 'auto_redirect' => !empty($settingsSnapshot['auto_redirect']),
             ]
         ];
+    }
+
+    public static function extractSessionVariables(int $sessionId, array $graphSnapshot): array
+    {
+        $answers = Database::query(
+            "SELECT qa.*, q.id as q_id 
+             FROM quiz_answers qa
+             LEFT JOIN questions q ON qa.question_id = q.id
+             WHERE qa.session_id = ? AND qa.superseded_at IS NULL AND (qa.answer_type != 'form' OR qa.answer_type IS NULL)
+             ORDER BY qa.id ASC",
+            [$sessionId]
+        );
+
+        $variables = [];
+        $qIdx = 1;
+
+        $nodesById = [];
+        foreach ($graphSnapshot['nodes'] ?? [] as $n) {
+            $nodesById[(int)$n['id']] = $n;
+        }
+
+        $optionsById = [];
+        foreach ($graphSnapshot['options'] ?? [] as $opt) {
+            $optionsById[(int)$opt['id']] = $opt;
+        }
+
+        foreach ($answers as $ans) {
+            $nodeId = (int)$ans['node_id'];
+            $node = $nodesById[$nodeId] ?? null;
+            $varKey = !empty($node['variable_key']) ? strtoupper(ltrim($node['variable_key'], '@')) : ('Q' . $qIdx);
+
+            $val = 0.0;
+            if ($ans['answer_type'] === 'slider') {
+                $val = (float)$ans['answer_value_text'];
+            } else {
+                $optIds = json_decode($ans['selected_option_ids_json'] ?? '[]', true) ?: [];
+                $firstOptId = reset($optIds);
+                if ($firstOptId && isset($optionsById[(int)$firstOptId])) {
+                    $optVal = $optionsById[(int)$firstOptId]['value'] ?? '';
+                    if (is_numeric($optVal)) {
+                        $val = (float)$optVal;
+                    } elseif (is_numeric($ans['answer_value_text'])) {
+                        $val = (float)$ans['answer_value_text'];
+                    }
+                } elseif (is_numeric($ans['answer_value_text'])) {
+                    $val = (float)$ans['answer_value_text'];
+                }
+            }
+
+            $variables[$varKey] = $val;
+            $qIdx++;
+        }
+
+        return $variables;
+    }
+
+    public static function evaluateFormula(string $expr, array $variables = []): float
+    {
+        if (trim($expr) === '') {
+            return 0.0;
+        }
+
+        // 1. Substitute variables @Q1, @VAR_KEY
+        $parsed = preg_replace_callback('/@([A-Za-z0-9_]+)/', function ($matches) use ($variables) {
+            $key = strtoupper($matches[1]);
+            $val = 0.0;
+            foreach ($variables as $vKey => $vVal) {
+                if (strtoupper($vKey) === $key) {
+                    $val = (float)$vVal;
+                    break;
+                }
+            }
+            return (string)$val;
+        }, $expr);
+
+        // Remove whitespace
+        $parsed = preg_replace('/\s+/', '', $parsed);
+        if ($parsed === '') {
+            return 0.0;
+        }
+
+        // Validate characters
+        if (!preg_match('/^[0-9.+\\-*\/%^()]+$/', $parsed)) {
+            Logger::error("Invalid characters in formula: {$expr}");
+            return 0.0;
+        }
+
+        // Tokenize
+        $tokens = [];
+        $len = strlen($parsed);
+        $i = 0;
+        while ($i < $len) {
+            $ch = $parsed[$i];
+            if (strpos('+-*/%^()', $ch) !== false) {
+                // Check unary minus
+                if ($ch === '-' && (empty($tokens) || (is_string(end($tokens)) && strpos('+-*/%^(', end($tokens)) !== false))) {
+                    $numStr = '-';
+                    $i++;
+                    while ($i < $len && (ctype_digit($parsed[$i]) || $parsed[$i] === '.')) {
+                        $numStr .= $parsed[$i];
+                        $i++;
+                    }
+                    if ($numStr === '-') {
+                        return 0.0;
+                    }
+                    $tokens[] = (float)$numStr;
+                    continue;
+                } else {
+                    $tokens[] = $ch;
+                    $i++;
+                }
+            } elseif (ctype_digit($ch) || $ch === '.') {
+                $numStr = '';
+                while ($i < $len && (ctype_digit($parsed[$i]) || $parsed[$i] === '.')) {
+                    $numStr .= $parsed[$i];
+                    $i++;
+                }
+                $tokens[] = (float)$numStr;
+            } else {
+                return 0.0;
+            }
+        }
+
+        // Shunting-Yard algorithm
+        $precedence = ['+' => 1, '-' => 1, '*' => 2, '/' => 2, '%' => 2, '^' => 3];
+        $associativity = ['+' => 'L', '-' => 'L', '*' => 'L', '/' => 'L', '%' => 'L', '^' => 'R'];
+        $outputQueue = [];
+        $opStack = [];
+
+        foreach ($tokens as $token) {
+            if (is_float($token) || is_int($token)) {
+                $outputQueue[] = (float)$token;
+            } elseif (isset($precedence[$token])) {
+                while (!empty($opStack)) {
+                    $top = end($opStack);
+                    if (isset($precedence[$top]) && (
+                        ($associativity[$token] === 'L' && $precedence[$token] <= $precedence[$top]) ||
+                        ($associativity[$token] === 'R' && $precedence[$token] < $precedence[$top])
+                    )) {
+                        $outputQueue[] = array_pop($opStack);
+                    } else {
+                        break;
+                    }
+                }
+                $opStack[] = $token;
+            } elseif ($token === '(') {
+                $opStack[] = $token;
+            } elseif ($token === ')') {
+                while (!empty($opStack) && end($opStack) !== '(') {
+                    $outputQueue[] = array_pop($opStack);
+                }
+                if (empty($opStack)) {
+                    return 0.0; // Unbalanced
+                }
+                array_pop($opStack); // Discard '('
+            }
+        }
+
+        while (!empty($opStack)) {
+            $top = array_pop($opStack);
+            if ($top === '(' || $top === ')') {
+                return 0.0;
+            }
+            $outputQueue[] = $top;
+        }
+
+        // Evaluate RPN
+        $evalStack = [];
+        foreach ($outputQueue as $token) {
+            if (is_float($token) || is_int($token)) {
+                $evalStack[] = (float)$token;
+            } else {
+                if (count($evalStack) < 2) {
+                    return 0.0;
+                }
+                $b = array_pop($evalStack);
+                $a = array_pop($evalStack);
+                $res = 0.0;
+                switch ($token) {
+                    case '+': $res = $a + $b; break;
+                    case '-': $res = $a - $b; break;
+                    case '*': $res = $a * $b; break;
+                    case '/':
+                        if ($b == 0.0) return 0.0;
+                        $res = $a / $b;
+                        break;
+                    case '%':
+                        if ($b == 0.0) return 0.0;
+                        $res = fmod($a, $b);
+                        break;
+                    case '^': $res = pow($a, $b); break;
+                }
+                $evalStack[] = (float)$res;
+            }
+        }
+
+        if (count($evalStack) !== 1) {
+            return 0.0;
+        }
+
+        $final = reset($evalStack);
+        return is_finite($final) ? (float)$final : 0.0;
     }
 
     public static function getPublicResult(string $rawResultToken): ?array

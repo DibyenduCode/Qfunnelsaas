@@ -144,6 +144,7 @@ class FunnelController
             $data = [
                 'name' => $request->input('name'),
                 'description' => $request->input('description'),
+                'funnel_mode' => $request->input('funnel_mode', $existingFunnel['funnel_mode'] ?? 'quiz'),
                 'settings' => [
                     'theme' => $request->input('theme', 'light'),
                     'accent_color' => $request->input('accent_color', '#5B5BD6'),
@@ -191,6 +192,11 @@ class FunnelController
     {
         $tenantId = TenantContextService::getActiveTenantId();
         $user = current_user();
+
+        if (!UsageLimitService::hasFeature($tenantId, 'funnel_cloning') && !AuthorizationService::isPlatformAdmin()) {
+            Session::setFlash('error', "Funnel Cloning is not included in your subscription plan. Please upgrade to unlock 1-click duplication.");
+            return Response::redirect(url('/admin/funnels'));
+        }
 
         try {
             $copy = FunnelService::duplicateFunnel($tenantId, (int)$id, (int)$user['id']);
@@ -257,5 +263,27 @@ class FunnelController
         }
 
         return Response::redirect(url('/admin/funnels'));
+    }
+
+    public function updateMode(Request $request, string $id): Response
+    {
+        $tenantId = TenantContextService::getActiveTenantId();
+        $user = current_user();
+        $mode = $request->input('funnel_mode');
+
+        if (!in_array($mode, ['quiz', 'calculator'], true)) {
+            return Response::error('Invalid funnel mode.', 'INVALID_MODE', null, 400);
+        }
+
+        if ($mode === 'calculator' && !UsageLimitService::hasFeature($tenantId, 'calculator_mode') && !AuthorizationService::isPlatformAdmin()) {
+            return Response::error("Calculator & Quote Mode is not included in your current subscription plan. Please upgrade to unlock.", "FEATURE_LOCKED", null, 403);
+        }
+
+        try {
+            $updated = FunnelService::updateFunnel($tenantId, (int)$id, ['funnel_mode' => $mode], (int)$user['id']);
+            return Response::success(['funnel_mode' => $mode], "Funnel mode updated to '{$mode}'.");
+        } catch (\Throwable $e) {
+            return Response::error($e->getMessage(), 'UPDATE_ERROR', null, 400);
+        }
     }
 }

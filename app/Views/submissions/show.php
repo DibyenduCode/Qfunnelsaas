@@ -11,6 +11,40 @@
             <h2 class="text-lg font-bold text-[#171A21]">Visitor Journey Inspector</h2>
         </div>
         <div class="flex items-center gap-2">
+            <?php
+                $visitorPhone = null;
+                $visitorName = null;
+                if (!empty($detail['form_values'])) {
+                    foreach ($detail['form_values'] as $fv) {
+                        $fKey = strtolower($fv['field_key_snapshot'] ?? '');
+                        $fType = strtolower($fv['field_type_snapshot'] ?? '');
+                        if (in_array($fKey, ['phone', 'mobile', 'whatsapp', 'tel']) || $fType === 'phone') {
+                            if (!empty($fv['value_text'])) {
+                                $visitorPhone = $fv['value_text'];
+                            }
+                        }
+                        if (in_array($fKey, ['name', 'full_name', 'first_name']) && empty($visitorName)) {
+                            if (!empty($fv['value_text'])) {
+                                $visitorName = $fv['value_text'];
+                            }
+                        }
+                    }
+                }
+                $quickConnect = $detail['result']['quick_connect'] ?? null;
+            ?>
+            <?php if ($visitorPhone): 
+                $cleanLeadPhone = preg_replace('/[^0-9]/', '', $visitorPhone);
+                $greetingMsg = rawurlencode("Hi " . ($visitorName ?: 'there') . ", thank you for your submission on " . $detail['session']['funnel_name'] . "!");
+            ?>
+                <a href="https://wa.me/<?= $cleanLeadPhone ?>?text=<?= $greetingMsg ?>" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-5.805 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/></svg>
+                    <span>WhatsApp Lead</span>
+                </a>
+                <a href="tel:<?= htmlspecialchars($cleanLeadPhone) ?>" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#5B5BD6] hover:bg-[#4848B8] text-white shadow-xs transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                    <span>Call Lead</span>
+                </a>
+            <?php endif; ?>
             <?php if ($detail['session']['status'] === 'completed'): ?>
                 <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                     ✓ Completed Journey
@@ -24,7 +58,7 @@
     </div>
 
     <!-- Overview Meta Banner -->
-    <div class="bg-white border border-[#E4E7EC] rounded-xl p-5 shadow-sm grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+    <div class="bg-white border border-[#E4E7EC] rounded-xl p-5 shadow-sm grid grid-cols-2 md:grid-cols-<?= (!empty($detail['session']['formatted_quote']) || $detail['session']['calculated_value'] !== null) ? '5' : '4' ?> gap-4 text-xs">
         <div>
             <span class="text-[#687080] block text-[11px] mb-0.5">Funnel</span>
             <span class="font-bold text-[#171A21]"><?= e($detail['session']['funnel_name']) ?></span>
@@ -51,6 +85,14 @@
                 </a>
             <?php endif; ?>
         </div>
+        <?php if (!empty($detail['session']['formatted_quote']) || $detail['session']['calculated_value'] !== null): ?>
+            <div>
+                <span class="text-purple-800 font-bold block text-[11px] mb-0.5">🧮 Instant Quote</span>
+                <span class="font-extrabold font-mono text-purple-700 text-sm block">
+                    <?= e($detail['session']['formatted_quote'] ?: (string)$detail['session']['calculated_value']) ?>
+                </span>
+            </div>
+        <?php endif; ?>
     </div>
 
     <!-- Main Content: Two Columns -->
@@ -58,6 +100,110 @@
 
         <!-- Column 1: Captured Lead Profile & Answer Trail (7 cols) -->
         <div class="lg:col-span-7 space-y-6">
+
+            <?php 
+                $hasQuote = !empty($detail['session']['formatted_quote']) || $detail['session']['calculated_value'] !== null || !empty($detail['result']['calculator']);
+                $calcData = $detail['result']['calculator'] ?? null;
+            ?>
+            <?php if ($hasQuote): ?>
+                <!-- Calculator & Quote Result Card -->
+                <div class="bg-gradient-to-br from-purple-50 via-indigo-50/40 to-white border border-purple-200 rounded-xl p-5 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-purple-200/80">
+                        <h3 class="text-sm font-bold text-purple-950 flex items-center gap-2">
+                            <span>🧮</span>
+                            <span><?= e($calcData['result_label'] ?? 'Calculator & Dynamic Quote Result') ?></span>
+                        </h3>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-600 text-white tracking-wide uppercase">
+                            CALCULATED
+                        </span>
+                    </div>
+
+                    <div class="flex items-baseline justify-between">
+                        <div>
+                            <span class="text-[11px] font-semibold text-purple-800 uppercase tracking-wider block">Generated Quote</span>
+                            <span class="text-2xl sm:text-3xl font-black font-mono text-purple-700 tracking-tight">
+                                <?= e($detail['session']['formatted_quote'] ?: ($detail['session']['calculated_value'] !== null ? number_format((float)$detail['session']['calculated_value']) : '—')) ?>
+                            </span>
+                        </div>
+                        <?php if ($detail['session']['calculated_value'] !== null): ?>
+                            <div class="text-right">
+                                <span class="text-[11px] font-semibold text-slate-500 block">Raw Calculated Value</span>
+                                <span class="font-mono font-bold text-slate-700 text-sm"><?= (float)$detail['session']['calculated_value'] ?></span>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <?php if (!empty($calcData['formula'])): ?>
+                        <div class="p-2.5 rounded-lg bg-white/80 border border-purple-200 text-xs">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-purple-900 block mb-1">Evaluated Formula</span>
+                            <code class="font-mono font-bold text-purple-900 text-xs bg-purple-50 px-2 py-1 rounded border border-purple-200 block truncate">
+                                <?= e($calcData['formula']) ?>
+                            </code>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($calcData['variables'])): ?>
+                        <div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-purple-900 block mb-1.5">Captured Question Variables</span>
+                            <div class="flex flex-wrap gap-2">
+                                <?php foreach ($calcData['variables'] as $vKey => $vVal): ?>
+                                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-indigo-200 shadow-2xs text-xs font-mono">
+                                        <span class="text-[#5B5BD6] font-extrabold">@<?= e($vKey) ?></span>
+                                        <span class="text-slate-400">=</span>
+                                        <span class="font-bold text-[#171A21]"><?= e((string)$vVal) ?></span>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($quickConnect) && !empty($quickConnect['enabled'])): ?>
+                <!-- Quick Connect Terminal Action Details -->
+                <div class="bg-gradient-to-r from-emerald-50/70 via-teal-50/40 to-white border border-emerald-200 rounded-xl p-5 shadow-sm space-y-3">
+                    <div class="flex items-center justify-between pb-3 border-b border-emerald-200/80">
+                        <h3 class="text-sm font-bold text-emerald-950 flex items-center gap-2">
+                            <span>📞</span>
+                            <span>Direct 1-Click Connect Channel</span>
+                        </h3>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-600 text-white tracking-wide uppercase">
+                            <?= strtoupper(e($quickConnect['action_type'] ?? 'both')) ?>
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <?php if (!empty($quickConnect['call_url'])): ?>
+                            <div class="p-3 bg-white rounded-lg border border-emerald-200 shadow-2xs">
+                                <span class="text-[10px] uppercase font-bold text-slate-500 block mb-1">Target Phone Number</span>
+                                <div class="flex items-center justify-between">
+                                    <span class="font-mono font-bold text-[#171A21]"><?= e($quickConnect['phone_number'] ?? '—') ?></span>
+                                    <a href="<?= e($quickConnect['call_url']) ?>" class="text-[11px] font-bold text-[#5B5BD6] hover:underline">Test Call ↗</a>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if (!empty($quickConnect['whatsapp_url'])): ?>
+                            <div class="p-3 bg-white rounded-lg border border-emerald-200 shadow-2xs">
+                                <span class="text-[10px] uppercase font-bold text-slate-500 block mb-1">Target WhatsApp</span>
+                                <div class="flex items-center justify-between">
+                                    <span class="font-mono font-bold text-[#171A21]"><?= e($quickConnect['whatsapp_number'] ?? '—') ?></span>
+                                    <a href="<?= e($quickConnect['whatsapp_url']) ?>" target="_blank" class="text-[11px] font-bold text-emerald-700 hover:underline">Test Chat ↗</a>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <?php if (!empty($quickConnect['message'])): ?>
+                        <div class="p-2.5 rounded-lg bg-white border border-emerald-200 text-xs">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Pre-filled WhatsApp Message Template</span>
+                            <p class="font-sans text-slate-700 text-xs bg-slate-50 p-2 rounded border border-slate-200">
+                                <?= nl2br(e($quickConnect['message'])) ?>
+                            </p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
 
             <!-- Lead Form Card -->
             <div class="bg-white border border-[#E4E7EC] rounded-xl p-5 shadow-sm">
@@ -117,10 +263,17 @@
                                     <span class="text-[10px] text-[#687080]"><?= date('H:i:s', strtotime($ans['answered_at'])) ?></span>
                                 </div>
                                 <div class="pl-7">
-                                    <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200">
-                                        <span>Choice:</span>
-                                        <span><?= e($ans['answer_value_text']) ?></span>
-                                    </div>
+                                    <?php if ($ans['answer_type'] === 'slider'): ?>
+                                        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-[#5B5BD6] font-semibold border border-indigo-200">
+                                            <span>🎚️ Slider Value:</span>
+                                            <span class="font-bold font-mono"><?= e($ans['answer_value_text']) ?></span>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200">
+                                            <span>Choice:</span>
+                                            <span><?= e($ans['answer_value_text']) ?></span>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         <?php endforeach; ?>

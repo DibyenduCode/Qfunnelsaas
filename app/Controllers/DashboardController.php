@@ -22,4 +22,24 @@ class DashboardController
             'usage' => $usage,
         ]);
     }
+
+    public function workspaceSuspended(Request $request): Response
+    {
+        $tenantId = TenantContextService::getActiveTenantId();
+        $tenant = TenantContextService::getActiveTenant();
+
+        if (!$tenant || $tenant['status'] !== 'suspended') {
+            return Response::redirect(url('/admin/dashboard'));
+        }
+
+        $billing = \App\Services\SubscriptionService::getBillingSummary($tenantId);
+        $userTenants = TenantContextService::getUserTenants((int)current_user()['id']);
+
+        return view('dashboard.suspended', [
+            'title' => 'Workspace Suspended — Quiz Funnel SaaS',
+            'tenant' => $tenant,
+            'billing' => $billing,
+            'userTenants' => $userTenants,
+        ], 'auth'); // Clean focused layout
+    }
 }
