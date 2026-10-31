@@ -53,6 +53,29 @@
         if (!graphData || !graphData.nodes) return null;
         return graphData.nodes.find(n => n.id == idOrKey || n.node_key === String(idOrKey)) || null;
     }
+    function parseVideoUrl(url) {
+        if (!url || typeof url !== 'string') return { provider: null, id: null, hash: null };
+        url = url.trim();
+
+        // YouTube
+        let m = url.match(/(?:youtube\.com\/(?:watch\?.*v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+        if (m) {
+            return { provider: 'youtube', id: m[1], hash: null };
+        }
+
+        // Vimeo with unlisted hash e.g. vimeo.com/123456789/abcdef123 or player.vimeo.com/video/123456789?h=abcdef123
+        m = url.match(/vimeo\.com\/(?:video\/)?(\d+)(?:\/([a-zA-Z0-9]+))?/);
+        if (m) {
+            let hash = m[2] || null;
+            if (!hash) {
+                let hm = url.match(/[?&]h=([a-zA-Z0-9]+)/);
+                if (hm) hash = hm[1];
+            }
+            return { provider: 'vimeo', id: m[1], hash: hash };
+        }
+
+        return { provider: null, id: null, hash: null };
+    }
 
     // Init
     window.addEventListener('DOMContentLoaded', init);
@@ -299,6 +322,11 @@
                 addNodeToCanvas('connect');
                 return;
             }
+            if (e.key.toLowerCase() === 'v' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                e.preventDefault();
+                addNodeToCanvas('video_gate');
+                return;
+            }
             if (e.key.toLowerCase() === 'l' && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 e.preventDefault();
                 autoArrangeNodes();
@@ -459,6 +487,12 @@
             badgeText = 'Lead Form';
             // Input Fields Card
             iconSvg = `<svg class="w-3.5 h-3.5 text-sky-600" viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><line x1="5" y1="5.5" x2="11" y2="5.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="5" y1="8.5" x2="9" y2="8.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="10" cy="10.5" r="1" fill="currentColor"/></svg>`;
+            iconBg = 'bg-slate-50 border-slate-200/80';
+        } else if (node.node_type === 'video_gate') {
+            topBorderColor = 'border-t-rose-500';
+            badgeText = 'Video Gate';
+            // Playback Video Camera Card
+            iconSvg = `<svg class="w-3.5 h-3.5 text-rose-600" viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><polygon points="6,5.5 11,8 6,10.5" fill="currentColor"/></svg>`;
             iconBg = 'bg-slate-50 border-slate-200/80';
         }
 
@@ -715,6 +749,97 @@
                     ${submitAction === 'redirect' ? `
                         <div class="port-handle ${edge ? 'bg-sky-500' : 'bg-amber-400'}"
                              data-port-type="output" data-node-id="${node.id}" data-option-id="null" title="${edge ? `Connected: ${escapeHtml(targetLabel)}` : 'Drag to connect route'}"></div>
+                    ` : ''}
+                </div>
+            `;
+        } else if (node.node_type === 'video_gate') {
+            const vg = node.video_gate || {};
+            const parsed = parseVideoUrl(vg.video_url || '');
+            const prov = parsed.provider || vg.video_provider || 'youtube';
+            const gateEnabled = vg.gate_enabled !== false;
+            const gateSeconds = parseFloat(vg.gate_timestamp_seconds !== undefined ? vg.gate_timestamp_seconds : 45);
+            const gateMin = Math.floor(gateSeconds / 60);
+            const gateSec = Math.floor(gateSeconds % 60);
+            const gateFormatted = `${String(gateMin).padStart(2, '0')}:${String(gateSec).padStart(2, '0')}s`;
+            const gateType = vg.gate_type || 'lead_form';
+            const onEnd = vg.on_video_end || 'auto_advance';
+            const endAction = vg.end_action || (vg.on_video_end === 'message' || vg.on_video_end === 'thank_you' ? 'thank_you' : 'next_step');
+
+            const edge = (graphData.edges || []).find(e => e.source_node_id == node.id && (e.source_option_id === null || e.source_option_id === undefined));
+            const targetNode = edge ? graphData.nodes.find(n => n.id == edge.target_node_id) : null;
+            const targetLabel = targetNode ? `→ ${targetNode.title || targetNode.node_type}` : null;
+
+            if (endAction === 'thank_you') {
+                statusBadgeHtml = `<span class="inline-flex items-center gap-1 text-[9px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span><span>Thank You Screen</span></span>`;
+            } else if (gateEnabled) {
+                statusBadgeHtml = `<span class="inline-flex items-center gap-1 text-[9px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/70"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span><span>🔒 ${gateFormatted}</span></span>`;
+            } else {
+                statusBadgeHtml = `<span class="inline-flex items-center gap-1 text-[9px] font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200"><span>Gate Off</span></span>`;
+            }
+
+            let optionsHtml = '';
+            if (gateType === 'question') {
+                const q = node.question || vg.question || { options: [] };
+                const opts = q.options || [];
+                optionsHtml = `
+                    <div class="mt-2.5 space-y-1.5 border-t border-slate-100 pt-2">
+                        <div class="flex items-center justify-between text-[10px] font-bold text-slate-600">
+                            <span>Turnstile Choices (${opts.length})</span>
+                            <span class="text-[9px] text-slate-400">Routes per option</span>
+                        </div>
+                        ${opts.map(opt => {
+                            const optEdge = (graphData.edges || []).find(e => e.source_node_id == node.id && (e.source_option_id == opt.id || e.source_option_key == opt.option_key));
+                            const optTarget = optEdge ? graphData.nodes.find(n => n.id == optEdge.target_node_id) : null;
+                            return `
+                                <div class="px-2 py-1.5 rounded-md bg-slate-50 border border-slate-200/70 text-[10px] flex items-center justify-between relative group/opt">
+                                    <span class="truncate max-w-[130px] font-medium text-slate-700">${escapeHtml(opt.label || 'Choice')}</span>
+                                    <span class="text-[9px] ${optTarget ? 'text-indigo-600 font-semibold' : 'text-slate-400'} truncate max-w-[85px]">${optTarget ? escapeHtml(optTarget.title) : 'Default route'}</span>
+                                    <div class="port-handle ${optTarget ? 'bg-indigo-500' : 'bg-slate-300'}"
+                                         data-port-type="output" data-node-id="${node.id}" data-option-id="${opt.id}" title="${optTarget ? `Connected to: ${escapeHtml(optTarget.title)}` : 'Drag to connect downstream option branch'}"></div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            } else {
+                const fields = vg.form_fields || [];
+                optionsHtml = `
+                    <div class="mt-2 space-y-1">
+                        <div class="flex items-center justify-between text-[10px] text-slate-500 font-medium">
+                            <span>In-Video Lead Capture Form:</span>
+                            <span class="font-bold text-rose-600">${fields.length} field${fields.length === 1 ? '' : 's'}</span>
+                        </div>
+                        ${fields.slice(0, 3).map(f => `
+                            <div class="px-2 py-0.5 rounded bg-slate-50 border border-slate-200/60 text-[9px] text-slate-600 flex items-center justify-between">
+                                <span class="truncate max-w-[150px] font-medium">${escapeHtml(f.label || f.field_key)}</span>
+                                <span class="text-slate-400 font-mono">${escapeHtml(f.field_type || 'text')}${f.is_required ? '*' : ''}</span>
+                            </div>
+                        `).join('')}
+                        ${fields.length > 3 ? `<div class="text-[9px] text-slate-400 text-center font-medium">+${fields.length - 3} more field${fields.length - 3 === 1 ? '' : 's'}</div>` : ''}
+                    </div>
+                `;
+            }
+
+            bodyHtml = `
+                <div class="p-3">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${prov === 'vimeo' ? 'bg-sky-100 text-sky-800 border border-sky-300' : 'bg-red-100 text-red-800 border border-red-300'}">
+                            <span>${prov === 'vimeo' ? 'Vimeo' : 'YouTube'}</span>
+                        </span>
+                        <span class="text-[10px] text-slate-400 font-mono truncate max-w-[110px]">${escapeHtml(parsed.id || vg.video_id || 'ID Pending')}</span>
+                    </div>
+                    <p class="font-semibold text-xs text-slate-800 line-clamp-1">${escapeHtml(node.title || 'Interactive Video Gate')}</p>
+                    ${vg.video_headline ? `<p class="text-[10px] text-slate-500 line-clamp-1 mt-0.5 italic">"${escapeHtml(vg.video_headline)}"</p>` : ''}
+                    ${optionsHtml}
+                </div>
+                <div class="px-3 py-2 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between text-[11px] rounded-b-xl relative">
+                    <span class="font-medium text-slate-700 flex items-center gap-1.5 truncate max-w-[190px]">
+                        <span class="w-1.5 h-1.5 rounded-full ${endAction === 'thank_you' ? 'bg-emerald-500' : (edge ? 'bg-rose-500' : 'bg-amber-400')} shrink-0"></span>
+                        <span class="text-[10px] text-slate-700 truncate">${endAction === 'thank_you' ? '🎉 Terminal Thank You Screen' : (targetLabel || (onEnd === 'auto_advance' ? 'Auto-advance on finish' : 'Route after finish CTA'))}</span>
+                    </span>
+                    ${endAction !== 'thank_you' ? `
+                        <div class="port-handle ${edge ? 'bg-rose-500' : 'bg-amber-400'}"
+                             data-port-type="output" data-node-id="${node.id}" data-option-id="null" title="${edge ? `Connected: ${escapeHtml(targetLabel)}` : 'Drag to connect downstream flow'}"></div>
                     ` : ''}
                 </div>
             `;
@@ -1094,6 +1219,22 @@
                         nodeId: fNode.id,
                         nodeTitle: fNode.title || 'Form',
                         optionLabel: 'Submit Route'
+                    });
+                }
+            }
+        });
+
+        const videoGates = (graphData.nodes || []).filter(n => n.node_type === 'video_gate');
+        videoGates.forEach(vgNode => {
+            const vg = vgNode.video_gate || {};
+            const endAction = vg.end_action || (vg.on_video_end === 'message' || vg.on_video_end === 'thank_you' ? 'thank_you' : 'next_step');
+            if (endAction === 'next_step') {
+                const isMapped = edges.some(e => e.source_node_id == vgNode.id && (e.source_option_id === null || e.source_option_id === undefined));
+                if (!isMapped) {
+                    unmappedList.push({
+                        nodeId: vgNode.id,
+                        nodeTitle: vgNode.title || 'Video Gate',
+                        optionLabel: 'Next Step Route'
                     });
                 }
             }
@@ -2035,6 +2176,313 @@
                     </div>
                 </div>
             `;
+        } else if (node.node_type === 'video_gate') {
+            if (!node.video_gate) {
+                node.video_gate = {
+                    video_provider: 'youtube',
+                    video_url: '',
+                    video_id: '',
+                    gate_enabled: true,
+                    gate_timestamp_seconds: 45,
+                    gate_type: 'lead_form',
+                    gate_headline: '🔒 Complete this quick step to continue watching',
+                    gate_subheadline: 'Enter your details below to unlock the rest of this video.',
+                    gate_button_text: '▶️ Unlock & Continue Video',
+                    allow_skip_gate: false,
+                    on_video_end: 'auto_advance',
+                    form_fields: [],
+                    question: { question_text: '', options: [] }
+                };
+            }
+            const vg = node.video_gate;
+            const parsed = parseVideoUrl(vg.video_url || '');
+            const prov = parsed.provider || vg.video_provider || 'youtube';
+            const vidId = parsed.id || vg.video_id || '';
+            const gateType = vg.gate_type || 'lead_form';
+            const onEnd = vg.on_video_end || 'auto_advance';
+
+            const defaultEdge = (graphData.edges || []).find(e => e.source_node_id == node.id && (e.source_option_id === null || e.source_option_id === undefined));
+
+            inspectorContent.innerHTML = `
+                <div class="space-y-4">
+                    ${getStartStepWidgetHtml(node)}
+
+                    <div>
+                        <label class="block font-semibold text-[#171A21] uppercase text-[10px] mb-1">Step Title</label>
+                        <input type="text" value="${escapeHtml(node.title || '')}" oninput="updateNodeTitle(${node.id}, this.value)"
+                               class="w-full px-3 py-1.5 rounded-lg border border-[#E4E7EC] text-xs">
+                    </div>
+
+                    <!-- Video Source Settings -->
+                    <div class="space-y-3 p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-rose-600 flex items-center gap-1">
+                                <span>🎬</span>
+                                <span>Video Source (YouTube / Vimeo Only)</span>
+                            </span>
+                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${prov === 'vimeo' ? 'bg-sky-100 text-sky-800' : 'bg-red-100 text-red-800'}">
+                                ${prov === 'vimeo' ? 'Vimeo' : 'YouTube'}
+                            </span>
+                        </div>
+
+                        <div>
+                            <label class="block font-semibold text-[#171A21] text-[10px] mb-1">Video URL (YouTube or Vimeo) *</label>
+                            <input type="text" value="${escapeHtml(vg.video_url || '')}"
+                                   placeholder="https://www.youtube.com/watch?v=... or https://vimeo.com/..."
+                                   oninput="updateVideoGateUrl(${node.id}, this.value)"
+                                   class="w-full px-3 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs font-mono">
+                            <div class="flex items-center justify-between mt-1 text-[10px]">
+                                <span class="text-slate-400">Zero file upload • IFrame streaming only</span>
+                                <span class="font-mono text-slate-600">${vidId ? `ID: ${escapeHtml(vidId)}` : 'Paste URL to detect'}</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block font-semibold text-[#171A21] text-[10px] mb-1">Optional Headline Above Player</label>
+                            <input type="text" value="${escapeHtml(vg.video_headline || '')}"
+                                   placeholder="e.g. Watch this quick 2-minute overview"
+                                   oninput="updateVideoGateProperty(${node.id}, 'video_headline', this.value)"
+                                   class="w-full px-3 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs">
+                        </div>
+
+                        <div class="pt-1 flex items-center justify-between text-xs">
+                            <div>
+                                <span class="font-semibold text-slate-800 block text-[11px]">Smart Autoplay</span>
+                                <span class="text-[10px] text-slate-400 block leading-tight">Plays automatically (falls back to muted if browser requires)</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" ${vg.autoplay_behavior !== false ? 'checked' : ''}
+                                       onchange="updateVideoGateProperty(${node.id}, 'autoplay_behavior', this.checked)"
+                                       class="sr-only peer">
+                                <div class="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-rose-500"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Mid-Roll Turnstile Gate Configuration -->
+                    <div class="space-y-3 p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-amber-700 flex items-center gap-1">
+                                <span>🔒</span>
+                                <span>Mid-Roll Gate (Turnstile)</span>
+                            </span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" ${vg.gate_enabled !== false ? 'checked' : ''}
+                                       onchange="updateVideoGateProperty(${node.id}, 'gate_enabled', this.checked)"
+                                       class="sr-only peer">
+                                <div class="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-amber-500"></div>
+                            </label>
+                        </div>
+
+                        ${vg.gate_enabled !== false ? `
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block font-semibold text-[#171A21] text-[10px] mb-1">Gate Timestamp (Seconds) *</label>
+                                    <input type="number" min="0" step="1" value="${vg.gate_timestamp_seconds !== undefined ? vg.gate_timestamp_seconds : 45}"
+                                           oninput="updateVideoGateProperty(${node.id}, 'gate_timestamp_seconds', parseFloat(this.value) || 0)"
+                                           class="w-full px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs font-mono font-bold text-amber-700">
+                                </div>
+                                <div>
+                                    <label class="block font-semibold text-[#171A21] text-[10px] mb-1">Turnstile Mode</label>
+                                    <select onchange="updateVideoGateProperty(${node.id}, 'gate_type', this.value)"
+                                            class="w-full px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs font-semibold text-slate-800">
+                                        <option value="lead_form" ${gateType === 'lead_form' ? 'selected' : ''}>📋 Lead Capture Form</option>
+                                        <option value="question" ${gateType === 'question' ? 'selected' : ''}>❓ Turnstile Question</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block font-semibold text-[#171A21] text-[10px] mb-1">Gate Overlay Headline</label>
+                                <input type="text" value="${escapeHtml(vg.gate_headline || '🔒 Complete this quick step to continue watching')}"
+                                       oninput="updateVideoGateProperty(${node.id}, 'gate_headline', this.value)"
+                                       class="w-full px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs">
+                            </div>
+
+                            <div>
+                                <label class="block font-semibold text-[#171A21] text-[10px] mb-1">Gate Overlay Subheadline</label>
+                                <input type="text" value="${escapeHtml(vg.gate_subheadline || 'Enter your details below to unlock the rest of this video.')}"
+                                       oninput="updateVideoGateProperty(${node.id}, 'gate_subheadline', this.value)"
+                                       class="w-full px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs">
+                            </div>
+
+                            <div>
+                                <label class="block font-semibold text-[#171A21] text-[10px] mb-1">Unlock Button Text</label>
+                                <input type="text" value="${escapeHtml(vg.gate_button_text || '▶️ Unlock & Continue Video')}"
+                                       oninput="updateVideoGateProperty(${node.id}, 'gate_button_text', this.value)"
+                                       class="w-full px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs">
+                            </div>
+
+                            <div class="pt-1 flex items-center justify-between text-xs">
+                                <div>
+                                    <span class="font-semibold text-slate-800 block text-[11px]">Allow Skip Gate</span>
+                                    <span class="text-[10px] text-slate-400 block leading-tight">Shows a subtle "Skip for now" link</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" ${vg.allow_skip_gate ? 'checked' : ''}
+                                           onchange="updateVideoGateProperty(${node.id}, 'allow_skip_gate', this.checked)"
+                                           class="sr-only peer">
+                                    <div class="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-slate-700"></div>
+                                </label>
+                            </div>
+                        ` : `
+                            <p class="text-[11px] text-slate-500 italic">Mid-roll gate disabled. Video will play from start to finish without pausing for capture.</p>
+                        `}
+                    </div>
+
+                    <!-- Turnstile Content (Lead Form Fields OR Question Options) -->
+                    ${vg.gate_enabled !== false ? (
+                        gateType === 'lead_form' ? `
+                            <div class="space-y-3 p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-700">In-Video Form Fields (${(vg.form_fields || []).length})</span>
+                                    <button type="button" onclick="addVideoGateField(${node.id}, 'custom')" class="text-xs text-[#5B5BD6] font-semibold hover:underline">+ Custom Field</button>
+                                </div>
+
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="text-[10px] text-[#687080] font-semibold">Presets:</span>
+                                    <button type="button" onclick="addVideoGateField(${node.id}, 'name')" class="px-2 py-0.5 rounded bg-white hover:bg-slate-100 text-[10px] font-medium border border-slate-200 text-[#171A21]">+ Name</button>
+                                    <button type="button" onclick="addVideoGateField(${node.id}, 'email')" class="px-2 py-0.5 rounded bg-white hover:bg-slate-100 text-[10px] font-medium border border-slate-200 text-[#171A21]">+ Email</button>
+                                    <button type="button" onclick="addVideoGateField(${node.id}, 'phone')" class="px-2 py-0.5 rounded bg-white hover:bg-slate-100 text-[10px] font-medium border border-slate-200 text-[#171A21]">+ Phone</button>
+                                    <button type="button" onclick="addVideoGateField(${node.id}, 'company')" class="px-2 py-0.5 rounded bg-white hover:bg-slate-100 text-[10px] font-medium border border-slate-200 text-[#171A21]">+ Company</button>
+                                    <button type="button" onclick="addVideoGateField(${node.id}, 'consent')" class="px-2 py-0.5 rounded bg-white hover:bg-slate-100 text-[10px] font-medium border border-slate-200 text-[#171A21]">+ Consent</button>
+                                </div>
+
+                                <div class="space-y-2 pt-1">
+                                    ${(vg.form_fields || []).map((f, idx) => `
+                                        <div class="p-2.5 border border-[#E4E7EC] rounded-xl bg-white space-y-2">
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="w-4 h-4 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold flex items-center justify-center">${idx + 1}</span>
+                                                    <span class="font-bold text-[10px] text-[#171A21] truncate max-w-[140px]">${escapeHtml(f.label || 'Untitled Field')}</span>
+                                                    ${f.is_required ? '<span class="text-[9px] font-bold text-rose-600 bg-rose-50 px-1 rounded">Required</span>' : ''}
+                                                </div>
+                                                <button type="button" onclick="removeVideoGateField(${node.id}, ${f.id})" class="p-1 text-rose-500 hover:text-rose-700 font-bold ml-1" title="Delete Field">✕</button>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <div>
+                                                    <label class="block text-[9px] font-semibold text-[#687080] mb-0.5">Label</label>
+                                                    <input type="text" value="${escapeHtml(f.label || '')}"
+                                                           oninput="updateVideoGateField(${node.id}, ${f.id}, 'label', this.value)"
+                                                           class="w-full px-2 py-1 rounded border border-[#E4E7EC] bg-white text-xs">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-[9px] font-semibold text-[#687080] mb-0.5">Type</label>
+                                                    <select onchange="updateVideoGateField(${node.id}, ${f.id}, 'field_type', this.value)"
+                                                            class="w-full px-2 py-1 rounded border border-[#E4E7EC] bg-white text-xs">
+                                                        <option value="text" ${f.field_type === 'text' ? 'selected' : ''}>Text</option>
+                                                        <option value="email" ${f.field_type === 'email' ? 'selected' : ''}>Email</option>
+                                                        <option value="phone" ${f.field_type === 'phone' ? 'selected' : ''}>Phone</option>
+                                                        <option value="consent" ${f.field_type === 'consent' ? 'selected' : ''}>Consent</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="space-y-3 p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-700">Turnstile Choices</span>
+                                    <button type="button" onclick="addVideoGateOption(${node.id})" class="text-xs text-[#5B5BD6] font-semibold hover:underline">+ Add Option</button>
+                                </div>
+
+                                <div class="space-y-2 pt-1">
+                                    ${((node.question || vg.question || {}).options || []).map((opt, idx) => `
+                                        <div class="p-2.5 border border-[#E4E7EC] rounded-xl bg-white space-y-1.5">
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-[10px] font-bold text-slate-700">Choice ${idx + 1}</span>
+                                                <button type="button" onclick="removeVideoGateOption(${node.id}, ${opt.id})" class="text-rose-500 font-bold hover:text-rose-700 text-xs">✕</button>
+                                            </div>
+                                            <input type="text" value="${escapeHtml(opt.label || '')}"
+                                                   placeholder="Option text"
+                                                   oninput="updateVideoGateOption(${node.id}, ${opt.id}, 'label', this.value)"
+                                                   class="w-full px-2.5 py-1 rounded border border-[#E4E7EC] bg-white text-xs">
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `
+                    ) : ''}
+
+                    <!-- After Video Action: Next Step OR Thank You -->
+                    <div class="space-y-3 p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-700 block">After Video Finishes Action</span>
+                        <div class="space-y-1.5 pt-1">
+                            <label class="flex items-start gap-2.5 p-2 rounded-xl bg-white border ${endAction === 'next_step' ? 'border-rose-500 ring-1 ring-rose-300' : 'border-slate-200'} cursor-pointer hover:border-rose-400 transition-all">
+                                <input type="radio" name="video_end_action_${node.id}" value="next_step" ${endAction === 'next_step' ? 'checked' : ''}
+                                       onchange="updateVideoGateProperty(${node.id}, 'end_action', 'next_step')" class="mt-0.5 text-rose-600">
+                                <div>
+                                    <span class="block font-bold text-xs text-[#171A21]">Route / Redirect to Next Step</span>
+                                    <span class="block text-[10px] text-[#687080] mt-0.5 leading-tight">Proceeds to connected question, form, or destination landing page.</span>
+                                </div>
+                            </label>
+                            <label class="flex items-start gap-2.5 p-2 rounded-xl bg-white border ${endAction === 'thank_you' ? 'border-emerald-500 ring-1 ring-emerald-300' : 'border-slate-200'} cursor-pointer hover:border-emerald-400 transition-all">
+                                <input type="radio" name="video_end_action_${node.id}" value="thank_you" ${endAction === 'thank_you' ? 'checked' : ''}
+                                       onchange="updateVideoGateProperty(${node.id}, 'end_action', 'thank_you')" class="mt-0.5 text-emerald-600">
+                                <div>
+                                    <span class="block font-bold text-xs text-[#171A21]">Show Thank You Message (No Redirection)</span>
+                                    <span class="block text-[10px] text-[#687080] mt-0.5 leading-tight">Acts as final step; displays success confirmation screen without leaving.</span>
+                                </div>
+                            </label>
+                        </div>
+
+                        ${endAction === 'thank_you' ? `
+                            <div class="space-y-2 pt-2 border-t border-slate-200/60">
+                                <div>
+                                    <label class="block font-semibold text-[#171A21] text-[10px] mb-1">Success Heading</label>
+                                    <input type="text" value="${escapeHtml(vg.success_heading || '🎉 Thank You for Watching!')}"
+                                           oninput="updateVideoGateProperty(${node.id}, 'success_heading', this.value)"
+                                           class="w-full px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs">
+                                </div>
+                                <div>
+                                    <label class="block font-semibold text-[#171A21] text-[10px] mb-1">Success Message</label>
+                                    <textarea rows="2" oninput="updateVideoGateProperty(${node.id}, 'success_message', this.value)"
+                                              class="w-full px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs">${escapeHtml(vg.success_message || 'Your submission has been received. We will be in touch shortly.')}</textarea>
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="space-y-2 pt-2 border-t border-slate-200/60">
+                                <div>
+                                    <label class="block font-semibold text-[#171A21] text-[10px] mb-1">When Video Ends</label>
+                                    <select onchange="updateVideoGateProperty(${node.id}, 'on_video_end', this.value)"
+                                            class="w-full px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs font-semibold text-slate-800">
+                                        <option value="auto_advance" ${onEnd === 'auto_advance' ? 'selected' : ''}>⚡ Auto-advance immediately on finish</option>
+                                        <option value="show_cta_button" ${onEnd === 'show_cta_button' ? 'selected' : ''}>🔘 Show CTA Button below video</option>
+                                    </select>
+                                </div>
+                                ${onEnd === 'show_cta_button' ? `
+                                    <div>
+                                        <label class="block font-semibold text-[#171A21] text-[10px] mb-1">CTA Button Text</label>
+                                        <input type="text" value="${escapeHtml(vg.cta_button_text || 'Continue to Next Step ➔')}"
+                                               oninput="updateVideoGateProperty(${node.id}, 'cta_button_text', this.value)"
+                                               class="w-full px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs">
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `}
+                    </div>
+
+                    ${endAction === 'next_step' && gateType !== 'question' ? `
+                        <div>
+                            <label class="block font-semibold text-[#171A21] uppercase text-[10px] mb-1">Connected Next Node</label>
+                            <select onchange="updateEdgeTarget(${node.id}, null, this.value)" class="w-full px-2.5 py-1.5 rounded border border-[#E4E7EC] bg-white text-xs">
+                                <option value="">-- Disconnected --</option>
+                                ${graphData.nodes.filter(n => n.id !== node.id).map(n => `
+                                    <option value="${n.id}" ${defaultEdge && defaultEdge.target_node_id == n.id ? 'selected' : ''}>${escapeHtml(n.title)} (${n.node_type})</option>
+                                `).join('')}
+                            </select>
+                        </div>
+                    ` : ''}
+
+                    <div class="pt-4 border-t border-[#E4E7EC]">
+                        <button type="button" onclick="deleteNode('${node.id}')" class="w-full py-2 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 font-semibold hover:bg-rose-100 transition-colors">
+                            Delete Video Gate Node
+                        </button>
+                    </div>
+                </div>
+            `;
         }
 
         if (preserveScroll && inspectorContent) {
@@ -2186,6 +2634,39 @@
                 success_heading: 'Thank You!',
                 success_message: 'Your submission has been received.'
             };
+        } else if (type === 'video_gate') {
+            node.title = '🎬 Interactive Video Gate';
+            node.video_gate = {
+                video_provider: 'youtube',
+                video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                video_id: 'dQw4w9WgXcQ',
+                video_headline: 'Watch this quick video',
+                autoplay_behavior: true,
+                gate_enabled: true,
+                gate_timestamp_seconds: 45,
+                gate_type: 'lead_form',
+                gate_headline: '🔒 Complete this quick step to continue watching',
+                gate_subheadline: 'Enter your details below to unlock the rest of this video.',
+                gate_button_text: '▶️ Unlock & Continue Video',
+                allow_skip_gate: false,
+                end_action: 'next_step',
+                on_video_end: 'auto_advance',
+                success_heading: '🎉 Thank You for Watching!',
+                success_message: 'Your submission has been received. We will be in touch shortly.',
+                cta_button_text: 'Continue to Next Step ➔',
+                form_fields: [
+                    { id: Date.now() + 1, field_key: 'name', label: 'Full Name', field_type: 'text', is_required: 1 },
+                    { id: Date.now() + 2, field_key: 'email', label: 'Work Email', field_type: 'email', is_required: 1 }
+                ],
+                question: {
+                    question_text: 'What is your primary interest?',
+                    options: [
+                        { id: Date.now() + 1, option_key: `opt_${Math.random().toString(36).substring(2, 8)}`, label: 'Option A', value: 'option_a', display_order: 1 },
+                        { id: Date.now() + 2, option_key: `opt_${Math.random().toString(36).substring(2, 8)}`, label: 'Option B', value: 'option_b', display_order: 2 }
+                    ]
+                }
+            };
+            node.question = node.video_gate.question;
         }
 
         // If no node is currently designated as start, make this node the start node
@@ -3478,6 +3959,37 @@
             return;
         }
 
+        if (node.node_type === 'video_gate') {
+            const vg = node.video_gate || {};
+            const parsed = parseVideoUrl(vg.video_url || '');
+            const prov = parsed.provider || vg.video_provider || 'YouTube';
+            body.innerHTML = `
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold text-rose-600 uppercase tracking-wider flex items-center gap-1">
+                            <span>🎬</span>
+                            <span>${prov === 'vimeo' ? 'Vimeo' : 'YouTube'} Interactive Video</span>
+                        </span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            🔒 Gate at ${vg.gate_timestamp_seconds || 45}s
+                        </span>
+                    </div>
+                    <h3 class="text-sm font-bold text-[#171A21]">${escapeHtml(node.title || 'Video Gate Step')}</h3>
+                    ${vg.video_headline ? `<p class="text-xs text-slate-500">${escapeHtml(vg.video_headline)}</p>` : ''}
+                    <div class="aspect-video bg-black rounded-xl flex items-center justify-center text-white text-xs font-mono shadow-inner border border-slate-800">
+                        ▶ Interactive ${prov === 'vimeo' ? 'Vimeo' : 'YouTube'} Player (${escapeHtml(parsed.id || vg.video_id || 'ID')})
+                    </div>
+                    <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-800">
+                        <strong>Turnstile Gate:</strong> Pauses at ${vg.gate_timestamp_seconds || 45}s to present ${vg.gate_type === 'question' ? 'a multiple choice turnstile' : 'a lead capture form'}.
+                    </div>
+                    <button type="button" onclick="submitPreviewVideoGate(${node.id})" class="w-full py-2.5 rounded-xl bg-rose-600 text-white text-xs font-semibold shadow hover:bg-rose-700 transition-colors">
+                        Simulate Watch & Finish ➔
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
         if (node.node_type === 'form') {
             const form = node.form || {
                 fields: [],
@@ -3575,6 +4087,41 @@
         body.innerHTML = html;
     }
 
+    window.submitPreviewVideoGate = function (nodeId) {
+        const node = graphData.nodes.find(n => n.id == nodeId);
+        if (!node) return;
+        const vg = node.video_gate || {};
+        const endAction = vg.end_action || (vg.on_video_end === 'message' || vg.on_video_end === 'thank_you' ? 'thank_you' : 'next_step');
+
+        if (endAction === 'thank_you') {
+            const body = document.getElementById('previewModalBody');
+            body.innerHTML = `
+                <div class="text-center py-6 space-y-4">
+                    <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 font-bold text-xl flex items-center justify-center mx-auto">🎉</div>
+                    <h3 class="text-base font-bold text-[#171A21]">${escapeHtml(vg.success_heading || '🎉 Thank You for Watching!')}</h3>
+                    <p class="text-xs text-[#687080] leading-relaxed max-w-sm mx-auto">${escapeHtml(vg.success_message || 'Your submission has been received. We will be in touch shortly.')}</p>
+                    <div class="pt-2">
+                        <button type="button" onclick="openPreviewModal()" class="px-4 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-[#171A21] hover:bg-slate-50">
+                            Restart Preview
+                        </button>
+                    </div>
+                </div>
+            `;
+        } else {
+            const edge = (graphData.edges || []).find(e => e.source_node_id == nodeId && (e.source_option_id === null || e.source_option_id === undefined));
+            if (!edge || !edge.target_node_id) {
+                showAlertDialog({
+                    title: 'No Connected Route',
+                    message: 'This video step is configured to route to the next step, but no next node is connected yet on the canvas.',
+                    type: 'warning',
+                    btnText: 'Got It'
+                });
+                return;
+            }
+            renderPreviewStep(edge.target_node_id);
+        }
+    };
+
     window.submitPreviewForm = function (nodeId) {
         const node = graphData.nodes.find(n => n.id == nodeId);
         if (!node) return;
@@ -3628,6 +4175,123 @@
     }
 
     // Toast Notification Utility
+    
+    window.updateVideoGateProperty = function (nodeId, prop, value) {
+        const node = findNode(nodeId);
+        if (node) {
+            if (!node.video_gate) node.video_gate = {};
+            node.video_gate[prop] = value;
+            if (prop === 'gate_type' || prop === 'gate_enabled' || prop === 'on_video_end' || prop === 'end_action') {
+                renderCanvas();
+                renderInspector(true);
+            }
+            markDirty();
+        }
+    };
+
+    window.updateVideoGateUrl = function (nodeId, url) {
+        const node = findNode(nodeId);
+        if (node) {
+            if (!node.video_gate) node.video_gate = {};
+            node.video_gate.video_url = url;
+            const parsed = parseVideoUrl(url);
+            if (parsed.provider) {
+                node.video_gate.video_provider = parsed.provider;
+                node.video_gate.video_id = parsed.id;
+                node.video_gate.video_hash = parsed.hash;
+            }
+            renderCanvas();
+            renderInspector(true);
+            markDirty();
+        }
+    };
+
+    window.addVideoGateField = function (nodeId, presetType) {
+        const node = findNode(nodeId);
+        if (node && node.video_gate) {
+            if (!node.video_gate.form_fields) node.video_gate.form_fields = [];
+            let newField = { id: Date.now(), field_key: 'custom', label: 'Custom Field', field_type: 'text', is_required: 0 };
+            if (presetType === 'name') newField = { id: Date.now(), field_key: 'name', label: 'Full Name', field_type: 'text', is_required: 1 };
+            if (presetType === 'email') newField = { id: Date.now(), field_key: 'email', label: 'Email Address', field_type: 'email', is_required: 1 };
+            if (presetType === 'phone') newField = { id: Date.now(), field_key: 'phone', label: 'Phone Number', field_type: 'phone', is_required: 1 };
+            if (presetType === 'company') newField = { id: Date.now(), field_key: 'company', label: 'Company Name', field_type: 'text', is_required: 0 };
+            if (presetType === 'consent') newField = { id: Date.now(), field_key: 'consent', label: 'I agree to the terms and privacy policy', field_type: 'consent', is_required: 1 };
+            node.video_gate.form_fields.push(newField);
+            renderCanvas();
+            renderInspector(true);
+            markDirty();
+        }
+    };
+
+    window.removeVideoGateField = function (nodeId, fieldId) {
+        const node = findNode(nodeId);
+        if (node && node.video_gate && node.video_gate.form_fields) {
+            node.video_gate.form_fields = node.video_gate.form_fields.filter(f => f.id != fieldId);
+            renderCanvas();
+            renderInspector(true);
+            markDirty();
+        }
+    };
+
+    window.updateVideoGateField = function (nodeId, fieldId, key, val) {
+        const node = findNode(nodeId);
+        if (node && node.video_gate && node.video_gate.form_fields) {
+            const f = node.video_gate.form_fields.find(fld => fld.id == fieldId);
+            if (f) {
+                f[key] = val;
+                renderCanvas();
+                renderInspector(true);
+                markDirty();
+            }
+        }
+    };
+
+    window.addVideoGateOption = function (nodeId) {
+        const node = findNode(nodeId);
+        if (node && node.video_gate) {
+            if (!node.video_gate.question) node.video_gate.question = { question_text: 'Question', options: [] };
+            if (!node.video_gate.question.options) node.video_gate.question.options = [];
+            const count = node.video_gate.question.options.length + 1;
+            const newOpt = {
+                id: Date.now(),
+                option_key: `opt_${Math.random().toString(36).substring(2, 8)}`,
+                label: `Option ${count}`,
+                value: `choice_${count}`,
+                display_order: count
+            };
+            node.video_gate.question.options.push(newOpt);
+            node.question = node.video_gate.question;
+            renderCanvas();
+            renderInspector(true);
+            markDirty();
+        }
+    };
+
+    window.removeVideoGateOption = function (nodeId, optionId) {
+        const node = findNode(nodeId);
+        if (node && node.video_gate && node.video_gate.question && node.video_gate.question.options) {
+            node.video_gate.question.options = node.video_gate.question.options.filter(o => o.id != optionId);
+            node.question = node.video_gate.question;
+            renderCanvas();
+            renderInspector(true);
+            markDirty();
+        }
+    };
+
+    window.updateVideoGateOption = function (nodeId, optionId, key, val) {
+        const node = findNode(nodeId);
+        if (node && node.video_gate && node.video_gate.question && node.video_gate.question.options) {
+            const opt = node.video_gate.question.options.find(o => o.id == optionId);
+            if (opt) {
+                opt[key] = val;
+                node.question = node.video_gate.question;
+                renderCanvas();
+                renderInspector(true);
+                markDirty();
+            }
+        }
+    };
+
     window.showToast = function (text, iconType = 'success') {
         const container = document.getElementById('toastContainer');
         const textEl = document.getElementById('toastText');
@@ -3818,6 +4482,8 @@
                 ctx.fillStyle = '#6366F1';
             } else if (n.node_type === 'form') {
                 ctx.fillStyle = '#0EA5E9';
+            } else if (n.node_type === 'video_gate') {
+                ctx.fillStyle = '#F43F5E';
             } else {
                 ctx.fillStyle = '#A855F7';
             }

@@ -117,7 +117,7 @@ $invoicesCount = count($invoices);
                                         </span>
                                     </div>
                                     <span class="block text-[10px] text-slate-400 mt-0.5">
-                                        ₹<?= number_format((float)($t['subscription_amount'] ?: ($t['plan_price'] ?? 0)), 2) ?>
+                                        ₹<?= number_format(((float)$t['subscription_amount'] > 0 ? (float)$t['subscription_amount'] : (float)($t['plan_price'] ?? 0)), 2) ?>
                                     </span>
                                 </td>
                                 <td class="py-3.5 px-4">
@@ -450,6 +450,15 @@ $invoicesCount = count($invoices);
                     </tbody>
                 </table>
             </div>
+
+            <?php if (isset($users['total_pages'])): ?>
+                <?php
+                $pagination = $users;
+                $pageParam = 'user_page';
+                $queryParams = array_filter(['q' => $search ?? '', 'status' => $statusFilter ?? '']);
+                require __DIR__ . '/../partials/pagination.php';
+                ?>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -812,7 +821,8 @@ function openBillingModal(tenant) {
     if (tenant.current_period_end) document.getElementById('bcModalEnd').value = tenant.current_period_end.split(' ')[0];
     else if (tenant.subscription_ends_at) document.getElementById('bcModalEnd').value = tenant.subscription_ends_at.split(' ')[0];
     
-    document.getElementById('bcModalAmount').value = tenant.subscription_amount || tenant.plan_price || 0;
+    const parsedBcAmount = parseFloat(tenant.subscription_amount || 0);
+    document.getElementById('bcModalAmount').value = parsedBcAmount > 0 ? parsedBcAmount : (parseFloat(tenant.plan_price || 0) || 0);
     document.getElementById('bcModalStatus').value = tenant.subscription_status || 'active';
     document.getElementById('bcModalAutoRenew').checked = tenant.auto_renew !== 0;
 
@@ -838,7 +848,8 @@ function openRecordPaymentModal(tenant) {
     form.action = '<?= url("/admin/platform/tenants") ?>/' + tenant.id + '/record-payment';
 
     document.getElementById('rpModalTenantName').value = tenant.name;
-    document.getElementById('rpModalAmount').value = tenant.subscription_amount || tenant.plan_price || 0;
+    const parsedRpAmount = parseFloat(tenant.subscription_amount || 0);
+    document.getElementById('rpModalAmount').value = parsedRpAmount > 0 ? parsedRpAmount : (parseFloat(tenant.plan_price || 0) || 0);
 
     modal.classList.remove('hidden');
 }

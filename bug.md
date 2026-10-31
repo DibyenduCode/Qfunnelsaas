@@ -131,6 +131,101 @@ Below is the complete analysis of every issue found, the root causes, and the fi
 
 ---
 
+### Bug 9: Super Admin Customer Table Displaying Subscription Plan Price as `₹0.00`
+- **Severity**: Medium (Visual/Billing Confusion)
+- **Status**: Fixed
+- **Symptom**:
+  In Super Admin *Customers & Users* (`/admin/platform/customers`), the "Plan & Billing Cycle" column showed `₹0.00` for all active subscribers (even on Pro or Starter plans).
+- **Root Cause**:
+  `subscription_amount` defaults to `"0.00"` in database subscriptions. In `customers.php`, the template evaluated:
+  ```php
+  ₹<?= number_format((float)($t['subscription_amount'] ?: ($t['plan_price'] ?? 0)), 2) ?>
+  ```
+  In PHP, non-empty string `"0.00"` evaluates as truthy in ternary shorthand `?:`, preventing fallback to `$t['plan_price']`.
+- **Resolution**:
+  Updated the check in `app/Views/platform/customers.php`:
+  ```php
+  ₹<?= number_format(((float)$t['subscription_amount'] > 0 ? (float)$t['subscription_amount'] : (float)($t['plan_price'] ?? 0)), 2) ?>
+  ```
+  Real plan prices (e.g., `₹749.00`, `₹1,499.00`) now display accurately.
+
+---
+
+### Bug 10: Billing Cycle & Record Payment Modals Defaulting Amount Input to `0`
+- **Severity**: Medium (Data Entry Error Risk)
+- **Status**: Fixed
+- **Symptom**:
+  When a Super Admin clicked *"Billing Cycle"* or *"Record Payment"* for any customer, the amount field in the modal was pre-filled with `0` or `0.00` instead of the plan's recurring price.
+- **Root Cause**:
+  In `customers.php` JS modal openers:
+  ```javascript
+  document.getElementById('bcModalAmount').value = tenant.subscription_amount || tenant.plan_price || 0;
+  document.getElementById('rpModalAmount').value = tenant.subscription_amount || tenant.plan_price || 0;
+  ```
+  In JavaScript, `"0.00"` is a non-empty string and therefore truthy, so `tenant.subscription_amount || tenant.plan_price` resolved to `"0.00"`.
+- **Resolution**:
+  Parsed with `parseFloat()`:
+  ```javascript
+  const parsedAmount = parseFloat(tenant.subscription_amount || 0);
+  document.getElementById('bcModalAmount').value = parsedAmount > 0 ? parsedAmount : (parseFloat(tenant.plan_price || 0) || 0);
+  ```
+
+---
+
+### Bug 11: Missing Pagination Component on Super Admin Platform Users Tab
+- **Severity**: High (Accessibility & Data Truncation)
+- **Status**: Fixed
+- **Symptom**:
+  In Super Admin *Customers & Users*, clicking the *"Platform Users"* tab only displayed the first 10 users with zero pagination buttons (Prev, Next, or page numbers), even though 290 registered platform users existed.
+- **Root Cause**:
+  While `PlatformAdminController::customers()` prepared `$usersPagination` with `user_page` support and `customers.php` had auto-tab switching for `?user_page=X`, the actual pagination markup partial call was completely omitted from the bottom of the users table.
+- **Resolution**:
+  Added the reusable pagination component to `app/Views/platform/customers.php`:
+  ```php
+  <?php if (isset($users['total_pages'])): ?>
+      <?php
+      $pagination = $users;
+      $pageParam = 'user_page';
+      $queryParams = array_filter(['q' => $search ?? '', 'status' => $statusFilter ?? '']);
+      require __DIR__ . '/../partials/pagination.php';
+      ?>
+  <?php endif; ?>
+  ```
+  Super admins can now browse all pages of registered users with auto-tab retention.
+
+---
+
+### Bug 12: Custom Legal Pages CMS Leading to 404 Not Found
+- **Severity**: High (Broken Public Pages)
+- **Status**: Fixed
+- **Symptom**:
+  When a Super Admin created a custom legal or compliance page in CMS (e.g. `/security`, `/disclaimer`), clicking *"View Live Public Page"* or clicking the footer/sidebar links led to a 404 Page Not Found error.
+- **Root Cause**:
+  `routes/web.php` registered hardcoded routes for the 4 core policies (`/terms`, `/privacy`, `/refund-policy`, `/cookie-policy`) and a parameterized route `/legal/{slug}`. However, `legal_pages.php` and `legal/show.php` unconditionally linked to `url('/' . $p['slug'])`, pointing to paths that had no router match.
+- **Resolution**:
+  Added a link resolver helper in `app/Views/platform/legal_pages.php` and `app/Views/legal/show.php`:
+  ```php
+  $coreSlugs = ['terms', 'privacy', 'refund-policy', 'cookie-policy'];
+  $getLegalUrl = function($slug) use ($coreSlugs) {
+      return in_array($slug, $coreSlugs) ? url('/' . e($slug)) : url('/legal/' . e($slug));
+  };
+  ```
+  Updated all live links, preview buttons, and URL slug prefixes to use `/legal/{slug}` for custom policies and dedicated root URLs for core policies.
+
+---
+
+### Bug 13: Missing CSRF Meta Tag in Superadmin Layout
+- **Severity**: Low (Security & AJAX Consistency)
+- **Status**: Fixed
+- **Symptom**:
+  Async JavaScript routines and DOM inspection looking for `<meta name="csrf-token">` in the Super Admin layout failed because the meta tag was missing from `app/Views/layouts/superadmin.php`.
+- **Root Cause**:
+  `layouts/admin.php` had the meta tag, but `layouts/superadmin.php` was omitted during initial template setup.
+- **Resolution**:
+  Added `<meta name="csrf-token" content="<?= csrf_token() ?>">` to the `<head>` of `app/Views/layouts/superadmin.php`.
+
+---
+
 ## Verification & Automated Test Results
 
 1. **Automated PHP Test Suite (`tests/run_tests.php`)**:
@@ -141,15 +236,23 @@ Below is the complete analysis of every issue found, the root causes, and the fi
    - `SUITE 5: Submissions & Analytics Integrity` — 3/3 Passed
    - `SUITE 6: Plan Limits Enforcement` — 1/1 Passed
    - `SUITE 7: Super Admin Tools & Controls` — 5/5 Passed
-   - **Total**: 26 Passed, 0 Failed.
+   - `SUITE 8: Calculator & Quote Funnel Engine` — 9/9 Passed
+   - `SUITE 9: 1-Click Call & WhatsApp Direct Connect Engine` — 6/6 Passed
+   - `SUITE 10: Complete Node Deletion & Blank Canvas Persistence` — 3/3 Passed
+   - `SUITE 11: Customizable Form Node Headings & Button Text` — 5/5 Passed
+   - **Total Core Suite**: 49 Passed, 0 Failed.
 
-2. **Live Funnel End-to-End Visual Test (`/quiz/e-commerce-qualification-quiz`)**:
-   - **Step 1**: Directly displays Question *"What is your primary goal?"* with Option A and Option B (No form shown).
-   - **Step 2 (Option A)**: Routes to *"Lead Capture Form"* with Full Name, Email Address, and Phone inputs.
-   - **Step 3 (Submit)**: Shows *"Thank You! Your submission has been received."* and logs lead capture data.
-   - **Step 2 (Option B)**: Routes to *"Custom Result Page"* (`https://example.com/result`).
+2. **Specialized Test Suites**:
+   - `tests/test_billing_and_suspension.php`: 19/19 Passed (Billing intervals, manual invoices, zero-data-loss suspension, review queue, termination).
+   - `tests/test_custom_lead_stages.php`: 25/25 Passed (Custom CRM pipeline stages, emoji badges, deletion resets).
+   - `tests/test_user_upgrade_plan.php`: 18/18 Passed (Self-service billing, tier limit unlocks, downgrade prevention).
+   - **Grand Total Automated Tests**: 111 Passed, 0 Failed.
 
-3. **Form Field Focus & Autosave Live Browser Test (`/admin/funnels/45/builder`)**:
-   - Cleared custom field label input in inspector, waited across autosave intervals, and typed `'Client Phone Number'`.
-   - Verified that focus and cursor position were completely preserved without interruption.
-   - Verified that field keys remain valid and stable.
+3. **Super Admin Platform Live Browser Verification**:
+   - **Customers & Users (`/admin/platform/customers`)**: Verified real plan prices (`₹749.00` / `₹1,499.00`) render properly.
+   - **Platform Users Pagination**: Verified pagination appears at bottom of `tab-users`, page 2 loads seamlessly, tab state preserved.
+   - **Modals**: Verified `Billing Cycle` and `Record Payment` auto-populate with the correct non-zero plan price.
+   - **Legal Pages CMS**: Verified editor, public links resolving via `/legal/{slug}` and core URLs without 404s.
+   - **Payment Gateways**: Verified configuration saving, toggle switches, and missing key validation.
+   - **Zero PHP Errors**: All 18 routes (public, superadmin, tenant) returned HTTP 200 with 0 errors/warnings.
+

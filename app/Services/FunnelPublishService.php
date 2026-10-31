@@ -36,7 +36,7 @@ class FunnelPublishService
             // Graph Snapshot
             $nodes = Database::query("SELECT * FROM funnel_nodes WHERE funnel_id = ?", [$funnelId]);
             $questions = Database::query("SELECT * FROM questions WHERE funnel_id = ?", [$funnelId]);
-            $options = Database::query("SELECT qo.* FROM question_options qo JOIN questions q ON qo.question_id = q.id WHERE q.funnel_id = ?", [$funnelId]);
+            $options = Database::query("SELECT qo.* FROM question_options qo JOIN questions q ON qo.question_id = q.id WHERE q.funnel_id = ? ORDER BY qo.display_order ASC, qo.id ASC", [$funnelId]);
             $edges = Database::query("SELECT * FROM funnel_edges WHERE funnel_id = ?", [$funnelId]);
             $destinations = Database::query("SELECT * FROM destinations WHERE funnel_id = ?", [$funnelId]);
 
@@ -45,7 +45,7 @@ class FunnelPublishService
                 $startNode = Database::fetchOne("SELECT id FROM funnel_nodes WHERE funnel_id = ? AND node_type = 'start' ORDER BY id ASC LIMIT 1", [$funnelId]);
             }
             if (!$startNode) {
-                $startNode = Database::fetchOne("SELECT id FROM funnel_nodes WHERE funnel_id = ? AND node_type IN ('question','form') ORDER BY id ASC LIMIT 1", [$funnelId]);
+                $startNode = Database::fetchOne("SELECT id FROM funnel_nodes WHERE funnel_id = ? AND node_type IN ('question','form','video_gate') ORDER BY id ASC LIMIT 1", [$funnelId]);
             }
 
             $graphSnapshot = [

@@ -510,8 +510,8 @@ class PlatformAdminController
         }
 
         Database::execute(
-            "INSERT INTO plans (name, slug, price, billing_interval, description, limits_json, features_json, is_active) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO plans (name, slug, price, billing_interval, description, limits_json, features_json, is_active, is_visible) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 $name,
                 $slug,
@@ -520,7 +520,8 @@ class PlatformAdminController
                 $description,
                 json_encode($limits),
                 json_encode($features),
-                !empty($request->input('is_active')) ? 1 : 0
+                !empty($request->input('is_active')) ? 1 : 0,
+                !empty($request->input('is_visible')) ? 1 : 0
             ]
         );
 
@@ -571,7 +572,7 @@ class PlatformAdminController
         }
 
         Database::execute(
-            "UPDATE plans SET name = ?, price = ?, billing_interval = ?, description = ?, limits_json = ?, features_json = ?, is_active = ? WHERE id = ?",
+            "UPDATE plans SET name = ?, price = ?, billing_interval = ?, description = ?, limits_json = ?, features_json = ?, is_active = ?, is_visible = ? WHERE id = ?",
             [
                 $name,
                 $price,
@@ -580,6 +581,7 @@ class PlatformAdminController
                 json_encode($limits),
                 json_encode($features),
                 !empty($request->input('is_active')) ? 1 : 0,
+                !empty($request->input('is_visible')) ? 1 : 0,
                 $planId
             ]
         );
@@ -590,7 +592,36 @@ class PlatformAdminController
     }
 
     /**
-     * 5d. Delete / Deactivate Plan
+     * 5d. Toggle Frontend Visibility (Show/Hide plan on homepage)
+     */
+    public function togglePlanVisibility(Request $request, string $id): Response
+    {
+        $planId = (int)$id;
+        $plan = Database::fetchOne("SELECT * FROM plans WHERE id = ?", [$planId]);
+        if (!$plan) {
+            Session::setFlash('error', "Plan not found.");
+            return Response::redirect(url('/admin/platform/plans'));
+        }
+
+        $newVal = empty($plan['is_visible']) ? 1 : 0;
+        Database::execute("UPDATE plans SET is_visible = ? WHERE id = ?", [$newVal, $planId]);
+
+        $userId = (int)(current_user()['id'] ?? 0);
+        AuditLogService::log(null, $userId, 'toggle_plan_visibility', 'plan', $planId, [
+            'name' => $plan['name'],
+            'is_visible' => $newVal,
+        ]);
+
+        $statusMsg = $newVal 
+            ? "Plan '{$plan['name']}' is now VISIBLE to users on the frontend home page."
+            : "Plan '{$plan['name']}' is now HIDDEN from users on the frontend home page.";
+
+        Session::setFlash('success', $statusMsg);
+        return Response::redirect(url('/admin/platform/plans'));
+    }
+
+    /**
+     * 5e. Delete / Deactivate Plan
      */
     public function deletePlan(Request $request, string $id): Response
     {
@@ -672,6 +703,20 @@ class PlatformAdminController
             ],
         ];
 
+        $warnings = [];
+        if (!empty($payload['stripe']['enabled']) && (empty($payload['stripe']['publishable_key']) || empty($payload['stripe']['secret_key']))) {
+            $warnings[] = "Stripe is enabled with missing keys.";
+        }
+        if (!empty($payload['razorpay']['enabled']) && (empty($payload['razorpay']['key_id']) || empty($payload['razorpay']['key_secret']))) {
+            $warnings[] = "Razorpay is enabled without complete credentials.";
+        }
+        if (!empty($payload['paypal']['enabled']) && empty($payload['paypal']['client_id'])) {
+            $warnings[] = "PayPal is enabled without Client ID.";
+        }
+        if (!empty($payload['bank_transfer']['enabled']) && empty($payload['bank_transfer']['account_number'])) {
+            $warnings[] = "Bank Transfer is enabled without account number.";
+        }
+
         PlatformSettingService::set('payment_gateways', $payload);
 
         AuditLogService::log(null, (int)current_user()['id'], 'update_payment_gateways', 'settings', null, [
@@ -682,7 +727,11 @@ class PlatformAdminController
             'manual_enabled' => $payload['manual_custom']['enabled'],
         ]);
 
-        Session::setFlash('success', "Payment gateway settings updated successfully.");
+        if (!empty($warnings)) {
+            Session::setFlash('success', "Settings saved with warnings: " . implode(" ", $warnings));
+        } else {
+            Session::setFlash('success', "Payment gateway settings updated successfully.");
+        }
         return Response::redirect(url('/admin/platform/payment-gateways'));
     }
 

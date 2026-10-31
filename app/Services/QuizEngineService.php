@@ -287,6 +287,93 @@ class QuizEngineService
             return self::completeSession($session, $node, $graphSnapshot, $settingsSnapshot);
         }
 
+        // If current node is a video gate node, return video gate step
+        if ($node['node_type'] === 'video_gate') {
+            $nodeConfig = !empty($node['config_json']) ? (json_decode($node['config_json'], true) ?: []) : [];
+            $vgConfig = $nodeConfig['video_gate'] ?? ($node['video_gate'] ?? []);
+            $historyCount = (int) Database::fetchColumn(
+                "SELECT COUNT(DISTINCT node_id) FROM quiz_answers WHERE session_id = ? AND superseded_at IS NULL",
+                [$session['id']]
+            );
+
+            // Check if gate was already unlocked in this session
+            $alreadyUnlocked = (bool) Database::fetchOne(
+                "SELECT id FROM quiz_step_events WHERE session_id = ? AND node_id = ? AND event_type IN ('video_gate_completed', 'video_gate_skipped')",
+                [$session['id'], $currentNodeId]
+            );
+
+            // Question options if gate_type is question
+            $question = null;
+            $options = [];
+            if (($vgConfig['gate_type'] ?? 'lead_form') === 'question') {
+                foreach ($graphSnapshot['questions'] ?? [] as $q) {
+                    if ((int)$q['node_id'] === $currentNodeId) {
+                        $question = $q;
+                        break;
+                    }
+                }
+                if ($question) {
+                    foreach ($graphSnapshot['options'] ?? [] as $opt) {
+                        if ((int)$opt['question_id'] === (int)$question['id']) {
+                            $options[] = [
+                                'id' => (int)$opt['id'],
+                                'option_key' => $opt['option_key'],
+                                'label' => $opt['label'],
+                                'value' => $opt['value'],
+                            ];
+                        }
+                    }
+                }
+                if (empty($options) && !empty($vgConfig['question']['options'])) {
+                    $options = $vgConfig['question']['options'];
+                }
+            }
+
+            return [
+                'success' => true,
+                'status' => 'video_gate_step',
+                'funnel_name' => $session['funnel_name'],
+                'settings' => $settingsSnapshot,
+                'step' => [
+                    'node_id' => $currentNodeId,
+                    'node_type' => 'video_gate',
+                    'title' => $node['title'] ?? 'Video Presentation',
+                    'is_gate_unlocked' => $alreadyUnlocked,
+                    'video_gate' => [
+                        'video_provider' => $vgConfig['video_provider'] ?? 'youtube',
+                        'video_url' => $vgConfig['video_url'] ?? '',
+                        'video_id' => $vgConfig['video_id'] ?? '',
+                        'video_hash' => $vgConfig['video_hash'] ?? '',
+                        'video_headline' => $vgConfig['video_headline'] ?? '',
+                        'autoplay_behavior' => isset($vgConfig['autoplay_behavior']) ? (bool)$vgConfig['autoplay_behavior'] : true,
+                        'gate_enabled' => isset($vgConfig['gate_enabled']) ? (bool)$vgConfig['gate_enabled'] : true,
+                        'gate_timestamp_seconds' => (float)($vgConfig['gate_timestamp_seconds'] ?? 45.0),
+                        'gate_type' => $vgConfig['gate_type'] ?? 'lead_form',
+                        'gate_headline' => $vgConfig['gate_headline'] ?? '🔒 Complete this quick step to continue watching',
+                        'gate_subheadline' => $vgConfig['gate_subheadline'] ?? 'Enter your details below to unlock the rest of this video.',
+                        'gate_button_text' => $vgConfig['gate_button_text'] ?? '▶️ Unlock & Continue Video',
+                        'allow_skip_gate' => !empty($vgConfig['allow_skip_gate']),
+                        'end_action' => $vgConfig['end_action'] ?? ($vgConfig['on_video_end'] === 'message' || $vgConfig['on_video_end'] === 'thank_you' ? 'thank_you' : 'next_step'),
+                        'on_video_end' => $vgConfig['on_video_end'] ?? 'auto_advance',
+                        'success_heading' => $vgConfig['success_heading'] ?? '🎉 Thank You for Watching!',
+                        'success_message' => $vgConfig['success_message'] ?? 'Your submission has been received. We will be in touch shortly.',
+                        'cta_button_text' => $vgConfig['cta_button_text'] ?? 'Continue to Next Step ➔',
+                        'form_fields' => $vgConfig['form_fields'] ?? [
+                            ['id' => 1, 'field_key' => 'name', 'label' => 'Full Name', 'field_type' => 'text', 'placeholder' => 'Enter your name', 'is_required' => 1],
+                            ['id' => 2, 'field_key' => 'email', 'label' => 'Email Address', 'field_type' => 'email', 'placeholder' => 'Enter your email', 'is_required' => 1]
+                        ],
+                        'options' => $options,
+                        'question' => [
+                            'question_text' => $question['question_text'] ?? ($vgConfig['question']['question_text'] ?? 'Please choose an option to continue:'),
+                            'options' => $options
+                        ]
+                    ],
+                    'step_number' => $historyCount + 1,
+                    'can_go_back' => $historyCount > 0 && !empty($settingsSnapshot['enable_back_button']),
+                ]
+            ];
+        }
+
         // If current node is a form node, return form step
         if ($node['node_type'] === 'form') {
             $formConfig = !empty($node['config_json']) ? (json_decode($node['config_json'], true) ?: []) : [];
@@ -437,6 +524,10 @@ class QuizEngineService
 
         if ($node && $node['node_type'] === 'form') {
             return self::submitFormNode($rawToken, $session, $node, $answerPayload, $graphSnapshot, $settingsSnapshot);
+        }
+
+        if ($node && $node['node_type'] === 'video_gate') {
+            return self::advanceVideoStep($rawToken, $nodeId);
         }
 
         // Find question
@@ -910,6 +1001,317 @@ class QuizEngineService
 
         Database::execute(
             "UPDATE quiz_sessions SET current_node_id = ?, last_activity_at = NOW() WHERE id = ?",
+            [$targetNodeId, $session['id']]
+        );
+
+        return self::getCurrentStep($rawToken);
+    }
+
+    public static function recordVideoEvent(string $rawToken, int $nodeId, string $eventType, array $eventData = []): array
+    {
+        $session = self::resolveSession($rawToken);
+        if (!$session) {
+            throw new RuntimeException("Invalid or expired quiz session.");
+        }
+
+        $allowedEvents = ['video_started', 'video_gate_reached', 'video_gate_completed', 'video_gate_skipped', 'video_completed'];
+        if (!in_array($eventType, $allowedEvents, true)) {
+            throw new RuntimeException("Unsupported video event type: {$eventType}");
+        }
+
+        // When reaching the gate without completion, mark session status as 'form_pending_video_gate'
+        if ($eventType === 'video_gate_reached') {
+            Database::execute(
+                "UPDATE quiz_sessions SET status = 'form_pending_video_gate', last_activity_at = NOW() WHERE id = ? AND status = 'in_progress'",
+                [$session['id']]
+            );
+        } elseif ($eventType === 'video_completed' || $eventType === 'video_gate_completed' || $eventType === 'video_gate_skipped') {
+            Database::execute(
+                "UPDATE quiz_sessions SET status = 'in_progress', last_activity_at = NOW() WHERE id = ? AND status = 'form_pending_video_gate'",
+                [$session['id']]
+            );
+        }
+
+        Database::execute(
+            "INSERT INTO quiz_step_events (tenant_id, funnel_id, funnel_version_id, session_id, event_type, node_id, event_data_json, occurred_at) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, NOW())",
+            [
+                $session['tenant_id'],
+                $session['funnel_id'],
+                $session['funnel_version_id'],
+                $session['id'],
+                $eventType,
+                $nodeId,
+                !empty($eventData) ? json_encode($eventData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null
+            ]
+        );
+
+        return ['success' => true, 'event' => $eventType];
+    }
+
+    public static function submitVideoGate(string $rawToken, int $nodeId, array $payload): array
+    {
+        $session = self::resolveSession($rawToken);
+        if (!$session) {
+            throw new RuntimeException("Invalid or expired quiz session.");
+        }
+
+        $graphSnapshot = json_decode($session['graph_snapshot_json'], true) ?: [];
+        $node = null;
+        foreach ($graphSnapshot['nodes'] ?? [] as $n) {
+            if ((int)$n['id'] === $nodeId) {
+                $node = $n;
+                break;
+            }
+        }
+        if (!$node || $node['node_type'] !== 'video_gate') {
+            throw new RuntimeException("Target step is not an interactive video gate.");
+        }
+
+        $nodeConfig = !empty($node['config_json']) ? (json_decode($node['config_json'], true) ?: []) : [];
+        $vgConfig = $nodeConfig['video_gate'] ?? ($node['video_gate'] ?? []);
+        $gateType = $vgConfig['gate_type'] ?? 'lead_form';
+
+        if ($gateType === 'lead_form') {
+            $fields = $vgConfig['form_fields'] ?? [
+                ['field_key' => 'name', 'label' => 'Full Name', 'field_type' => 'text', 'is_required' => 1],
+                ['field_key' => 'email', 'label' => 'Email Address', 'field_type' => 'email', 'is_required' => 1],
+            ];
+            $formData = $payload['form_data'] ?? $payload;
+
+            $errors = [];
+            foreach ($fields as $f) {
+                $key = $f['field_key'] ?? ($f['key'] ?? '');
+                if (!$key) continue;
+                $val = trim($formData[$key] ?? '');
+                $isRequired = !empty($f['is_required']) || !empty($f['required']);
+                $fType = $f['field_type'] ?? ($f['type'] ?? 'text');
+                $fLabel = $f['label'] ?? ($f['field_label'] ?? ucfirst($key));
+
+                if ($isRequired && $val === '') {
+                    $errors[$key] = $fLabel . ' is required.';
+                } elseif ($val !== '' && in_array($fType, ['email'], true) && !filter_var($val, FILTER_VALIDATE_EMAIL)) {
+                    $errors[$key] = 'Please provide a valid email address.';
+                }
+            }
+
+            if (!empty($errors)) {
+                return [
+                    'success' => false,
+                    'error_code' => 'VALIDATION_FAILED',
+                    'error' => reset($errors),
+                    'errors' => $errors
+                ];
+            }
+
+            Database::transaction(function () use ($session, $nodeId, $node, $fields, $formData, $vgConfig) {
+                Database::execute(
+                    "INSERT INTO form_submissions (tenant_id, funnel_id, funnel_version_id, session_id, submitted_at) VALUES (?, ?, ?, ?, NOW())",
+                    [$session['tenant_id'], $session['funnel_id'], $session['funnel_version_id'], $session['id']]
+                );
+                $formSubId = (int) Database::lastInsertId();
+
+                foreach ($fields as $f) {
+                    $key = $f['field_key'] ?? ($f['key'] ?? '');
+                    if (!$key) continue;
+                    $val = isset($formData[$key]) ? (string)$formData[$key] : '';
+                    $fType = $f['field_type'] ?? ($f['type'] ?? 'text');
+                    $fLabel = $f['label'] ?? ($f['field_label'] ?? ucfirst($key));
+
+                    Database::execute(
+                        "INSERT INTO form_submission_values (tenant_id, form_submission_id, field_id, field_key_snapshot, field_label_snapshot, field_type_snapshot, value_text) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        [$session['tenant_id'], $formSubId, $f['id'] ?? null, $key, $fLabel, $fType, $val]
+                    );
+                }
+
+                // Invalidate prior answer for this node if any
+                Database::execute(
+                    "UPDATE quiz_answers SET superseded_at = NOW() WHERE session_id = ? AND node_id = ? AND superseded_at IS NULL",
+                    [$session['id'], $nodeId]
+                );
+
+                Database::execute(
+                    "INSERT INTO quiz_answers (tenant_id, session_id, funnel_version_id, node_id, question_id, question_text_snapshot, answer_type, answer_value_text, selected_option_ids_json, answered_at) 
+                     VALUES (?, ?, ?, ?, NULL, ?, 'video_gate_lead', ?, ?, NOW())",
+                    [
+                        $session['tenant_id'],
+                        $session['id'],
+                        $session['funnel_version_id'],
+                        $nodeId,
+                        $node['title'] ?? 'Video Gate Lead Capture',
+                        json_encode($formData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                        json_encode(array_keys($formData))
+                    ]
+                );
+
+                Database::execute(
+                    "INSERT INTO quiz_step_events (tenant_id, funnel_id, funnel_version_id, session_id, event_type, node_id, event_data_json, occurred_at) 
+                     VALUES (?, ?, ?, ?, 'video_gate_completed', ?, ?, NOW())",
+                    [
+                        $session['tenant_id'],
+                        $session['funnel_id'],
+                        $session['funnel_version_id'],
+                        $session['id'],
+                        $nodeId,
+                        json_encode(['gate_type' => 'lead_form', 'lead' => $formData, 'provider' => $vgConfig['video_provider'] ?? 'youtube', 'gate_seconds' => $vgConfig['gate_timestamp_seconds'] ?? 45])
+                    ]
+                );
+
+                // Restore session status to in_progress
+                Database::execute(
+                    "UPDATE quiz_sessions SET status = 'in_progress', last_activity_at = NOW() WHERE id = ?",
+                    [$session['id']]
+                );
+            });
+
+            // Trigger Webhook Event (lead.captured)
+            try {
+                WebhookService::trigger((int)$session['tenant_id'], 'lead.captured', [
+                    'session_id' => (int)$session['id'],
+                    'funnel_id' => (int)$session['funnel_id'],
+                    'funnel_name' => $session['funnel_name'],
+                    'node_id' => $nodeId,
+                    'source' => 'video_gate',
+                    'lead_data' => $formData,
+                    'submitted_at' => date('Y-m-d H:i:s'),
+                ]);
+            } catch (\Throwable $e) {
+                Logger::error("Webhook dispatch failed: " . $e->getMessage());
+            }
+
+            return ['success' => true, 'is_unlocked' => true, 'gate_type' => 'lead_form'];
+        } else {
+            // Gate type: question
+            $selectedOptionId = isset($payload['option_id']) ? (int)$payload['option_id'] : null;
+            $selectedOptionLabel = $payload['option_label'] ?? '';
+
+            if (!$selectedOptionId && empty($selectedOptionLabel)) {
+                return ['success' => false, 'error' => 'Please select an answer to continue.'];
+            }
+
+            Database::transaction(function () use ($session, $nodeId, $node, $selectedOptionId, $selectedOptionLabel, $vgConfig) {
+                Database::execute(
+                    "UPDATE quiz_answers SET superseded_at = NOW() WHERE session_id = ? AND node_id = ? AND superseded_at IS NULL",
+                    [$session['id'], $nodeId]
+                );
+
+                Database::execute(
+                    "INSERT INTO quiz_answers (tenant_id, session_id, funnel_version_id, node_id, question_id, question_text_snapshot, answer_type, answer_value_text, selected_option_ids_json, answered_at) 
+                     VALUES (?, ?, ?, ?, NULL, ?, 'video_gate_question', ?, ?, NOW())",
+                    [
+                        $session['tenant_id'],
+                        $session['id'],
+                        $session['funnel_version_id'],
+                        $nodeId,
+                        $vgConfig['question']['question_text'] ?? ($node['title'] ?? 'Video Question'),
+                        $selectedOptionLabel ?: (string)$selectedOptionId,
+                        json_encode($selectedOptionId ? [$selectedOptionId] : [])
+                    ]
+                );
+
+                Database::execute(
+                    "INSERT INTO quiz_step_events (tenant_id, funnel_id, funnel_version_id, session_id, event_type, node_id, option_id, event_data_json, occurred_at) 
+                     VALUES (?, ?, ?, ?, 'video_gate_completed', ?, ?, ?, NOW())",
+                    [
+                        $session['tenant_id'],
+                        $session['funnel_id'],
+                        $session['funnel_version_id'],
+                        $session['id'],
+                        $nodeId,
+                        $selectedOptionId,
+                        json_encode(['gate_type' => 'question', 'option_id' => $selectedOptionId, 'option_label' => $selectedOptionLabel, 'provider' => $vgConfig['video_provider'] ?? 'youtube', 'gate_seconds' => $vgConfig['gate_timestamp_seconds'] ?? 45])
+                    ]
+                );
+
+                Database::execute(
+                    "UPDATE quiz_sessions SET status = 'in_progress', last_activity_at = NOW() WHERE id = ?",
+                    [$session['id']]
+                );
+            });
+
+            return ['success' => true, 'is_unlocked' => true, 'gate_type' => 'question', 'option_id' => $selectedOptionId];
+        }
+    }
+
+    public static function advanceVideoStep(string $rawToken, int $nodeId): array
+    {
+        $session = self::resolveSession($rawToken);
+        if (!$session) {
+            throw new RuntimeException("Invalid session.");
+        }
+
+        $graphSnapshot = json_decode($session['graph_snapshot_json'], true) ?: [];
+
+        $node = null;
+        foreach ($graphSnapshot['nodes'] ?? [] as $n) {
+            if ((int)$n['id'] === $nodeId) {
+                $node = $n;
+                break;
+            }
+        }
+        $nodeConfig = !empty($node['config_json']) ? (json_decode($node['config_json'], true) ?: []) : [];
+        $vgConfig = $nodeConfig['video_gate'] ?? ($node['video_gate'] ?? []);
+        $endAction = $vgConfig['end_action'] ?? ($vgConfig['on_video_end'] === 'message' || $vgConfig['on_video_end'] === 'thank_you' ? 'thank_you' : 'next_step');
+
+        if ($endAction === 'thank_you' || $endAction === 'message') {
+            $settingsSnapshot = json_decode($session['settings_snapshot_json'], true) ?: [];
+            return self::completeSessionWithMessage($session, $node ?: ['id' => $nodeId, 'title' => 'Video Step'], [
+                'success_heading' => $vgConfig['success_heading'] ?? '🎉 Thank You for Watching!',
+                'success_message' => $vgConfig['success_message'] ?? 'Your submission has been received. We will be in touch shortly.'
+            ], $graphSnapshot, $settingsSnapshot);
+        }
+
+        // Find the most recent active answer for this node to see if an option was selected
+        $lastAns = Database::fetchOne(
+            "SELECT * FROM quiz_answers WHERE session_id = ? AND node_id = ? AND superseded_at IS NULL ORDER BY id DESC LIMIT 1",
+            [$session['id'], $nodeId]
+        );
+
+        $selectedOptionId = null;
+        if ($lastAns && !empty($lastAns['selected_option_ids_json'])) {
+            $opts = json_decode($lastAns['selected_option_ids_json'], true) ?: [];
+            if (!empty($opts)) {
+                $selectedOptionId = (int)$opts[0];
+            }
+        }
+
+        $targetNodeId = null;
+        // 1. Try option-specific branch
+        if ($selectedOptionId) {
+            foreach ($graphSnapshot['edges'] ?? [] as $edge) {
+                if ((int)$edge['source_node_id'] === $nodeId && (int)$edge['source_option_id'] === $selectedOptionId) {
+                    $targetNodeId = (int)$edge['target_node_id'];
+                    break;
+                }
+            }
+        }
+
+        // 2. Try default outgoing edge from this node
+        if (!$targetNodeId) {
+            foreach ($graphSnapshot['edges'] ?? [] as $edge) {
+                if ((int)$edge['source_node_id'] === $nodeId && empty($edge['source_option_id'])) {
+                    $targetNodeId = (int)$edge['target_node_id'];
+                    break;
+                }
+            }
+        }
+
+        // 3. Fallback to any edge from this node
+        if (!$targetNodeId) {
+            foreach ($graphSnapshot['edges'] ?? [] as $edge) {
+                if ((int)$edge['source_node_id'] === $nodeId) {
+                    $targetNodeId = (int)$edge['target_node_id'];
+                    break;
+                }
+            }
+        }
+
+        if (!$targetNodeId) {
+            throw new RuntimeException("Routing error: No destination connected for this video step.");
+        }
+
+        Database::execute(
+            "UPDATE quiz_sessions SET current_node_id = ?, status = 'in_progress', last_activity_at = NOW() WHERE id = ?",
             [$targetNodeId, $session['id']]
         );
 

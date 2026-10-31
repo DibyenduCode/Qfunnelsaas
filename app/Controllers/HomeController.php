@@ -12,7 +12,7 @@ class HomeController
     {
         $plans = [];
         try {
-            $plans = Database::query("SELECT * FROM plans WHERE is_active = 1 ORDER BY price ASC, id ASC");
+            $plans = Database::query("SELECT * FROM plans WHERE is_active = 1 AND is_visible = 1 ORDER BY price ASC, id ASC");
         } catch (\Throwable $e) {
             $plans = [];
         }
@@ -20,6 +20,7 @@ class HomeController
         return view('home.index', [
             'title' => 'QFunnel — Interactive Quiz Funnel & Lead Qualification SaaS',
             'plans' => $plans,
+            'featureCatalog' => \App\Services\UsageLimitService::getFeatureCatalog(),
             'currentUser' => current_user(),
         ], null);
     }

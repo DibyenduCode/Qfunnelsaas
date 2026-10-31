@@ -8,6 +8,35 @@ use RuntimeException;
 
 class FunnelGraphService
 {
+    public static function parseVideoUrl(string $url): array
+    {
+        $url = trim($url);
+        if (preg_match('/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i', $url, $m)) {
+            return [
+                'provider' => 'youtube',
+                'id' => $m[1],
+                'hash' => '',
+                'clean_url' => "https://www.youtube.com/watch?v={$m[1]}"
+            ];
+        }
+        if (preg_match('/(?:vimeo\.com\/(?:video\/)?|player\.vimeo\.com\/video\/)([0-9]+)(?:\/([a-zA-Z0-9]+))?/i', $url, $m)) {
+            $id = $m[1];
+            $hash = $m[2] ?? '';
+            return [
+                'provider' => 'vimeo',
+                'id' => $id,
+                'hash' => $hash,
+                'clean_url' => $hash ? "https://vimeo.com/{$id}/{$hash}" : "https://vimeo.com/{$id}"
+            ];
+        }
+        return [
+            'provider' => null,
+            'id' => null,
+            'hash' => '',
+            'clean_url' => $url
+        ];
+    }
+
     public static function getGraph(int $tenantId, int $funnelId): array
     {
         $funnel = Database::fetchOne("SELECT * FROM funnels WHERE tenant_id = ? AND id = ?", [$tenantId, $funnelId]);
@@ -124,6 +153,40 @@ class FunnelGraphService
                     unset($fld);
                 }
                 $node['form'] = $formData;
+            } elseif ($node['node_type'] === 'video_gate') {
+                $vg = !empty($nodeConfig['video_gate']) ? $nodeConfig['video_gate'] : $nodeConfig;
+                $vgUrl = $vg['video_url'] ?? '';
+                $parsed = self::parseVideoUrl($vgUrl);
+                $vg['video_provider'] = $parsed['provider'] ?: ($vg['video_provider'] ?? 'youtube');
+                $vg['video_id'] = $parsed['id'] ?: ($vg['video_id'] ?? '');
+                $vg['video_hash'] = $parsed['hash'] ?: ($vg['video_hash'] ?? '');
+                $vg['video_url'] = $vgUrl;
+                $vg['video_headline'] = $vg['video_headline'] ?? '';
+                $vg['autoplay_behavior'] = isset($vg['autoplay_behavior']) ? (bool)$vg['autoplay_behavior'] : true;
+                $vg['gate_enabled'] = isset($vg['gate_enabled']) ? (bool)$vg['gate_enabled'] : true;
+                $vg['gate_timestamp_seconds'] = isset($vg['gate_timestamp_seconds']) ? (float)$vg['gate_timestamp_seconds'] : 45.0;
+                $vg['gate_type'] = $vg['gate_type'] ?? 'lead_form';
+                $vg['gate_headline'] = $vg['gate_headline'] ?? '🔒 Complete this quick step to continue watching';
+                $vg['gate_subheadline'] = $vg['gate_subheadline'] ?? 'Enter your details below to unlock the rest of this video.';
+                $vg['gate_button_text'] = $vg['gate_button_text'] ?? '▶️ Unlock & Continue Video';
+                $vg['allow_skip_gate'] = !empty($vg['allow_skip_gate']);
+                $vg['end_action'] = $vg['end_action'] ?? ($vg['on_video_end'] === 'message' || $vg['on_video_end'] === 'thank_you' ? 'thank_you' : 'next_step');
+                $vg['on_video_end'] = $vg['on_video_end'] ?? 'auto_advance';
+                $vg['success_heading'] = $vg['success_heading'] ?? '🎉 Thank You for Watching!';
+                $vg['success_message'] = $vg['success_message'] ?? 'Your submission has been received. We will be in touch shortly.';
+                $vg['cta_button_text'] = $vg['cta_button_text'] ?? 'Continue to Next Step ➔';
+                $vg['form_fields'] = $vg['form_fields'] ?? [
+                    ['id' => (int)($node['id'] * 1000 + 1), 'field_key' => 'name', 'label' => 'Full Name', 'field_type' => 'text', 'placeholder' => 'Enter your name', 'is_required' => 1],
+                    ['id' => (int)($node['id'] * 1000 + 2), 'field_key' => 'email', 'label' => 'Email Address', 'field_type' => 'email', 'placeholder' => 'Enter your email', 'is_required' => 1]
+                ];
+                $vg['question'] = $questionsByNode[$node['id']] ?? ($vg['question'] ?? [
+                    'question_text' => 'What best describes your current situation?',
+                    'options' => []
+                ]);
+                $node['video_gate'] = $vg;
+                if (!empty($questionsByNode[$node['id']])) {
+                    $node['question'] = $questionsByNode[$node['id']];
+                }
             }
             $enrichedNodes[] = $node;
         }
@@ -209,6 +272,20 @@ class FunnelGraphService
                     if (isset($node['destination_mode'])) $configPayload['destination_mode'] = $node['destination_mode'];
                     if (isset($node['calculator'])) $configPayload['calculator'] = $node['calculator'];
                     if (isset($node['quick_connect'])) $configPayload['quick_connect'] = $node['quick_connect'];
+                } elseif ($nodeType === 'video_gate') {
+                    $vgPayload = $node['video_gate'] ?? [];
+                    if (is_string($vgPayload)) {
+                        $vgPayload = json_decode($vgPayload, true) ?: [];
+                    }
+                    if (!empty($vgPayload['video_url'])) {
+                        $parsed = self::parseVideoUrl($vgPayload['video_url']);
+                        if ($parsed['provider']) {
+                            $vgPayload['video_provider'] = $parsed['provider'];
+                            $vgPayload['video_id'] = $parsed['id'];
+                            $vgPayload['video_hash'] = $parsed['hash'];
+                        }
+                    }
+                    $configPayload['video_gate'] = $vgPayload;
                 }
 
                 $configJson = !empty($configPayload) ? json_encode($configPayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null;
@@ -233,9 +310,11 @@ class FunnelGraphService
                 }
                 $touchedNodeIds[] = $dbNodeId;
 
-                // Handle Question Node configuration
-                if ($nodeType === 'question' && !empty($node['question'])) {
-                    $qData = $node['question'];
+                // Handle Question Node configuration (or Video Gate with Question Turnstile)
+                $isQuestionNode = ($nodeType === 'question' && !empty($node['question']));
+                $isVideoGateQuestion = ($nodeType === 'video_gate' && ($configPayload['video_gate']['gate_type'] ?? '') === 'question' && (!empty($node['question']) || !empty($configPayload['video_gate']['question'])));
+                if ($isQuestionNode || $isVideoGateQuestion) {
+                    $qData = !empty($node['question']) ? $node['question'] : ($configPayload['video_gate']['question'] ?? []);
                     $qText = trim($qData['question_text'] ?? 'Untitled Question');
                     $helpText = $qData['help_text'] ?? null;
                     $inputType = $node['input_type'] ?? ($configPayload['input_type'] ?? 'single_choice');
@@ -342,7 +421,7 @@ class FunnelGraphService
                 if ($hasLegacyStart) {
                     Database::execute("UPDATE funnel_nodes SET is_start = 1 WHERE id = ?", [$hasLegacyStart['id']]);
                 } else {
-                    Database::execute("UPDATE funnel_nodes SET is_start = 1 WHERE funnel_id = ? AND node_type IN ('question', 'form') ORDER BY id ASC LIMIT 1", [$funnelId]);
+                    Database::execute("UPDATE funnel_nodes SET is_start = 1 WHERE funnel_id = ? AND node_type IN ('question', 'form', 'video_gate') ORDER BY id ASC LIMIT 1", [$funnelId]);
                 }
             }
 
@@ -523,6 +602,48 @@ class FunnelGraphService
                         'type' => 'form_missing_route',
                         'severity' => 'error',
                         'message' => "Form '{$node['title']}' is set to route to a next step, but no next node is connected.",
+                        'node_id' => $node['id'],
+                    ];
+                }
+            } elseif ($node['node_type'] === 'video_gate') {
+                $nodeConfig = !empty($node['config_json']) ? (json_decode($node['config_json'], true) ?: []) : [];
+                $vg = $node['video_gate'] ?? ($nodeConfig['video_gate'] ?? []);
+                $videoUrl = trim($vg['video_url'] ?? '');
+                $parsed = self::parseVideoUrl($videoUrl);
+
+                if (empty($videoUrl)) {
+                    $issues[] = [
+                        'type' => 'video_gate_missing_url',
+                        'severity' => 'error',
+                        'message' => "Video Gate '{$node['title']}' requires a YouTube or Vimeo URL.",
+                        'node_id' => $node['id'],
+                    ];
+                } elseif (!$parsed['provider']) {
+                    $issues[] = [
+                        'type' => 'video_gate_invalid_url',
+                        'severity' => 'error',
+                        'message' => "Video Gate '{$node['title']}' must have a valid YouTube or Vimeo URL (e.g. https://www.youtube.com/watch?v=... or https://vimeo.com/...).",
+                        'node_id' => $node['id'],
+                    ];
+                }
+
+                $gateSeconds = isset($vg['gate_timestamp_seconds']) ? (float)$vg['gate_timestamp_seconds'] : 45.0;
+                if ($gateSeconds < 0) {
+                    $issues[] = [
+                        'type' => 'video_gate_invalid_timestamp',
+                        'severity' => 'error',
+                        'message' => "Video Gate '{$node['title']}' gate timestamp must be 0 seconds or greater.",
+                        'node_id' => $node['id'],
+                    ];
+                }
+
+                $endAction = $vg['end_action'] ?? ($vg['on_video_end'] === 'message' || $vg['on_video_end'] === 'thank_you' ? 'thank_you' : 'next_step');
+                $vgEdges = $edgesBySourceNode[$node['id']] ?? [];
+                if ($endAction !== 'thank_you' && $endAction !== 'message' && empty($vgEdges)) {
+                    $issues[] = [
+                        'type' => 'video_gate_missing_route',
+                        'severity' => 'error',
+                        'message' => "Video Gate '{$node['title']}' is configured to advance to a next step, but no next node is connected.",
                         'node_id' => $node['id'],
                     ];
                 }

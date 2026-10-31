@@ -1248,197 +1248,171 @@
                 </div>
             </div>
 
-            <!-- 4 Pricing Columns Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 items-stretch mb-12">
-                
-                <!-- 1. Free Forever Tier -->
-                <div class="ambient-card ambient-card-hover flex flex-col justify-between p-7 rounded-3xl border border-white/[0.08]">
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-lg font-bold text-white font-display">Free</h3>
-                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/[0.08] text-slate-300 border border-white/[0.1] font-mono">FREE FOREVER</span>
-                        </div>
-                        <div>
-                            <span class="text-3xl font-black text-white font-display">₹0</span>
-                            <span class="text-xs text-slate-400 font-mono"> / forever</span>
-                        </div>
-                        <p class="text-xs text-slate-400 leading-relaxed">
-                            Essential single-funnel plan for testing interactive quizzes and lead capture.
-                        </p>
-                        
-                        <div class="pt-4 border-t border-white/[0.08] space-y-2.5 text-xs text-slate-300">
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2 font-mono">INCLUDED:</span>
-                            <div class="flex items-start gap-2">
-                                <span class="text-emerald-400 font-bold">✓</span>
-                                <span>1 Active Funnel</span>
-                            </div>
-                            <div class="flex items-start gap-2">
-                                <span class="text-emerald-400 font-bold">✓</span>
-                                <span>100 Submissions / month</span>
-                            </div>
-                            <div class="flex items-start gap-2">
-                                <span class="text-emerald-400 font-bold">✓</span>
-                                <span>Visual Canvas Builder</span>
-                            </div>
-                            <div class="flex items-start gap-2">
-                                <span class="text-emerald-400 font-bold">✓</span>
-                                <span>Standard Universal Embeds</span>
-                            </div>
-                            <div class="flex items-start gap-2">
-                                <span class="text-emerald-400 font-bold">✓</span>
-                                <span>Bilingual Support (English & Bengali)</span>
-                            </div>
-                        </div>
+            <!-- Dynamic Pricing Columns Grid -->
+            <?php 
+            $planCount = count($plans ?? []);
+            $gridColsClass = 'grid-cols-1';
+            if ($planCount === 2) {
+                $gridColsClass = 'grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto';
+            } elseif ($planCount === 3) {
+                $gridColsClass = 'grid-cols-1 md:grid-cols-3 max-w-6xl mx-auto';
+            } elseif ($planCount >= 4) {
+                $gridColsClass = 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4';
+            } else {
+                $gridColsClass = 'grid-cols-1 max-w-md mx-auto';
+            }
+            ?>
+            <div class="grid <?= $gridColsClass ?> gap-6 lg:gap-8 items-stretch mb-12">
+                <?php if (empty($plans)): ?>
+                    <div class="col-span-full py-12 text-center text-slate-400">
+                        <p class="text-sm">No subscription plans are currently available for public registration. Please contact our support team.</p>
                     </div>
+                <?php else: ?>
+                    <?php foreach ($plans as $p): 
+                        $limits = json_decode($p['limits_json'] ?? '{}', true) ?: [];
+                        $features = json_decode($p['features_json'] ?? '{}', true) ?: [];
 
-                    <div class="pt-6">
-                        <a href="<?= url('/register') ?>" class="w-full py-3 px-4 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-white text-xs font-bold transition-all text-center block border border-white/[0.1]">
-                            Try for Free →
-                        </a>
-                    </div>
-                </div>
+                        $maxFunnels = (int)($limits['max_funnels'] ?? 1);
+                        $maxSubmissions = (int)($limits['max_submissions_per_month'] ?? 100);
+                        $maxTeam = (int)($limits['max_team_members'] ?? 1);
 
-                <!-- 2. Starter Tier -->
-                <div class="ambient-card ambient-card-hover flex flex-col justify-between p-7 rounded-3xl border border-white/[0.08]">
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-lg font-bold text-white font-display">Starter</h3>
-                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30 font-mono">GROWTH</span>
-                        </div>
-                        <div>
-                            <span class="text-3xl font-black text-white font-display" id="priceStarterDisplay">₹599</span>
-                            <span class="text-xs text-slate-400 font-mono" id="periodStarterDisplay"> / mo (billed yearly)</span>
-                        </div>
-                        <p class="text-xs text-slate-400 leading-relaxed">
-                            Ideal for emerging creators and growing lead funnels needing custom branding.
-                        </p>
-                        
-                        <div class="pt-4 border-t border-white/[0.08] space-y-2.5 text-xs text-slate-300">
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2 font-mono">INCLUDED:</span>
-                            <div class="flex items-start gap-2">
-                                <span class="text-emerald-400 font-bold">✓</span>
-                                <strong class="text-white">5 Active Funnels</strong>
-                            </div>
-                            <div class="flex items-start gap-2">
-                                <span class="text-emerald-400 font-bold">✓</span>
-                                <span>1,000 Submissions / month</span>
-                            </div>
-                            <div class="flex items-start gap-2">
-                                <span class="text-emerald-400 font-bold">✓</span>
-                                <span>CSV Lead Data Export</span>
-                            </div>
-                            <div class="flex items-start gap-2">
-                                <span class="text-emerald-400 font-bold">✓</span>
-                                <span>Custom Brand Logo & Accent Colors</span>
-                            </div>
-                            <div class="flex items-start gap-2">
-                                <span class="text-emerald-400 font-bold">✓</span>
-                                <span>3 Team Members Workspace</span>
-                            </div>
-                        </div>
-                    </div>
+                        $funnelsLabel = ($maxFunnels <= 0 || $maxFunnels == -1) ? 'Unlimited Active Funnels' : ($maxFunnels == 1 ? '1 Active Funnel' : "{$maxFunnels} Active Funnels");
+                        $submissionsLabel = ($maxSubmissions <= 0 || $maxSubmissions == -1) ? 'Unlimited Lead Submissions' : number_format($maxSubmissions) . ' Submissions / month';
+                        $teamLabel = ($maxTeam <= 0 || $maxTeam == -1) ? 'Unlimited Workspace Seats' : ($maxTeam == 1 ? '1 Team Member' : "{$maxTeam} Team Members Workspace");
 
-                    <div class="pt-6">
-                        <a href="<?= url('/register') ?>" class="w-full py-3 px-4 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-white text-xs font-bold transition-all text-center block border border-white/[0.1]">
-                            Choose Starter →
-                        </a>
-                    </div>
-                </div>
+                        $priceVal = (float)$p['price'];
+                        $isFree = ($priceVal <= 0);
+                        $isPro = in_array(strtolower($p['slug']), ['pro', 'popular'], true) || ($planCount > 1 && strtolower($p['slug']) === 'pro');
+                        $isAgency = in_array(strtolower($p['slug']), ['agency', 'enterprise'], true);
 
-                <!-- 3. Pro Tier (HIGHLIGHTED GLOWING CARD) -->
-                <div class="ambient-card ambient-card-hover flex flex-col justify-between p-7 rounded-3xl border-2 border-brand-500 relative shadow-2xl shadow-brand-500/20 bg-gradient-to-b from-brand-950/40 via-dark-900 to-dark-950">
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-lg font-bold text-white font-display">Pro</h3>
-                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-brand-500 text-white font-mono shadow-sm">MOST POPULAR</span>
-                        </div>
-                        <div>
-                            <span class="text-3xl font-black text-white font-display" id="priceProDisplay">₹1,199</span>
-                            <span class="text-xs text-slate-400 font-mono" id="periodProDisplay"> / mo (billed yearly)</span>
-                        </div>
-                        <p class="text-xs text-slate-300 leading-relaxed">
-                            Unlimited funnels and submissions for high-velocity teams and agencies.
-                        </p>
-                        
-                        <div class="pt-4 border-t border-brand-500/30 space-y-2.5 text-xs text-slate-200">
-                            <span class="text-[10px] font-bold text-brand-400 uppercase tracking-wider block mb-2 font-mono">ALL STARTER FEATURES PLUS:</span>
-                            <div class="flex items-start gap-2">
-                                <span class="text-emerald-400 font-bold">✓</span>
-                                <strong class="text-white">Unlimited Active Funnels</strong>
+                        if ($isFree) {
+                            $monthlyPriceDisplay = '₹0';
+                            $yearlyPriceDisplay = '₹0';
+                            $monthlyPeriod = ' / forever';
+                            $yearlyPeriod = ' / forever';
+                        } else {
+                            if (($p['billing_interval'] ?? 'monthly') === 'yearly') {
+                                $yearlyMonthlyEq = round($priceVal / 12);
+                                $monthlyReg = round($yearlyMonthlyEq * 1.25);
+                            } else {
+                                $monthlyReg = round($priceVal);
+                                $yearlyMonthlyEq = round($priceVal * 0.8);
+                            }
+                            $monthlyPriceDisplay = '₹' . number_format($monthlyReg);
+                            $yearlyPriceDisplay = '₹' . number_format($yearlyMonthlyEq);
+                            $monthlyPeriod = ' / month';
+                            $yearlyPeriod = ' / mo (billed yearly)';
+                        }
+                    ?>
+                        <div class="ambient-card ambient-card-hover flex flex-col justify-between p-7 rounded-3xl <?= $isPro ? 'border-2 border-brand-500 relative shadow-2xl shadow-brand-500/20 bg-gradient-to-b from-brand-950/40 via-dark-900 to-dark-950' : 'border border-white/[0.08]' ?>">
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="text-lg font-bold text-white font-display"><?= e($p['name']) ?></h3>
+                                    <?php if ($isPro): ?>
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-brand-500 text-white font-mono shadow-sm">MOST POPULAR</span>
+                                    <?php elseif ($isFree): ?>
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/[0.08] text-slate-300 border border-white/[0.1] font-mono">FREE FOREVER</span>
+                                    <?php elseif ($isAgency): ?>
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30 font-mono">SCALE</span>
+                                    <?php else: ?>
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30 font-mono">GROWTH</span>
+                                    <?php endif; ?>
+                                </div>
+                                <div>
+                                    <span class="text-3xl font-black text-white font-display dynamic-plan-price" data-monthly="<?= $monthlyPriceDisplay ?>" data-yearly="<?= $yearlyPriceDisplay ?>">
+                                        <?= $yearlyPriceDisplay ?>
+                                    </span>
+                                    <span class="text-xs text-slate-400 font-mono dynamic-plan-period" data-monthly="<?= $monthlyPeriod ?>" data-yearly="<?= $yearlyPeriod ?>">
+                                        <?= $yearlyPeriod ?>
+                                    </span>
+                                </div>
+                                <p class="text-xs <?= $isPro ? 'text-slate-300' : 'text-slate-400' ?> leading-relaxed">
+                                    <?= e($p['description'] ?: ($isFree ? 'Essential single-funnel plan for testing interactive quizzes and lead capture.' : 'Comprehensive plan designed for scaling interactive lead funnels.')) ?>
+                                </p>
+                                
+                                <div class="pt-4 border-t <?= $isPro ? 'border-brand-500/30 text-slate-200' : 'border-white/[0.08] text-slate-300' ?> space-y-2.5 text-xs">
+                                    <span class="text-[10px] font-bold <?= $isPro ? 'text-brand-400' : 'text-slate-400' ?> uppercase tracking-wider block mb-2 font-mono">
+                                        <?= $isPro ? 'ALL PERKS INCLUDED:' : 'INCLUDED PERKS:' ?>
+                                    </span>
+                                    <div class="flex items-start gap-2">
+                                        <span class="text-emerald-400 font-bold">✓</span>
+                                        <strong class="text-white"><?= e($funnelsLabel) ?></strong>
+                                    </div>
+                                    <div class="flex items-start gap-2">
+                                        <span class="text-emerald-400 font-bold">✓</span>
+                                        <span><?= e($submissionsLabel) ?></span>
+                                    </div>
+                                    <div class="flex items-start gap-2">
+                                        <span class="text-emerald-400 font-bold">✓</span>
+                                        <span><?= e($teamLabel) ?></span>
+                                    </div>
+                                    <?php if (!empty($features['visual_builder']) || $isPro || $isFree): ?>
+                                        <div class="flex items-start gap-2">
+                                            <span class="text-emerald-400 font-bold">✓</span>
+                                            <span>Visual Canvas Builder</span>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($features['calculator_mode']) || $isPro): ?>
+                                        <div class="flex items-start gap-2">
+                                            <span class="text-emerald-400 font-bold">✓</span>
+                                            <span>Interactive Calculator & Formulas</span>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($features['webhooks']) || $isPro): ?>
+                                        <div class="flex items-start gap-2">
+                                            <span class="text-emerald-400 font-bold">✓</span>
+                                            <span>Webhooks & Google Sheets Sync</span>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($features['api_access']) || $isPro): ?>
+                                        <div class="flex items-start gap-2">
+                                            <span class="text-emerald-400 font-bold">✓</span>
+                                            <span>REST API (v1) with Bearer Token</span>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($features['white_label']) || $isPro): ?>
+                                        <div class="flex items-start gap-2">
+                                            <span class="text-emerald-400 font-bold">✓</span>
+                                            <span>100% White-Label (No SaaS branding)</span>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($features['custom_branding']) || $isPro): ?>
+                                        <div class="flex items-start gap-2">
+                                            <span class="text-emerald-400 font-bold">✓</span>
+                                            <span>Custom Brand Logo & Accent Colors</span>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($features['export_leads']) || $isPro): ?>
+                                        <div class="flex items-start gap-2">
+                                            <span class="text-emerald-400 font-bold">✓</span>
+                                            <span>CSV Lead Data Export</span>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($features['audit_logs']) || $isAgency): ?>
+                                        <div class="flex items-start gap-2">
+                                            <span class="text-emerald-400 font-bold">✓</span>
+                                            <span>Full Audit Logs & Priority SLA</span>
+                                        </div>
+                                    <?php endif; ?>
+                                    <div class="flex items-start gap-2">
+                                        <span class="text-emerald-400 font-bold">✓</span>
+                                        <span>Universal Embeds (WP & Shopify)</span>
+                                    </div>
+                                    <div class="flex items-start gap-2">
+                                        <span class="text-emerald-400 font-bold">✓</span>
+                                        <span>Bilingual Support (English & Bengali)</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="flex items-start gap-2">
-                                <span class="text-emerald-400 font-bold">✓</span>
-                                <span>Unlimited Lead Submissions</span>
-                            </div>
-                            <div class="flex items-start gap-2">
-                                <span class="text-emerald-400 font-bold">✓</span>
-                                <span>Webhooks & Google Sheets Sync</span>
-                            </div>
-                            <div class="flex items-start gap-2">
-                                <span class="text-emerald-400 font-bold">✓</span>
-                                <span>REST API (v1) with Bearer Token</span>
-                            </div>
-                            <div class="flex items-start gap-2">
-                                <span class="text-emerald-400 font-bold">✓</span>
-                                <span>100% White-Label (No SaaS branding)</span>
-                            </div>
-                            <div class="flex items-start gap-2">
-                                <span class="text-emerald-400 font-bold">✓</span>
-                                <span>10 Team Members Workspace</span>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="pt-6">
-                        <a href="<?= url('/register') ?>" class="w-full py-3 px-4 rounded-xl brand-gradient-btn text-white text-xs font-bold transition-all text-center block shadow-lg">
-                            Get Pro Access →
-                        </a>
-                    </div>
-                </div>
-
-                <!-- 4. Super Admin / Platform License Tier -->
-                <div class="ambient-card ambient-card-hover flex flex-col justify-between p-7 rounded-3xl border border-white/[0.08]">
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-lg font-bold text-white font-display">Agency</h3>
-                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30 font-mono">SCALE</span>
-                        </div>
-                        <div>
-                            <span class="text-3xl font-black text-white font-display" id="priceAgencyDisplay">₹2,399</span>
-                            <span class="text-xs text-slate-400 font-mono" id="periodAgencyDisplay"> / mo (billed yearly)</span>
-                        </div>
-                        <p class="text-xs text-slate-400 leading-relaxed">
-                            Unlimited multi-tenant client workspaces, audit logs, and priority 24/7 SLA.
-                        </p>
-                        
-                        <div class="pt-4 border-t border-white/[0.08] space-y-2.5 text-xs text-slate-300">
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2 font-mono">SCALE BENEFITS:</span>
-                            <div class="flex items-start gap-2">
-                                <span class="text-emerald-400 font-bold">✓</span>
-                                <span>Dedicated Super Admin Controls</span>
-                            </div>
-                            <div class="flex items-start gap-2">
-                                <span class="text-emerald-400 font-bold">✓</span>
-                                <span>Unlimited Team Members Allowed</span>
-                            </div>
-                            <div class="flex items-start gap-2">
-                                <span class="text-emerald-400 font-bold">✓</span>
-                                <span>Custom SMTP & System Health Monitors</span>
-                            </div>
-                            <div class="flex items-start gap-2">
-                                <span class="text-emerald-400 font-bold">✓</span>
-                                <span>Full Audit Logs & Priority SLA Support</span>
+                            <div class="pt-6">
+                                <a href="<?= url('/register?plan=' . urlencode($p['slug'])) ?>" class="w-full py-3 px-4 rounded-xl <?= $isPro ? 'brand-gradient-btn text-white text-xs font-bold transition-all text-center block shadow-lg' : 'bg-white/[0.08] hover:bg-white/[0.14] text-white text-xs font-bold transition-all text-center block border border-white/[0.1]' ?>">
+                                    <?= $isFree ? 'Try for Free →' : ($isPro ? 'Get ' . e($p['name']) . ' Access →' : 'Choose ' . e($p['name']) . ' →') ?>
+                                </a>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="pt-6">
-                        <a href="<?= url('/register') ?>" class="w-full py-3 px-4 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-white text-xs font-bold transition-all text-center block border border-white/[0.1]">
-                            Get Agency Plan →
-                        </a>
-                    </div>
-                </div>
-
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </div>
 
             <!-- Lifetime Deal Highlight Card -->
@@ -2089,23 +2063,22 @@
             const toggle = document.getElementById('pricingIntervalToggle');
             const thumb = document.getElementById('pricingToggleThumb');
             
-            if (isAnnual) {
-                thumb.className = 'translate-x-5 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out';
-                document.getElementById('priceStarterDisplay').textContent = '₹599';
-                document.getElementById('periodStarterDisplay').textContent = ' / mo (billed yearly)';
-                document.getElementById('priceProDisplay').textContent = '₹1,199';
-                document.getElementById('periodProDisplay').textContent = ' / mo (billed yearly)';
-                document.getElementById('priceAgencyDisplay').textContent = '₹2,399';
-                document.getElementById('periodAgencyDisplay').textContent = ' / mo (billed yearly)';
-            } else {
-                thumb.className = 'translate-x-0 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out';
-                document.getElementById('priceStarterDisplay').textContent = '₹749';
-                document.getElementById('periodStarterDisplay').textContent = ' / month';
-                document.getElementById('priceProDisplay').textContent = '₹1,499';
-                document.getElementById('periodProDisplay').textContent = ' / month';
-                document.getElementById('priceAgencyDisplay').textContent = '₹2,999';
-                document.getElementById('periodAgencyDisplay').textContent = ' / month';
+            if (thumb) {
+                if (isAnnual) {
+                    thumb.className = 'translate-x-5 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out';
+                } else {
+                    thumb.className = 'translate-x-0 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out';
+                }
             }
+
+            document.querySelectorAll('.dynamic-plan-price').forEach(function(el) {
+                const val = isAnnual ? el.getAttribute('data-yearly') : el.getAttribute('data-monthly');
+                if (val) el.textContent = val;
+            });
+            document.querySelectorAll('.dynamic-plan-period').forEach(function(el) {
+                const val = isAnnual ? el.getAttribute('data-yearly') : el.getAttribute('data-monthly');
+                if (val) el.textContent = val;
+            });
         }
 
         // FAQ Accordion Toggler

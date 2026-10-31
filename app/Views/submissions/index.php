@@ -289,9 +289,15 @@ $stageMap = array_column($leadStages, null, 'slug');
                                     <span class="font-medium text-slate-800 block truncate" title="<?= e($sub['destination_name'] ?: 'None') ?>">
                                         <?= e($sub['destination_name'] ?: '—') ?>
                                     </span>
-                                    <span class="text-[10px] text-slate-400 capitalize block">
-                                        <?= e(str_replace('_', ' ', $sub['status'])) ?>
-                                    </span>
+                                    <?php if ($sub['status'] === 'form_pending_video_gate'): ?>
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                            <span>🎬</span> Video Gate Pending
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="text-[10px] text-slate-400 capitalize block">
+                                            <?= e(str_replace('_', ' ', $sub['status'])) ?>
+                                        </span>
+                                    <?php endif; ?>
                                 </td>
 
                                 <!-- Date & Time -->

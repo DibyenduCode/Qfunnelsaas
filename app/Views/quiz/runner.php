@@ -245,6 +245,123 @@
                 </form>
             </div>
 
+                        <!-- Video Gate Step Container (🎬 Interactive Video Gate Node) -->
+            <div id="videoGateSection" class="hidden space-y-4">
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-[11px] font-extrabold uppercase tracking-wider text-rose-500 flex items-center gap-1.5">
+                            <span>🎬</span>
+                            <span id="videoGatePlatformLabel">Interactive Video Step</span>
+                        </span>
+                        <span id="videoGateBadge" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-2xs">
+                            <span id="videoGateBadgeIcon">🔒</span>
+                            <span id="videoGateBadgeText">Gate at 00:45s</span>
+                        </span>
+                    </div>
+                    <h2 id="videoHeadline" class="text-xl sm:text-2xl font-extrabold <?= $isDark ? 'text-white' : 'text-[#0F172A]' ?> tracking-tight leading-snug"></h2>
+                </div>
+
+                <!-- Video Viewport Container (16:9 Aspect Ratio) -->
+                <div id="videoPlayerWrapper" class="relative w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-lg border <?= $isDark ? 'border-slate-800' : 'border-slate-200' ?> select-none">
+                    <!-- Underlying Iframe Container -->
+                    <div id="videoIframeTarget" class="absolute inset-0 w-full h-full pointer-events-none"></div>
+
+                    <!-- Transparent Interaction Shield: intercepts direct clicks to prevent opening YT/Vimeo external links -->
+                    <div id="videoInteractionShield" onclick="handleVideoShieldClick()" class="absolute inset-0 z-10 cursor-pointer"></div>
+
+                    <!-- Floating Tap to Unmute Badge (shown if smart autoplay starts muted) -->
+                    <button type="button" id="tapToUnmuteBtn" onclick="unmuteVideoPlayer(event)" class="hidden absolute top-4 left-4 z-20 px-3 py-1.5 rounded-full bg-black/80 backdrop-blur-md text-white text-xs font-bold border border-white/20 shadow-lg flex items-center gap-1.5 hover:bg-black/90 transition-all">
+                        <span>🔊</span>
+                        <span>Tap to Unmute</span>
+                    </button>
+
+                    <!-- Big Play / Pause Overlay Icon indicator on user tap -->
+                    <div id="playStateIndicator" class="pointer-events-none absolute inset-0 z-15 flex items-center justify-center opacity-0 transition-opacity duration-200">
+                        <div class="w-16 h-16 rounded-full bg-black/60 backdrop-blur-sm text-white flex items-center justify-center text-2xl shadow-xl">
+                            <span id="playStateIcon">▶</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Glassmorphism Mid-Roll Gate Modal Popup (Floating Viewport Modal z-50) -->
+                <div id="videoGateOverlay" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md transition-all duration-300 hidden select-none" style="backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);">
+                    <div class="w-full max-w-md max-h-[90vh] overflow-y-auto p-6 sm:p-7 rounded-3xl border border-white/10 bg-slate-900/95 text-white shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                        <div class="text-center space-y-2">
+                            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-xs">
+                                <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                                <span id="overlayPillBadgeText">🔒 Video Gate Required</span>
+                            </div>
+                            <h3 id="overlayGateHeadline" class="text-lg sm:text-xl font-extrabold tracking-tight text-white leading-snug"></h3>
+                            <p id="overlayGateSubheadline" class="text-xs text-slate-400 font-medium leading-relaxed"></p>
+                        </div>
+
+                        <!-- Dynamic Gate Content: Form Fields OR Question Options -->
+                        <div id="overlayGateContent"></div>
+
+                        <!-- Error Notice inside Overlay -->
+                        <div id="overlayErrorNotice" class="hidden text-xs text-rose-400 font-semibold p-3 rounded-xl bg-rose-500/10 border border-rose-500/20"></div>
+
+                        <!-- Skip Gate Link (if allow_skip_gate is true) -->
+                        <div id="overlaySkipContainer" class="hidden text-center pt-1">
+                            <button type="button" onclick="skipVideoGate()" class="text-xs text-slate-400 hover:text-white underline transition-colors">
+                                Skip for now →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Branded Player Control Bar -->
+                <div id="customPlayerControls" class="p-3 rounded-xl border <?= $isDark ? 'border-slate-800 bg-[#141822]' : 'border-slate-200 bg-white' ?> shadow-xs space-y-2">
+                    <!-- Custom Progress Bar Track -->
+                    <div class="relative w-full pt-1 pb-1">
+                        <div id="customProgressTrack" onclick="handleProgressBarSeek(event)" class="relative w-full h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full cursor-not-allowed overflow-visible">
+                            <!-- Filled Bar -->
+                            <div id="customProgressFill" class="h-full rounded-full brand-bg transition-all duration-75" style="width: 0%;"></div>
+                            <!-- Lock Marker -->
+                            <div id="gateLockMarker" class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-amber-400 border-2 border-white shadow-md flex items-center justify-center text-[8px] z-20 pointer-events-none" title="Gate Lock Marker">
+                                🔒
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Buttons & Time Display -->
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-3">
+                            <!-- Play / Pause Button -->
+                            <button type="button" id="controlPlayPauseBtn" onclick="togglePlayPause()" class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold transition-colors">
+                                <span id="controlPlayIcon">▶</span>
+                            </button>
+                            <!-- Time Display -->
+                            <span class="font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                                <span id="currentTimeDisplay">00:00</span> / <span id="durationDisplay">00:00</span>
+                            </span>
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <!-- Mute / Unmute Button -->
+                            <button type="button" id="controlMuteBtn" onclick="toggleMute()" class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold transition-colors">
+                                <span id="controlMuteIcon">🔊</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- End of Video CTA Button (when on_video_end is 'show_cta_button') -->
+                <div id="videoEndCtaContainer" class="hidden pt-2">
+                    <button type="button" id="videoEndCtaBtn" onclick="handleVideoStepComplete()" class="w-full py-4 rounded-xl btn-brand text-white text-sm font-extrabold shadow-md flex items-center justify-center gap-2">
+                        <span id="videoEndCtaBtnText">Continue to Next Step →</span>
+                    </button>
+                </div>
+
+                <!-- Navigation Footer (Back Button) -->
+                <div class="pt-3 border-t <?= $isDark ? 'border-slate-800' : 'border-slate-100' ?> flex items-center justify-between">
+                    <button type="button" id="videoBackBtn" onclick="handleBackNavigation()" class="px-4 py-2.5 rounded-xl border <?= $isDark ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-50' ?> text-xs font-bold hidden transition-colors">
+                        ← Back
+                    </button>
+                </div>
+            </div>
+
             <!-- Question Step Container -->
             <div id="questionSection" class="hidden space-y-6">
                 <div>
@@ -533,6 +650,29 @@
                 return;
             }
 
+            if (stepResponse.status === 'video_gate_step') {
+                const qSec = document.getElementById('questionSection');
+                if (qSec) qSec.classList.add('hidden');
+                const fSec = document.getElementById('formSection');
+                if (fSec) fSec.classList.add('hidden');
+                const rSec = document.getElementById('resultSection');
+                if (rSec) rSec.classList.add('hidden');
+                const vgSec = document.getElementById('videoGateSection');
+                if (vgSec) vgSec.classList.remove('hidden');
+
+                document.getElementById('stepProgressBadge').classList.remove('hidden');
+                currentStepNumber = stepResponse.step.step_number || 1;
+                document.getElementById('currentStepNum').textContent = currentStepNumber;
+                updateProgressBar(currentStepNumber, 4);
+                currentStepData = stepResponse.step;
+                showVideoGate(stepResponse.step);
+                return;
+            }
+
+            const vgSec = document.getElementById('videoGateSection');
+            if (vgSec) vgSec.classList.add('hidden');
+            cleanupVideoPlayer();
+
             if (stepResponse.status === 'form_step') {
                 document.getElementById('questionSection').classList.add('hidden');
                 document.getElementById('resultSection').classList.add('hidden');
@@ -772,6 +912,9 @@
         }
 
         function renderResult(result) {
+            cleanupVideoPlayer();
+            const vgSec = document.getElementById('videoGateSection');
+            if (vgSec) vgSec.classList.add('hidden');
             const questionSection = document.getElementById('questionSection');
             if (questionSection) questionSection.classList.add('hidden');
             const formSection = document.getElementById('formSection');
@@ -1003,6 +1146,789 @@
         function escapeHtml(str) {
             return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
+
+        // =========================================================================
+        // 🎬 UNIFIED VIDEO GATE ENGINE (YouTube & Vimeo SDK Wrapper)
+        // Mid-Roll Lead Capture & Question Turnstile with Anti-Skip Protection
+        // =========================================================================
+        let videoPlayerInstance = null;
+        let videoProvider = null; // 'youtube' or 'vimeo'
+        let videoTimePollInterval = null;
+        let maxWatchedTime = 0;
+        let isGateUnlocked = false;
+        let gateTimestampSeconds = 45;
+        let currentVideoDuration = 0;
+        let isVideoPlaying = false;
+        let isVideoMuted = false;
+        let isGateOverlayVisible = false;
+        let hasReachedGateMilestone = false;
+        let currentVideoStepData = null;
+
+        // Lazy-load official SDKs
+        function loadYouTubeApi(callback) {
+            if (window.YT && window.YT.Player) {
+                callback();
+                return;
+            }
+            if (!document.getElementById('yt-iframe-api-script')) {
+                const tag = document.createElement('script');
+                tag.id = 'yt-iframe-api-script';
+                tag.src = 'https://www.youtube.com/iframe_api';
+                const firstScript = document.getElementsByTagName('script')[0];
+                firstScript.parentNode.insertBefore(tag, firstScript);
+            }
+            const prevReady = window.onYouTubeIframeAPIReady;
+            window.onYouTubeIframeAPIReady = function () {
+                if (typeof prevReady === 'function') prevReady();
+                callback();
+            };
+        }
+
+        function loadVimeoApi(callback) {
+            if (window.Vimeo && window.Vimeo.Player) {
+                callback();
+                return;
+            }
+            if (!document.getElementById('vimeo-player-api-script')) {
+                const tag = document.createElement('script');
+                tag.id = 'vimeo-player-api-script';
+                tag.src = 'https://player.vimeo.com/api/player.js';
+                tag.onload = callback;
+                const firstScript = document.getElementsByTagName('script')[0];
+                firstScript.parentNode.insertBefore(tag, firstScript);
+            } else {
+                const tag = document.getElementById('vimeo-player-api-script');
+                const prevOnload = tag.onload;
+                tag.onload = function () {
+                    if (typeof prevOnload === 'function') prevOnload();
+                    callback();
+                };
+            }
+        }
+
+        function cleanupVideoPlayer() {
+            if (videoTimePollInterval) {
+                clearInterval(videoTimePollInterval);
+                videoTimePollInterval = null;
+            }
+            if (videoPlayerInstance) {
+                try {
+                    if (videoProvider === 'youtube' && typeof videoPlayerInstance.destroy === 'function') {
+                        videoPlayerInstance.destroy();
+                    } else if (videoProvider === 'vimeo' && typeof videoPlayerInstance.destroy === 'function') {
+                        videoPlayerInstance.destroy();
+                    }
+                } catch (e) {
+                    console.warn('Error destroying player:', e);
+                }
+                videoPlayerInstance = null;
+            }
+            const container = document.getElementById('videoIframeTarget');
+            if (container) container.innerHTML = '';
+            isVideoPlaying = false;
+            isGateOverlayVisible = false;
+        }
+
+        function formatTimeMmSs(sec) {
+            if (isNaN(sec) || sec < 0) sec = 0;
+            const m = Math.floor(sec / 60);
+            const s = Math.floor(sec % 60);
+            return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        function showVideoGate(step) {
+            cleanupVideoPlayer();
+            currentVideoStepData = step;
+            const vg = step.video_gate || {};
+
+            videoProvider = (vg.video_provider || 'youtube').toLowerCase();
+            isGateUnlocked = !!step.is_gate_unlocked || vg.gate_enabled === false;
+            gateTimestampSeconds = parseFloat(vg.gate_timestamp_seconds !== undefined ? vg.gate_timestamp_seconds : 45);
+            maxWatchedTime = 0;
+            hasReachedGateMilestone = false;
+            currentVideoDuration = 0;
+
+            // Render Header & Badges
+            document.getElementById('videoHeadline').textContent = vg.video_headline || step.title || 'Interactive Video Step';
+            document.getElementById('videoGatePlatformLabel').textContent = videoProvider === 'vimeo' ? 'Vimeo Video Step' : 'YouTube Video Step';
+
+            const gateBadge = document.getElementById('videoGateBadge');
+            const gateBadgeText = document.getElementById('videoGateBadgeText');
+            if (vg.gate_enabled !== false) {
+                gateBadge.classList.remove('hidden');
+                gateBadgeText.textContent = isGateUnlocked ? '✓ Gate Unlocked' : `🔒 Gate at ${formatTimeMmSs(gateTimestampSeconds)}`;
+                if (isGateUnlocked) {
+                    gateBadge.className = 'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20';
+                } else {
+                    gateBadge.className = 'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20';
+                }
+            } else {
+                gateBadge.classList.add('hidden');
+            }
+
+            // Controls reset
+            document.getElementById('currentTimeDisplay').textContent = '00:00';
+            document.getElementById('durationDisplay').textContent = '00:00';
+            document.getElementById('customProgressFill').style.width = '0%';
+            document.getElementById('controlPlayIcon').textContent = '▶';
+            document.getElementById('videoGateOverlay').classList.add('hidden');
+            document.getElementById('tapToUnmuteBtn').classList.add('hidden');
+            document.getElementById('videoEndCtaContainer').classList.add('hidden');
+            const endAction = vg.end_action || (vg.on_video_end === 'message' || vg.on_video_end === 'thank_you' ? 'thank_you' : 'next_step');
+            const ctaBtnText = document.getElementById('videoEndCtaBtnText');
+            if (ctaBtnText) {
+                ctaBtnText.textContent = vg.cta_button_text || (endAction === 'thank_you' ? '🎉 Complete & View Results ➔' : 'Continue to Next Step ➔');
+            }
+
+            // Back button visibility
+            const backBtn = document.getElementById('videoBackBtn');
+            if (backBtn) {
+                if (step.can_go_back) {
+                    backBtn.classList.remove('hidden');
+                } else {
+                    backBtn.classList.add('hidden');
+                }
+            }
+
+            // Lock progress bar scrubbing if gate not yet unlocked
+            updateProgressScrubState();
+
+            // Fire milestone: video_started
+            recordVideoEvent('video_started', { provider: videoProvider, video_id: vg.video_id });
+
+            // Initialize respective SDK player
+            if (videoProvider === 'vimeo') {
+                initVimeoPlayer(vg);
+            } else {
+                initYouTubePlayer(vg);
+            }
+        }
+
+        function updateProgressScrubState() {
+            const track = document.getElementById('customProgressTrack');
+            const marker = document.getElementById('gateLockMarker');
+            if (isGateUnlocked) {
+                track.className = 'relative w-full h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full cursor-pointer overflow-visible';
+                marker.textContent = '🔓';
+                marker.className = 'absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-emerald-500 text-white border-2 border-white shadow-md flex items-center justify-center text-[8px] z-20 pointer-events-none';
+            } else {
+                track.className = 'relative w-full h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full cursor-not-allowed overflow-visible';
+                marker.textContent = '🔒';
+                marker.className = 'absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-amber-400 border-2 border-white shadow-md flex items-center justify-center text-[8px] z-20 pointer-events-none';
+            }
+        }
+
+        function initYouTubePlayer(vg) {
+            loadYouTubeApi(() => {
+                const target = document.getElementById('videoIframeTarget');
+                target.innerHTML = '<div id="ytPlayerElement" class="w-full h-full"></div>';
+
+                videoPlayerInstance = new YT.Player('ytPlayerElement', {
+                    videoId: vg.video_id,
+                    playerVars: {
+                        controls: 0,
+                        disablekb: 1,
+                        rel: 0,
+                        modestbranding: 1,
+                        playsinline: 1,
+                        fs: 0,
+                        iv_load_policy: 3,
+                        enablejsapi: 1,
+                        origin: window.location.origin
+                    },
+                    events: {
+                        onReady: (e) => {
+                            try {
+                                currentVideoDuration = e.target.getDuration() || 0;
+                                document.getElementById('durationDisplay').textContent = formatTimeMmSs(currentVideoDuration);
+                                updateLockMarkerPosition(currentVideoDuration);
+
+                                if (vg.autoplay_behavior) {
+                                    // Browser autoplay policy requires starting muted
+                                    e.target.mute();
+                                    isVideoMuted = true;
+                                    document.getElementById('controlMuteIcon').textContent = '🔇';
+                                    document.getElementById('tapToUnmuteBtn').classList.remove('hidden');
+                                    e.target.playVideo();
+                                }
+                            } catch (err) {
+                                console.warn('YT ready handler error:', err);
+                            }
+                        },
+                        onStateChange: (e) => {
+                            if (e.data === YT.PlayerState.PLAYING) {
+                                isVideoPlaying = true;
+                                document.getElementById('controlPlayIcon').textContent = '⏸';
+                                startTimePolling();
+                            } else if (e.data === YT.PlayerState.PAUSED) {
+                                isVideoPlaying = false;
+                                document.getElementById('controlPlayIcon').textContent = '▶';
+                            } else if (e.data === YT.PlayerState.ENDED) {
+                                isVideoPlaying = false;
+                                document.getElementById('controlPlayIcon').textContent = '▶';
+                                onVideoEnded();
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
+        function initVimeoPlayer(vg) {
+            loadVimeoApi(() => {
+                const target = document.getElementById('videoIframeTarget');
+                target.innerHTML = '';
+
+                videoPlayerInstance = new Vimeo.Player(target, {
+                    id: vg.video_id,
+                    controls: false,
+                    keyboard: false,
+                    playsinline: true,
+                    title: false,
+                    byline: false,
+                    portrait: false,
+                    dnt: true,
+                    responsive: true,
+                    autoplay: !!vg.autoplay_behavior
+                });
+
+                videoPlayerInstance.getDuration().then(dur => {
+                    currentVideoDuration = dur;
+                    document.getElementById('durationDisplay').textContent = formatTimeMmSs(dur);
+                    updateLockMarkerPosition(dur);
+                });
+
+                if (vg.autoplay_behavior) {
+                    videoPlayerInstance.setMuted(true).then(() => {
+                        isVideoMuted = true;
+                        document.getElementById('controlMuteIcon').textContent = '🔇';
+                        document.getElementById('tapToUnmuteBtn').classList.remove('hidden');
+                    });
+                }
+
+                videoPlayerInstance.on('play', () => {
+                    isVideoPlaying = true;
+                    document.getElementById('controlPlayIcon').textContent = '⏸';
+                    startTimePolling();
+                });
+
+                videoPlayerInstance.on('pause', () => {
+                    isVideoPlaying = false;
+                    document.getElementById('controlPlayIcon').textContent = '▶';
+                });
+
+                videoPlayerInstance.on('ended', () => {
+                    isVideoPlaying = false;
+                    document.getElementById('controlPlayIcon').textContent = '▶';
+                    onVideoEnded();
+                });
+
+                videoPlayerInstance.on('timeupdate', (data) => {
+                    handleTimeUpdate(data.seconds);
+                });
+            });
+        }
+
+        function updateLockMarkerPosition(duration) {
+            const marker = document.getElementById('gateLockMarker');
+            if (duration > 0 && gateTimestampSeconds > 0) {
+                const pct = Math.min(100, (gateTimestampSeconds / duration) * 100);
+                marker.style.left = `${pct}%`;
+                marker.title = `Gate triggers at ${formatTimeMmSs(gateTimestampSeconds)}`;
+            } else {
+                marker.style.left = '50%';
+            }
+        }
+
+        function startTimePolling() {
+            if (videoTimePollInterval) clearInterval(videoTimePollInterval);
+            videoTimePollInterval = setInterval(async () => {
+                if (!videoPlayerInstance || !isVideoPlaying) return;
+                try {
+                    let curTime = 0;
+                    if (videoProvider === 'youtube' && typeof videoPlayerInstance.getCurrentTime === 'function') {
+                        curTime = videoPlayerInstance.getCurrentTime() || 0;
+                        handleTimeUpdate(curTime);
+                    }
+                } catch (e) {
+                    console.warn('Time poll error:', e);
+                }
+            }, 200);
+        }
+
+        // Anti-Skip Guard Engine
+        function handleTimeUpdate(currentTime) {
+            if (isGateOverlayVisible) return;
+
+            // Track duration if wasn't set yet
+            if (currentVideoDuration <= 0 && currentTime > 0) {
+                if (videoProvider === 'youtube' && typeof videoPlayerInstance.getDuration === 'function') {
+                    currentVideoDuration = videoPlayerInstance.getDuration() || 0;
+                }
+                if (currentVideoDuration > 0) {
+                    document.getElementById('durationDisplay').textContent = formatTimeMmSs(currentVideoDuration);
+                    updateLockMarkerPosition(currentVideoDuration);
+                }
+            }
+
+            // Anti-Skip Guard: visitor attempted to scrub ahead before gate is unlocked
+            if (!isGateUnlocked) {
+                if (currentTime > maxWatchedTime + 1.5) {
+                    forceSeek(maxWatchedTime);
+                    showFlashNotice('⚠️ Skipping ahead is locked until you complete this step.');
+                    return;
+                } else if (currentTime > maxWatchedTime) {
+                    maxWatchedTime = currentTime;
+                }
+
+                // Hit Mid-Roll Turnstile Gate!
+                if (currentTime >= gateTimestampSeconds) {
+                    triggerGateTurnstile();
+                    return;
+                }
+            }
+
+            // Update UI Progress Bar & Timer
+            document.getElementById('currentTimeDisplay').textContent = formatTimeMmSs(currentTime);
+            if (currentVideoDuration > 0) {
+                const pct = Math.min(100, (currentTime / currentVideoDuration) * 100);
+                document.getElementById('customProgressFill').style.width = `${pct}%`;
+            }
+        }
+
+        function triggerGateTurnstile() {
+            if (isGateUnlocked || isGateOverlayVisible) return;
+            isGateOverlayVisible = true;
+
+            // Force pause and lock playback at gate timestamp
+            pauseVideo();
+            forceSeek(gateTimestampSeconds);
+            document.getElementById('currentTimeDisplay').textContent = formatTimeMmSs(gateTimestampSeconds);
+
+            if (!hasReachedGateMilestone) {
+                hasReachedGateMilestone = true;
+                recordVideoEvent('video_gate_reached', {
+                    timestamp: gateTimestampSeconds,
+                    provider: videoProvider,
+                    video_id: currentVideoStepData?.video_gate?.video_id
+                });
+            }
+
+            renderGateOverlayContent();
+            document.getElementById('videoGateOverlay').classList.remove('hidden');
+        }
+
+        function renderGateOverlayContent() {
+            const vg = currentVideoStepData?.video_gate || {};
+            const gateType = vg.gate_type || 'lead_form';
+
+            document.getElementById('overlayGateHeadline').textContent = vg.gate_headline || '🔒 Complete this quick step to continue watching';
+            document.getElementById('overlayGateSubheadline').textContent = vg.gate_subheadline || 'Enter your details below to unlock the rest of this video.';
+
+            const content = document.getElementById('overlayGateContent');
+            const errBox = document.getElementById('overlayErrorNotice');
+            errBox.classList.add('hidden');
+            errBox.textContent = '';
+
+            const skipContainer = document.getElementById('overlaySkipContainer');
+            if (vg.allow_skip_gate) {
+                skipContainer.classList.remove('hidden');
+            } else {
+                skipContainer.classList.add('hidden');
+            }
+
+            if (gateType === 'question') {
+                const q = vg.question || { question_text: 'What best describes your situation?', options: [] };
+                const opts = q.options || [];
+
+                content.innerHTML = `
+                    <div class="space-y-3.5">
+                        ${q.question_text ? `
+                            <p class="font-bold text-xs text-slate-300 mb-1">
+                                ${escapeHtml(q.question_text)}
+                            </p>
+                        ` : ''}
+                        <div class="space-y-2.5">
+                            ${opts.map((opt, idx) => `
+                                <button type="button" onclick="submitVideoQuestionOption(${opt.id}, '${escapeHtml(opt.label)}')"
+                                        class="w-full p-3.5 rounded-2xl border border-slate-700/80 bg-slate-800/80 hover:border-[#5B5BD6] hover:bg-indigo-950/40 text-left text-xs font-semibold flex items-center justify-between transition-all group shadow-xs hover:scale-[1.01]">
+                                    <div class="flex items-center gap-2.5">
+                                        <span class="w-6 h-6 rounded-full bg-slate-700/70 text-slate-300 text-[10px] font-bold flex items-center justify-center group-hover:bg-[#5B5BD6] group-hover:text-white transition-colors">
+                                            ${String.fromCharCode(65 + idx)}
+                                        </span>
+                                        <span class="text-white group-hover:text-indigo-300 font-medium">${escapeHtml(opt.label)}</span>
+                                    </div>
+                                    <span class="text-[11px] text-slate-400 font-bold group-hover:text-indigo-400 flex items-center gap-1">
+                                        <span>Unlock</span>
+                                        <span>▶</span>
+                                    </span>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Lead Form
+                const fields = vg.form_fields || [
+                    { field_key: 'name', label: 'Full Name', field_type: 'text', placeholder: 'Enter your name', is_required: 1 },
+                    { field_key: 'email', label: 'Email Address', field_type: 'email', placeholder: 'Enter your email', is_required: 1 }
+                ];
+
+                content.innerHTML = `
+                    <form id="videoGateLeadForm" onsubmit="handleVideoLeadSubmit(event)" class="space-y-3.5">
+                        ${fields.map(f => {
+                            if (f.field_type === 'consent') {
+                                return `
+                                    <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-800/60 border border-slate-700/80 cursor-pointer hover:border-slate-600 transition-colors">
+                                        <input type="checkbox" name="${escapeHtml(f.field_key)}" value="1" ${f.is_required ? 'required' : ''} class="mt-0.5 rounded text-[#5B5BD6] bg-slate-900 border-slate-700 focus:ring-offset-slate-900">
+                                        <span class="text-xs text-slate-300 leading-snug">${escapeHtml(f.label || 'I agree to the terms and privacy policy')}</span>
+                                    </label>
+                                `;
+                            }
+
+                            let iconSvg = `<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>`;
+                            if (f.field_type === 'email' || f.field_key === 'email') {
+                                iconSvg = `<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>`;
+                            } else if (f.field_type === 'phone' || f.field_key === 'phone') {
+                                iconSvg = `<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>`;
+                            } else if (f.field_key === 'name') {
+                                iconSvg = `<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>`;
+                            } else if (f.field_key === 'company') {
+                                iconSvg = `<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>`;
+                            }
+
+                            return `
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-300 mb-1">
+                                        ${escapeHtml(f.label || f.field_key)} ${f.is_required ? '<span class="text-rose-400">*</span>' : ''}
+                                    </label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                            ${iconSvg}
+                                        </div>
+                                        <input type="${f.field_type === 'email' ? 'email' : (f.field_type === 'phone' ? 'tel' : 'text')}"
+                                               name="${escapeHtml(f.field_key)}"
+                                               placeholder="${escapeHtml(f.placeholder || '')}"
+                                               ${f.is_required ? 'required' : ''}
+                                               class="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-700/80 bg-slate-800/80 text-xs font-medium text-white placeholder-slate-500 hover:border-slate-600 focus:border-[#5B5BD6] focus:ring-2 focus:ring-[#5B5BD6]/30 focus:outline-none transition-all">
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+
+                        <button type="submit" id="videoGateSubmitBtn"
+                                class="w-full py-3.5 rounded-xl btn-brand text-white text-xs font-bold shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/50 flex items-center justify-center gap-2 transition-all mt-2">
+                            <span>${escapeHtml(vg.gate_button_text || '▶️ Unlock & Continue Video')}</span>
+                        </button>
+                    </form>
+                `;
+            }
+        }
+
+        function isDarkTheme() {
+            return document.body.classList.contains('bg-[#0D0F14]');
+        }
+
+        async function handleVideoLeadSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('videoGateSubmitBtn');
+            const errBox = document.getElementById('overlayErrorNotice');
+            btn.disabled = true;
+            btn.textContent = 'Verifying & Unlocking...';
+            errBox.classList.add('hidden');
+
+            const form = document.getElementById('videoGateLeadForm');
+            const formData = new FormData(form);
+            const payload = {};
+            formData.forEach((val, key) => { payload[key] = val; });
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/quiz/video-gate-submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Quiz-Session': sessionToken
+                    },
+                    body: JSON.stringify({
+                        node_id: currentVideoStepData.node_id,
+                        form_data: payload
+                    })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    unlockGateAndResume();
+                } else {
+                    errBox.textContent = res.error || 'Please fill in all required fields.';
+                    errBox.classList.remove('hidden');
+                    btn.disabled = false;
+                    btn.textContent = currentVideoStepData?.video_gate?.gate_button_text || '▶️ Unlock & Continue Video';
+                }
+            } catch (err) {
+                errBox.textContent = 'Network error. Please try again.';
+                errBox.classList.remove('hidden');
+                btn.disabled = false;
+                btn.textContent = currentVideoStepData?.video_gate?.gate_button_text || '▶️ Unlock & Continue Video';
+            }
+        }
+
+        async function submitVideoQuestionOption(optionId, optionLabel) {
+            const errBox = document.getElementById('overlayErrorNotice');
+            errBox.classList.add('hidden');
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/quiz/video-gate-submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Quiz-Session': sessionToken
+                    },
+                    body: JSON.stringify({
+                        node_id: currentVideoStepData.node_id,
+                        option_id: optionId,
+                        option_label: optionLabel
+                    })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    unlockGateAndResume();
+                } else {
+                    errBox.textContent = res.error || 'Failed to record choice.';
+                    errBox.classList.remove('hidden');
+                }
+            } catch (err) {
+                errBox.textContent = 'Connection error. Please try again.';
+                errBox.classList.remove('hidden');
+            }
+        }
+
+        function skipVideoGate() {
+            recordVideoEvent('video_gate_skipped', { timestamp: gateTimestampSeconds });
+            unlockGateAndResume();
+        }
+
+        function unlockGateAndResume() {
+            isGateUnlocked = true;
+            isGateOverlayVisible = false;
+
+            // Update lock marker & progress bar
+            updateProgressScrubState();
+
+            // Update badge in step header
+            const gateBadge = document.getElementById('videoGateBadge');
+            const gateBadgeText = document.getElementById('videoGateBadgeText');
+            gateBadge.className = 'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20';
+            gateBadgeText.textContent = '✓ Gate Unlocked';
+
+            // Fade out overlay
+            const overlay = document.getElementById('videoGateOverlay');
+            overlay.classList.add('opacity-0');
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('opacity-0');
+            }, 250);
+
+            // Resume playback from gate timestamp
+            playVideo();
+        }
+
+        function handleVideoShieldClick() {
+            if (isGateOverlayVisible) return;
+            togglePlayPause();
+            flashPlayIndicator(isVideoPlaying ? '▶' : '⏸');
+        }
+
+        function togglePlayPause() {
+            if (isGateOverlayVisible) return;
+            if (isVideoPlaying) {
+                pauseVideo();
+            } else {
+                playVideo();
+            }
+        }
+
+        function playVideo() {
+            if (!videoPlayerInstance) return;
+            try {
+                if (videoProvider === 'youtube' && typeof videoPlayerInstance.playVideo === 'function') {
+                    videoPlayerInstance.playVideo();
+                } else if (videoProvider === 'vimeo' && typeof videoPlayerInstance.play === 'function') {
+                    videoPlayerInstance.play();
+                }
+            } catch (e) {
+                console.warn('Play error:', e);
+            }
+        }
+
+        function pauseVideo() {
+            if (!videoPlayerInstance) return;
+            try {
+                if (videoProvider === 'youtube' && typeof videoPlayerInstance.pauseVideo === 'function') {
+                    videoPlayerInstance.pauseVideo();
+                } else if (videoProvider === 'vimeo' && typeof videoPlayerInstance.pause === 'function') {
+                    videoPlayerInstance.pause();
+                }
+            } catch (e) {
+                console.warn('Pause error:', e);
+            }
+        }
+
+        function forceSeek(seconds) {
+            if (!videoPlayerInstance) return;
+            try {
+                if (videoProvider === 'youtube' && typeof videoPlayerInstance.seekTo === 'function') {
+                    videoPlayerInstance.seekTo(seconds, true);
+                } else if (videoProvider === 'vimeo' && typeof videoPlayerInstance.setCurrentTime === 'function') {
+                    videoPlayerInstance.setCurrentTime(seconds);
+                }
+            } catch (e) {
+                console.warn('Seek error:', e);
+            }
+        }
+
+        function toggleMute() {
+            if (!videoPlayerInstance) return;
+            try {
+                if (videoProvider === 'youtube') {
+                    if (videoPlayerInstance.isMuted()) {
+                        videoPlayerInstance.unMute();
+                        isVideoMuted = false;
+                        document.getElementById('controlMuteIcon').textContent = '🔊';
+                    } else {
+                        videoPlayerInstance.mute();
+                        isVideoMuted = true;
+                        document.getElementById('controlMuteIcon').textContent = '🔇';
+                    }
+                } else if (videoProvider === 'vimeo') {
+                    videoPlayerInstance.getMuted().then(muted => {
+                        const next = !muted;
+                        videoPlayerInstance.setMuted(next).then(() => {
+                            isVideoMuted = next;
+                            document.getElementById('controlMuteIcon').textContent = next ? '🔇' : '🔊';
+                        });
+                    });
+                }
+            } catch (e) {
+                console.warn('Mute error:', e);
+            }
+        }
+
+        function unmuteVideoPlayer(e) {
+            e.stopPropagation();
+            if (!videoPlayerInstance) return;
+            try {
+                if (videoProvider === 'youtube') {
+                    videoPlayerInstance.unMute();
+                    videoPlayerInstance.setVolume(100);
+                } else if (videoProvider === 'vimeo') {
+                    videoPlayerInstance.setMuted(false);
+                    videoPlayerInstance.setVolume(1);
+                }
+                isVideoMuted = false;
+                document.getElementById('controlMuteIcon').textContent = '🔊';
+                document.getElementById('tapToUnmuteBtn').classList.add('hidden');
+            } catch (err) {
+                console.warn('Unmute error:', err);
+            }
+        }
+
+        function handleProgressBarSeek(e) {
+            if (!isGateUnlocked) {
+                showFlashNotice('🔒 Progress scrubbing is locked until the gate is unlocked.');
+                return;
+            }
+            if (currentVideoDuration <= 0) return;
+
+            const track = document.getElementById('customProgressTrack');
+            const rect = track.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const pct = Math.max(0, Math.min(1, clickX / rect.width));
+            const targetSec = pct * currentVideoDuration;
+            forceSeek(targetSec);
+        }
+
+        function flashPlayIndicator(icon) {
+            const el = document.getElementById('playStateIndicator');
+            const iconEl = document.getElementById('playStateIcon');
+            iconEl.textContent = icon;
+            el.classList.remove('opacity-0');
+            setTimeout(() => {
+                el.classList.add('opacity-0');
+            }, 250);
+        }
+
+        function showFlashNotice(text) {
+            const ind = document.getElementById('playStateIndicator');
+            const iconEl = document.getElementById('playStateIcon');
+            iconEl.textContent = '🔒';
+            ind.classList.remove('opacity-0');
+            setTimeout(() => {
+                ind.classList.add('opacity-0');
+            }, 600);
+        }
+
+        function onVideoEnded() {
+            recordVideoEvent('video_completed', {
+                duration: currentVideoDuration,
+                provider: videoProvider
+            });
+
+            const vg = currentVideoStepData?.video_gate || {};
+            const onEnd = vg.on_video_end || 'auto_advance';
+
+            if (onEnd === 'auto_advance') {
+                handleVideoStepComplete();
+            } else {
+                document.getElementById('videoEndCtaContainer').classList.remove('hidden');
+            }
+        }
+
+        async function handleVideoStepComplete() {
+            cleanupVideoPlayer();
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('videoGateSection').classList.add('hidden');
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/quiz/video-advance`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Quiz-Session': sessionToken
+                    },
+                    body: JSON.stringify({
+                        node_id: currentVideoStepData.node_id
+                    })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    renderStep(data.data);
+                } else {
+                    showError(data.error || 'Failed to advance to next step.');
+                }
+            } catch (e) {
+                showError('Connection error advancing video step.');
+            }
+        }
+
+        async function recordVideoEvent(eventType, eventData = {}) {
+            if (!sessionToken || !currentVideoStepData) return;
+            try {
+                await fetch(`${API_BASE}/api/quiz/video-event`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Quiz-Session': sessionToken
+                    },
+                    body: JSON.stringify({
+                        node_id: currentVideoStepData.node_id,
+                        event_type: eventType,
+                        event_data: eventData
+                    })
+                });
+            } catch (e) {
+                console.warn('Failed to record video event:', e);
+            }
+        }
+
     </script>
 </body>
 </html>

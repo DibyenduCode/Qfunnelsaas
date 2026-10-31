@@ -45,6 +45,9 @@ $router->get('/api/quiz/step', [QuizController::class, 'apiStep']);
 $router->post('/api/quiz/form', [QuizController::class, 'apiSubmitForm']);
 $router->post('/api/quiz/answer', [QuizController::class, 'apiSubmitAnswer']);
 $router->post('/api/quiz/back', [QuizController::class, 'apiBack']);
+$router->post('/api/quiz/video-event', [QuizController::class, 'apiVideoEvent']);
+$router->post('/api/quiz/video-gate-submit', [QuizController::class, 'apiSubmitVideoGate']);
+$router->post('/api/quiz/video-advance', [QuizController::class, 'apiVideoAdvance']);
 
 // Public Dynamic Legal & Compliance Pages
 $router->get('/terms', [LegalController::class, 'terms']);
@@ -89,6 +92,7 @@ $router->group([AuthMiddleware::class], function (Router $router) {
         $router->get('/admin/platform/plans', [PlatformAdminController::class, 'plans']);
         $router->post('/admin/platform/plans/create', [PlatformAdminController::class, 'createPlan'], [CsrfMiddleware::class]);
         $router->post('/admin/platform/plans/{id}/update', [PlatformAdminController::class, 'updatePlan'], [CsrfMiddleware::class]);
+        $router->post('/admin/platform/plans/{id}/toggle-visibility', [PlatformAdminController::class, 'togglePlanVisibility'], [CsrfMiddleware::class]);
         $router->post('/admin/platform/plans/{id}/delete', [PlatformAdminController::class, 'deletePlan'], [CsrfMiddleware::class]);
         
         // Payment Gateways Settings (Auto & Manual)

@@ -151,6 +151,63 @@ class QuizController
         }
     }
 
+    public function apiVideoEvent(Request $request): Response
+    {
+        $token = $request->header('x-quiz-session') ?? $request->input('session_token');
+        if (empty($token)) {
+            return Response::error("Missing quiz session token.", "UNAUTHORIZED", null, 401);
+        }
+
+        $nodeId = (int)$request->input('node_id');
+        $eventType = (string)$request->input('event_type');
+        $eventData = $request->input('event_data', []);
+
+        try {
+            $res = QuizEngineService::recordVideoEvent($token, $nodeId, $eventType, $eventData);
+            return Response::success($res);
+        } catch (\Throwable $e) {
+            return Response::error($e->getMessage(), 'VIDEO_EVENT_ERROR', null, 400);
+        }
+    }
+
+    public function apiSubmitVideoGate(Request $request): Response
+    {
+        $token = $request->header('x-quiz-session') ?? $request->input('session_token');
+        if (empty($token)) {
+            return Response::error("Missing quiz session token.", "UNAUTHORIZED", null, 401);
+        }
+
+        $nodeId = (int)$request->input('node_id');
+        $payload = $request->all();
+
+        try {
+            $res = QuizEngineService::submitVideoGate($token, $nodeId, $payload);
+            if (isset($res['success']) && $res['success'] === false) {
+                return Response::error($res['error'] ?? 'Validation failed', 'VALIDATION_FAILED', $res['errors'] ?? [], 422);
+            }
+            return Response::success($res);
+        } catch (\Throwable $e) {
+            return Response::error($e->getMessage(), 'VIDEO_GATE_ERROR', null, 400);
+        }
+    }
+
+    public function apiVideoAdvance(Request $request): Response
+    {
+        $token = $request->header('x-quiz-session') ?? $request->input('session_token');
+        if (empty($token)) {
+            return Response::error("Missing quiz session token.", "UNAUTHORIZED", null, 401);
+        }
+
+        $nodeId = (int)$request->input('node_id');
+
+        try {
+            $step = QuizEngineService::advanceVideoStep($token, $nodeId);
+            return Response::success($step);
+        } catch (\Throwable $e) {
+            return Response::error($e->getMessage(), 'VIDEO_ADVANCE_ERROR', null, 400);
+        }
+    }
+
     public function result(Request $request, string $slug, string $token): Response
     {
         $result = QuizEngineService::getPublicResult($token);

@@ -190,7 +190,7 @@
 
         <!-- Right: Flow Validation, Preview, Publish -->
         <div class="flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap pr-2">
-            <button type="button" onclick="openValidationDrawer()" id="validateBtn" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs font-semibold text-[#171A21] hover:bg-[#F7F8FA] transition-colors shrink-0 whitespace-nowrap" title="Validate Flow (V)">
+            <button type="button" onclick="openValidationDrawer()" id="validateBtn" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#E4E7EC] bg-white text-xs font-semibold text-[#171A21] hover:bg-[#F7F8FA] transition-colors shrink-0 whitespace-nowrap" title="Validate Flow">
                 <svg class="w-3.5 h-3.5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                 <span class="whitespace-nowrap">Validate</span>
             </button>
@@ -299,6 +299,20 @@
                     </div>
                 </div>
 
+                <!-- Video Gate Node (YouTube & Vimeo Turnstile) -->
+                <div draggable="true" ondragstart="handlePaletteDragStart(event, 'video_gate')" onclick="addNodeToCanvas('video_gate')" class="palette-card w-full p-2.5 rounded-xl border border-slate-200/80 bg-white hover:border-rose-400 hover:bg-rose-50/20 text-left transition-all flex items-start gap-2.5 shadow-2xs select-none group">
+                    <div class="w-7 h-7 rounded-lg bg-slate-50 text-rose-600 border border-slate-200/80 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-rose-50/50 transition-all">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><polygon points="6,5.5 11,8 6,10.5" fill="currentColor"/></svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="block text-xs font-semibold text-slate-800">Video Gate</span>
+                            <kbd class="text-[9px] font-mono font-semibold bg-slate-100 text-slate-600 px-1 rounded border border-slate-200">V</kbd>
+                        </div>
+                        <span class="block text-[10px] text-slate-500 leading-tight mt-0.5">YouTube/Vimeo mid-roll turnstile</span>
+                    </div>
+                </div>
+
                 <!-- Quick Help / Workflow Tip -->
                 <div class="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200/60 text-[11px] text-slate-500 space-y-1">
                     <div class="flex items-center gap-1.5 font-semibold text-slate-700 text-[10px] uppercase tracking-wider">
@@ -333,6 +347,7 @@
                     <div class="flex items-center justify-between"><span class="font-medium">Add Form Node</span><kbd class="px-1.5 py-0.5 bg-white border border-[#D0D5DD] rounded text-[9px] font-mono shadow-xs">F</kbd></div>
                     <div class="flex items-center justify-between"><span class="font-medium">Add Destination</span><kbd class="px-1.5 py-0.5 bg-white border border-[#D0D5DD] rounded text-[9px] font-mono shadow-xs">D</kbd></div>
                     <div class="flex items-center justify-between"><span class="font-medium">Add Call/WhatsApp</span><kbd class="px-1.5 py-0.5 bg-white border border-[#D0D5DD] rounded text-[9px] font-mono shadow-xs">C</kbd></div>
+                    <div class="flex items-center justify-between"><span class="font-medium">Add Video Gate</span><kbd class="px-1.5 py-0.5 bg-white border border-[#D0D5DD] rounded text-[9px] font-mono shadow-xs">V</kbd></div>
                     <div class="flex items-center justify-between"><span class="font-medium">Live Preview</span><kbd class="px-1.5 py-0.5 bg-white border border-[#D0D5DD] rounded text-[9px] font-mono shadow-xs">P</kbd></div>
                     <div class="flex items-center justify-between"><span class="font-medium">Validate Flow</span><kbd class="px-1.5 py-0.5 bg-white border border-[#D0D5DD] rounded text-[9px] font-mono shadow-xs">V</kbd></div>
                 </div>

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= e($title ?? 'Super Admin Panel — QuizFunnel') ?></title>
+    <meta name="csrf-token" content="<?= csrf_token() ?>">
     <!-- Tailwind CSS (via official script CDN for Core PHP MVC) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font -->

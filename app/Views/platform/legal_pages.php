@@ -1,3 +1,9 @@
+<?php
+$coreSlugs = ['terms', 'privacy', 'refund-policy', 'cookie-policy'];
+$getLegalUrl = function($slug) use ($coreSlugs) {
+    return in_array($slug, $coreSlugs) ? url('/' . e($slug)) : url('/legal/' . e($slug));
+};
+?>
 <div class="space-y-6">
 
     <!-- Top Breadcrumb & Action Banner -->
@@ -16,7 +22,7 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 New Legal Page
             </button>
-            <a href="<?= url('/' . e($activePage['slug'] ?? 'terms')) ?>" target="_blank" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 transition-colors flex items-center gap-2">
+            <a href="<?= $getLegalUrl($activePage['slug'] ?? 'terms') ?>" target="_blank" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 transition-colors flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                 View Live Public Page
             </a>
@@ -72,7 +78,7 @@
                             <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
                                 <span>Updated: <?= date('M j, Y', strtotime($p['updated_at'])) ?></span>
                                 <div class="flex items-center gap-2">
-                                    <a href="<?= url('/' . e($p['slug'])) ?>" target="_blank" class="hover:text-indigo-600 transition-colors" title="View Public Page">
+                                    <a href="<?= $getLegalUrl($p['slug']) ?>" target="_blank" class="hover:text-indigo-600 transition-colors" title="View Public Page">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                                     </a>
                                     <?php if (!$isCore): ?>
@@ -132,7 +138,7 @@
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">URL Slug</label>
                                     <div class="flex rounded-lg shadow-2xs">
                                         <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-[#E2E8F0] bg-slate-50 text-slate-500 text-xs font-mono">
-                                            <?= url('/') ?>/
+                                            <?= in_array($activePage['slug'] ?? '', $coreSlugs) ? url('/') . '/' : url('/legal') . '/' ?>
                                         </span>
                                         <input type="text" name="slug" value="<?= e($activePage['slug']) ?>" required
                                                class="flex-1 text-xs font-mono rounded-r-lg border border-[#E2E8F0] px-3 py-2 focus:ring-2 focus:ring-indigo-500">

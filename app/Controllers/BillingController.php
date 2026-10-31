@@ -27,8 +27,9 @@ class BillingController
         $billing = SubscriptionService::getBillingSummary($tenantId);
         $usage = UsageLimitService::getUsageOverview($tenantId);
 
-        // Fetch all active plans for self-service upgrading
-        $plans = Database::query("SELECT * FROM plans WHERE is_active = 1 ORDER BY price ASC, id ASC");
+        // Fetch all active visible plans for self-service upgrading (plus current plan if already enrolled)
+        $currentPlanId = $sub['plan_id'] ?? 0;
+        $plans = Database::query("SELECT * FROM plans WHERE is_active = 1 AND (is_visible = 1 OR id = ?) ORDER BY price ASC, id ASC", [$currentPlanId]);
         $featureCatalog = UsageLimitService::getFeatureCatalog();
         $gateways = PlatformSettingService::getPaymentGateways();
         $invoices = SubscriptionService::getInvoices($tenantId);
@@ -66,7 +67,9 @@ class BillingController
         $paymentMethod = (string)$request->input('payment_method', 'direct_activation');
         $txnRef = trim((string)$request->input('transaction_reference', ''));
 
-        $targetPlan = Database::fetchOne("SELECT * FROM plans WHERE id = ? AND is_active = 1", [$planId]);
+        $sub = SubscriptionService::getActiveSubscription($tenantId);
+        $currentPlanId = $sub['plan_id'] ?? 0;
+        $targetPlan = Database::fetchOne("SELECT * FROM plans WHERE id = ? AND is_active = 1 AND (is_visible = 1 OR id = ?)", [$planId, $currentPlanId]);
         if (!$targetPlan) {
             Session::setFlash('error', "Selected plan is invalid or currently inactive.");
             return Response::redirect(url('/admin/billing'));

@@ -1,3 +1,9 @@
+<?php
+$coreSlugs = ['terms', 'privacy', 'refund-policy', 'cookie-policy'];
+$getLegalUrl = function($slug) use ($coreSlugs) {
+    return in_array($slug, $coreSlugs) ? url('/' . e($slug)) : url('/legal/' . e($slug));
+};
+?>
 <!DOCTYPE html>
 <html lang="en" class="h-full bg-slate-50">
 <head>
@@ -125,7 +131,7 @@
                     <nav class="space-y-1">
                         <?php foreach ($allPages as $p): ?>
                             <?php $isActive = ($p['slug'] === $activeSlug); ?>
-                            <a href="<?= url('/' . e($p['slug'])) ?>" 
+                            <a href="<?= $getLegalUrl($p['slug']) ?>" 
                                class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all <?= $isActive ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-200/60 shadow-xs' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
                                 <span><?= e($p['title']) ?></span>
                                 <?php if ($isActive): ?>
@@ -232,7 +238,7 @@
             </div>
             <div class="flex items-center gap-6">
                 <?php foreach ($allPages as $p): ?>
-                    <a href="<?= url('/' . e($p['slug'])) ?>" class="hover:text-slate-900 transition-colors <?= ($p['slug'] === $activeSlug) ? 'text-indigo-600 font-semibold' : '' ?>">
+                    <a href="<?= $getLegalUrl($p['slug']) ?>" class="hover:text-slate-900 transition-colors <?= ($p['slug'] === $activeSlug) ? 'text-indigo-600 font-semibold' : '' ?>">
                         <?= e($p['title']) ?>
                     </a>
                 <?php endforeach; ?>

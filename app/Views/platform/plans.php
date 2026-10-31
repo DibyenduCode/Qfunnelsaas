@@ -42,13 +42,21 @@ foreach ($featureCatalog as $key => $meta) {
                 <div>
                     <div class="flex items-center justify-between mb-2">
                         <span class="text-sm font-extrabold text-slate-900"><?= e($p['name']) ?></span>
-                        <?php if ($isPro): ?>
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700">★ POPULAR</span>
-                        <?php elseif ($p['is_active']): ?>
-                            <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700">Active</span>
-                        <?php else: ?>
-                            <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-500">Disabled</span>
-                        <?php endif; ?>
+                        <div class="flex items-center gap-1 flex-wrap justify-end">
+                            <?php if ($isPro): ?>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700">★ POPULAR</span>
+                            <?php endif; ?>
+                            <?php if ($p['is_active']): ?>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700">Active</span>
+                            <?php else: ?>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-500">Disabled</span>
+                            <?php endif; ?>
+                            <?php if (!empty($p['is_visible'])): ?>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200" title="Visible on frontend home page">👁 Frontend</span>
+                            <?php else: ?>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200" title="Hidden from frontend home page">🚫 Hidden</span>
+                            <?php endif; ?>
+                        </div>
                     </div>
 
                     <div class="mb-4">
@@ -91,11 +99,19 @@ foreach ($featureCatalog as $key => $meta) {
                     <span class="text-[11px] text-slate-400 font-medium">
                         <?= (int)$p['active_subscribers_count'] ?> active <?= (int)$p['active_subscribers_count'] === 1 ? 'tenant' : 'tenants' ?>
                     </span>
-                    <button type="button" 
-                            onclick='openEditPlanModal(<?= json_encode($p) ?>)' 
-                            class="px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors">
-                        Edit Plan
-                    </button>
+                    <div class="flex items-center gap-1.5">
+                        <form method="POST" action="<?= url("/admin/platform/plans/{$p['id']}/toggle-visibility") ?>" class="inline">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="px-2 py-1 text-[11px] font-semibold rounded <?= !empty($p['is_visible']) ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200' ?>" title="<?= !empty($p['is_visible']) ? 'Click to hide this plan from frontend users' : 'Click to make this plan visible on frontend' ?>">
+                                <?= !empty($p['is_visible']) ? 'Hide' : 'Show' ?>
+                            </button>
+                        </form>
+                        <button type="button" 
+                                onclick='openEditPlanModal(<?= json_encode($p) ?>)' 
+                                class="px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors">
+                            Edit
+                        </button>
+                    </div>
                 </div>
             </div>
         <?php endforeach; ?>
@@ -125,7 +141,8 @@ foreach ($featureCatalog as $key => $meta) {
                         <th class="py-3 px-4">Submissions Limit</th>
                         <th class="py-3 px-4">Enabled Features & Premium Capabilities</th>
                         <th class="py-3 px-4 text-center">Active Tenants</th>
-                        <th class="py-3 px-4">Status</th>
+                        <th class="py-3 px-4">System Status</th>
+                        <th class="py-3 px-4 text-center">Frontend Visibility</th>
                         <th class="py-3 px-4 text-right">Actions</th>
                     </tr>
                 </thead>
@@ -185,6 +202,28 @@ foreach ($featureCatalog as $key => $meta) {
                                 <?php else: ?>
                                     <span class="inline-flex px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">Disabled</span>
                                 <?php endif; ?>
+                            </td>
+                            <td class="py-3.5 px-4 text-center">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <?php if (!empty($p['is_visible'])): ?>
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                            <svg class="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                            Visible
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                            <svg class="w-3 h-3 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/></svg>
+                                            Hidden
+                                        </span>
+                                    <?php endif; ?>
+
+                                    <form method="POST" action="<?= url("/admin/platform/plans/{$p['id']}/toggle-visibility") ?>" class="inline">
+                                        <?= csrf_field() ?>
+                                        <button type="submit" class="px-2 py-0.5 text-[10px] font-semibold rounded <?= !empty($p['is_visible']) ? 'bg-amber-100 hover:bg-amber-200 text-amber-800' : 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800' ?>" title="<?= !empty($p['is_visible']) ? 'Hide this plan from public frontend' : 'Show this plan on public frontend' ?>">
+                                            <?= !empty($p['is_visible']) ? 'Hide' : 'Show' ?>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                             <td class="py-3.5 px-4 text-right">
                                 <div class="flex items-center justify-end gap-2">
@@ -320,9 +359,15 @@ foreach ($featureCatalog as $key => $meta) {
                     <textarea name="description" rows="2" placeholder="Brief overview of plan target audience and positioning..." class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
                 </div>
 
-                <div class="flex items-center gap-2">
-                    <input type="checkbox" name="is_active" id="create_is_active" value="1" checked class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                    <label for="create_is_active" class="text-xs font-medium text-slate-700">Make this plan immediately active for new tenant subscriptions</label>
+                <div class="space-y-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" name="is_active" id="create_is_active" value="1" checked class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                        <label for="create_is_active" class="text-xs font-medium text-slate-700">Make this plan active for tenant subscriptions</label>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" name="is_visible" id="create_is_visible" value="1" checked class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                        <label for="create_is_visible" class="text-xs font-medium text-slate-700"><strong>Show on Frontend:</strong> Visible to visitors on public home page pricing section</label>
+                    </div>
                 </div>
 
                 <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
@@ -449,9 +494,15 @@ foreach ($featureCatalog as $key => $meta) {
                     <textarea name="description" id="edit_description" rows="2" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
                 </div>
 
-                <div class="flex items-center gap-2">
-                    <input type="checkbox" name="is_active" id="edit_is_active" value="1" class="rounded border-slate-300 text-indigo-600">
-                    <label for="edit_is_active" class="text-xs font-medium text-slate-700">Plan is Active for new subscriptions</label>
+                <div class="space-y-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" name="is_active" id="edit_is_active" value="1" class="rounded border-slate-300 text-indigo-600">
+                        <label for="edit_is_active" class="text-xs font-medium text-slate-700">Plan is Active for subscriptions</label>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" name="is_visible" id="edit_is_visible" value="1" class="rounded border-slate-300 text-indigo-600">
+                        <label for="edit_is_visible" class="text-xs font-medium text-slate-700"><strong>Show on Frontend:</strong> Visible to visitors on public home page pricing section</label>
+                    </div>
                 </div>
 
                 <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
@@ -490,6 +541,7 @@ function openEditPlanModal(plan) {
     document.getElementById('edit_interval').value = plan.billing_interval || 'monthly';
     document.getElementById('edit_description').value = plan.description || '';
     document.getElementById('edit_is_active').checked = plan.is_active == 1;
+    document.getElementById('edit_is_visible').checked = plan.is_visible == 1;
 
     let limits = {};
     try {

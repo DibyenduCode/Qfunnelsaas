@@ -49,6 +49,11 @@
                 <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                     ✓ Completed Journey
                 </span>
+            <?php elseif ($detail['session']['status'] === 'form_pending_video_gate'): ?>
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                    <span>🎬</span>
+                    <span>Form Pending (Video Gate)</span>
+                </span>
             <?php else: ?>
                 <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
                     <?= ucfirst(str_replace('_', ' ', $detail['session']['status'])) ?>
@@ -268,6 +273,11 @@
                                             <span>🎚️ Slider Value:</span>
                                             <span class="font-bold font-mono"><?= e($ans['answer_value_text']) ?></span>
                                         </div>
+                                    <?php elseif ($ans['answer_type'] === 'video_gate_question'): ?>
+                                        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 text-rose-800 font-semibold border border-rose-200">
+                                            <span>🎬 Video Gate Option:</span>
+                                            <span class="font-bold"><?= e($ans['answer_value_text']) ?></span>
+                                        </div>
                                     <?php else: ?>
                                         <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200">
                                             <span>Choice:</span>
@@ -292,17 +302,47 @@
                 </h3>
 
                 <div class="relative pl-6 space-y-6 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-[#E4E7EC]">
-                    <?php foreach ($detail['events'] as $evt): ?>
+                    <?php 
+                        $unlockedVideoNodes = [];
+                        foreach ($detail['events'] as $eCheck) {
+                            if ($eCheck['event_type'] === 'video_gate_completed') {
+                                $unlockedVideoNodes[$eCheck['node_id'] ?? 0] = true;
+                            }
+                        }
+                    ?>
+                    <?php foreach ($detail['events'] as $evt): 
+                        $eventType = $evt['event_type'];
+                        $evtData = !empty($evt['event_data_json']) ? (is_string($evt['event_data_json']) ? json_decode($evt['event_data_json'], true) : $evt['event_data_json']) : [];
+                        $isVid = str_starts_with($eventType, 'video_');
+                        $bulletBg = 'bg-[#5B5BD6]';
+                        if ($eventType === 'video_started') $bulletBg = 'bg-rose-500';
+                        elseif ($eventType === 'video_gate_reached') $bulletBg = 'bg-amber-500';
+                        elseif ($eventType === 'video_gate_completed') $bulletBg = 'bg-emerald-500';
+                        elseif ($eventType === 'video_completed') $bulletBg = 'bg-purple-600';
+                    ?>
                         <div class="relative text-xs">
                             <!-- Bullet node -->
-                            <div class="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-[#5B5BD6] ring-4 ring-white"></div>
+                            <div class="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full <?= $bulletBg ?> ring-4 ring-white shadow-2xs"></div>
                             <div>
-                                <span class="font-bold text-[#171A21] capitalize">
-                                    <?= str_replace('_', ' ', $evt['event_type']) ?>
-                                </span>
-                                <span class="text-[10px] text-[#687080] ml-2">
-                                    <?= date('H:i:s', strtotime($evt['occurred_at'])) ?>
-                                </span>
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <?php if ($eventType === 'video_started'): ?>
+                                        <span class="font-bold text-rose-600">▶ Video Playback Started</span>
+                                    <?php elseif ($eventType === 'video_gate_reached'): ?>
+                                        <span class="font-bold text-amber-600">🔒 Video Gate Reached (Paused)</span>
+                                    <?php elseif ($eventType === 'video_gate_completed'): ?>
+                                        <span class="font-bold text-emerald-600">🔓 Video Gate Unlocked</span>
+                                    <?php elseif ($eventType === 'video_completed'): ?>
+                                        <span class="font-bold text-purple-600">🏁 Video Completed</span>
+                                    <?php else: ?>
+                                        <span class="font-bold text-[#171A21] capitalize">
+                                            <?= str_replace('_', ' ', $eventType) ?>
+                                        </span>
+                                    <?php endif; ?>
+
+                                    <span class="text-[10px] text-[#687080]">
+                                        <?= date('H:i:s', strtotime($evt['occurred_at'])) ?>
+                                    </span>
+                                </div>
 
                                 <?php if ($evt['node_title']): ?>
                                     <p class="text-[11px] text-[#687080] mt-0.5">
@@ -310,7 +350,55 @@
                                     </p>
                                 <?php endif; ?>
 
-                                <?php if ($evt['option_label']): ?>
+                                <?php if ($isVid): ?>
+                                    <div class="mt-1 space-y-1">
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <?php if (!empty($evtData['provider'])): ?>
+                                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold <?= strtolower($evtData['provider']) === 'youtube' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-sky-50 text-sky-600 border border-sky-200' ?>">
+                                                    <?= ucfirst(e($evtData['provider'])) ?>
+                                                </span>
+                                            <?php endif; ?>
+
+                                            <?php if (isset($evtData['gate_timestamp'])): ?>
+                                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700">
+                                                    ⏱️ Gate at <?= sprintf('%02d:%02d', floor($evtData['gate_timestamp'] / 60), $evtData['gate_timestamp'] % 60) ?>
+                                                </span>
+                                            <?php endif; ?>
+
+                                            <?php if ($eventType === 'video_gate_reached'): ?>
+                                                <?php if (!empty($unlockedVideoNodes[$evt['node_id'] ?? 0])): ?>
+                                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                        ✓ Unlocked
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                                        ⚠️ Abandoned / Dropped off
+                                                    </span>
+                                                <?php endif; ?>
+                                            <?php endif; ?>
+                                        </div>
+
+                                        <?php if ($eventType === 'video_gate_completed' && !empty($evtData['lead_fields'])): ?>
+                                            <div class="p-2 rounded-lg bg-emerald-50/70 border border-emerald-200 text-[11px] space-y-0.5 mt-1">
+                                                <span class="text-[10px] uppercase font-bold text-emerald-800 block mb-0.5">Captured In-Video Lead:</span>
+                                                <?php foreach ($evtData['lead_fields'] as $k => $v): ?>
+                                                    <div class="flex items-center justify-between">
+                                                        <span class="text-slate-500 capitalize"><?= e(str_replace('_', ' ', $k)) ?>:</span>
+                                                        <span class="font-bold text-slate-800"><?= e((string)$v) ?></span>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php endif; ?>
+
+                                        <?php if ($eventType === 'video_gate_completed' && !empty($evtData['option_label'])): ?>
+                                            <div class="text-[11px] text-emerald-800 font-semibold mt-0.5">
+                                                Selected Option: <strong><?= e($evtData['option_label']) ?></strong>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!$isVid && $evt['option_label']): ?>
                                     <p class="text-[11px] text-emerald-700 mt-0.5">
                                         Selected: <strong><?= e($evt['option_label']) ?></strong>
                                     </p>
